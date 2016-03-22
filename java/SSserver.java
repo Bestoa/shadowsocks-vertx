@@ -1,5 +1,7 @@
 import java.nio.ByteOrder;
 import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
+import java.nio.channels.ServerSocketChannel;
 import java.io.DataInputStream;  
 import java.io.DataOutputStream;  
 import java.net.ServerSocket;  
@@ -19,40 +21,48 @@ public class SSserver {
 
         final private int TIMEOUT = 3000;
 
-        private Socket mLocal;
+        private SocketChannel mLocalChannel;
         private String mRemoteAddr;
         private int mRemotePort;
 
-        public SServerInstance(Socket l)
+        public SServerInstance(SocketChannel l)
         {
-            mLocal = l;
+            mLocalChannel = l;
         }
 
-        private void parseHead(DataInputStream in) throws Exception
+        private void parseHead() throws Exception
         {
-            int addrtype = in.read();
-            int size = 0;
-            byte buf[] = new byte[HEAD_BUFF_LEN];
 
-            //get addr
-            if (addrtype == ADDR_TYPE_HOST) {
-                size = in.read();
-                size = in.read(buf, 0, size);
-            } else {
-                //do not support other addrtype now.
-                throw new Exception("Unsupport addr type!");
+            Socket local = mLocalChannel.socket();
+            DataInputStream in = new DataInputStream(local.getInputStream());
+
+            try{
+                int addrtype = in.read();
+                int size = 0;
+                byte buf[] = new byte[HEAD_BUFF_LEN];
+
+                //get addr
+                if (addrtype == ADDR_TYPE_HOST) {
+                    size = in.read();
+                    size = in.read(buf, 0, size);
+                } else {
+                    //do not support other addrtype now.
+                    throw new Exception("Unsupport addr type!");
+                }
+                mRemoteAddr = new String(buf, 0, size);
+
+                //get port
+                in.read(buf, 0, 2);
+                ByteBuffer bb = ByteBuffer.allocate(2);
+                bb.order(ByteOrder.BIG_ENDIAN);
+                bb.put(buf[0]);
+                bb.put(buf[1]);
+                mRemotePort = bb.getShort(0);
+
+                System.out.println("Addr type: " + addrtype + " addr: " + mRemoteAddr + ":" + mRemotePort);
+            }catch(Exception e){
+                e.printStackTrace();
             }
-            mRemoteAddr = new String(buf, 0, size);
-
-            //get port
-            in.read(buf, 0, 2);
-            ByteBuffer bb = ByteBuffer.allocate(2);
-            bb.order(ByteOrder.BIG_ENDIAN);
-            bb.put(buf[0]);
-            bb.put(buf[1]);
-            mRemotePort = bb.getShort(0);
-
-            System.out.println("Addr type: " + addrtype + " addr: " + mRemoteAddr + ":" + mRemotePort);
         }
 
         public void run()
@@ -60,41 +70,31 @@ public class SSserver {
             int addrtype;
             int size;
 
-            try(DataInputStream lin = new DataInputStream(mLocal.getInputStream());
-                    DataOutputStream lout = new DataOutputStream(mLocal.getOutputStream()))
+            try {
+                parseHead();
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+
+            try(SocketChannel remote = SocketChannel.open())
             {
+                remote.socket().setTcpNoDelay(true);
+                remote.socket().connect(new InetSocketAddress(mRemoteAddr, mRemotePort), TIMEOUT);
 
-                parseHead(lin);
-
-                try(Socket remote = new Socket())
-                {
-                    remote.setTcpNoDelay(true);
-                    remote.connect(new InetSocketAddress(mRemoteAddr, mRemotePort), TIMEOUT);
-
-                    try(DataInputStream rin = new DataInputStream(remote.getInputStream());
-                            DataOutputStream rout = new DataOutputStream(remote.getOutputStream());)
-                    {
-                        Thread t1 = new Thread(new handleStream(lin, rout));
-                        Thread t2 = new Thread(new handleStream(rin, lout));
-                        t1.start();
-                        t2.start();
-                        t1.join();
-                        t2.join();
-                    }catch(Exception e){
-                        throw e;
-                    }
-                }catch(Exception e){
-                    throw e;
-                }
-
-            }catch (Exception e) {
+                Thread t1 = new Thread(new handleStream(mLocalChannel, remote));
+                Thread t2 = new Thread(new handleStream(remote, mLocalChannel));
+                t1.start();
+                t2.start();
+                t1.join();
+                t2.join();
+            }catch(Exception e){
                 System.err.println("Exception: " + e.getMessage() + "! Target address: " + mRemoteAddr);
-            }finally{
-                try {
-                    mLocal.close();
-                }catch(Exception e) {
-                    System.err.println(e.getMessage());
-                }
+            }
+
+            try {
+                mLocalChannel.close();
+            }catch(Exception e) {
+                System.err.println(e.getMessage());
             }
         }
     }
@@ -103,35 +103,36 @@ public class SSserver {
 
         final private int BUFF_LEN = 4096;
 
-        private DataInputStream mInput;
-        private DataOutputStream mOutput;
+        private SocketChannel in;
+        private SocketChannel out;
 
-        public handleStream(DataInputStream i, DataOutputStream o){
-            mInput = i;
-            mOutput = o;
+        public handleStream(SocketChannel i, SocketChannel o){
+            in = i;
+            out = o;
         }
 
         public void run()
         {
-            byte buf[] = new byte[BUFF_LEN];
-            int r_size, w_size, total_r_size = 0;
+            ByteBuffer bbuf = ByteBuffer.allocate(BUFF_LEN);
+            int size = 0;
             while (true) {
                 try{
-                    r_size = mInput.read(buf, 0, BUFF_LEN);
-                    total_r_size += r_size;
-                    if (r_size <= 0) 
+                    bbuf.clear();
+                    size = in.read(bbuf);
+                    if (size <= 0) 
                         break;
-                    mOutput.write(buf, 0, r_size);
+                    bbuf.flip();
+                    while(bbuf.hasRemaining()) {
+                        out.write(bbuf);
+                    }
+                    /*
                 }catch(SocketTimeoutException e){
                     // ignore
                     break;
+                    */
                 }catch(Exception e){
                     e.printStackTrace();
                     break;
-                }
-                w_size = mOutput.size();
-                if (total_r_size != w_size) {
-                    System.err.println("Total read size: " + total_r_size + " != Total write size: " + w_size);
                 }
             }
         }
@@ -140,18 +141,19 @@ public class SSserver {
     public SSserver()
     {
     }
-    
+
     public void handle()
     {
         int port = 2048;
         int timeout = 30000;
         Executor service = Executors.newCachedThreadPool();
-        try(ServerSocket server = new ServerSocket(port)) {
-            server.setReuseAddress(true);
+        try(ServerSocketChannel server = ServerSocketChannel.open()) {
+            server.bind(new InetSocketAddress(port));
+            server.socket().setReuseAddress(true);
             while (true) {
-                Socket local = server.accept();
-                local.setTcpNoDelay(true);
-                local.setSoTimeout(timeout);
+                SocketChannel local = server.accept();
+                local.socket().setTcpNoDelay(true);
+                local.socket().setSoTimeout(timeout);
                 service.execute(new SServerInstance(local));
             }
         }catch(Exception e){

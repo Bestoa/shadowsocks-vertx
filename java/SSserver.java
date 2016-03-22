@@ -68,6 +68,7 @@ public class SSserver {
 
                 try(Socket remote = new Socket())
                 {
+                    remote.setTcpNoDelay(true);
                     remote.connect(new InetSocketAddress(mRemoteAddr, mRemotePort), TIMEOUT);
 
                     try(DataInputStream rin = new DataInputStream(remote.getInputStream());
@@ -149,6 +150,7 @@ public class SSserver {
             server.setReuseAddress(true);
             while (true) {
                 Socket local = server.accept();
+                local.setTcpNoDelay(true);
                 local.setSoTimeout(timeout);
                 service.execute(new SServerInstance(local));
             }

@@ -66,6 +66,8 @@ public class SSserver {
 
         private void close()
         {
+            if (mClientChannel == null)
+                return;
             try{
                 mClientChannel.close();
                 mClientChannel = null;
@@ -99,6 +101,17 @@ public class SSserver {
             }
         }
 
+        private void shutDownAll(SocketChannel in, SocketChannel out)
+        {
+            try{
+                in.shutdownInput();
+                out.shutdownInput();
+                in.shutdownOutput();
+                out.shutdownOutput();
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+        }
 
         private void sendData(SocketChannel in, SocketChannel out)
         {
@@ -108,20 +121,25 @@ public class SSserver {
                 try{
                     bbuf.clear();
                     size = in.read(bbuf);
-                    if (size <= 0)
-                        return;
+                    if (size <= 0) {
+                        break;
+                    }
                     bbuf.flip();
                     while(bbuf.hasRemaining()) {
                         out.write(bbuf);
                     }
                 }catch(SocketTimeoutException e){
                     // ignore
-                    return;
+                    e.printStackTrace();
+                    break;
                 }catch(Exception e){
                     e.printStackTrace();
-                    return;
+                    break;
                 }
             }
+            // no mater input/ouput reach eof shutdown all stream
+            // this logic is strange, but it could avoid CLOST_WAIT issue
+            shutDownAll(in, out);
         }
 
         public void run()

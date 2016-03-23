@@ -8,6 +8,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.InetSocketAddress;
+import java.net.InetAddress;
 import java.net.StandardSocketOptions;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -20,10 +21,11 @@ public class SSserver {
 
         final private int BUFF_LEN = 4096;
 
+        final private int ADDR_TYPE_IPV4 = 0x01;
         final private int ADDR_TYPE_HOST = 0x03;
 
         private SocketChannel mClientChannel;
-        private String mRemoteAddr;
+        private InetAddress mRemoteAddr;
         private int mRemotePort;
 
         /*
@@ -44,13 +46,17 @@ public class SSserver {
             byte buf[] = new byte[HEAD_BUFF_LEN];
 
             //get addr
-            if (addrtype == ADDR_TYPE_HOST) {
+            if (addrtype == ADDR_TYPE_IPV4) {
+                byte ipv4[] = new byte[4];
+                in.read(ipv4, 0, 4);
+                mRemoteAddr = InetAddress.getByAddress(ipv4);
+            }else if (addrtype == ADDR_TYPE_HOST) {
                 len = in.read(buf, 0, in.read());
+                mRemoteAddr = InetAddress.getByName(new String(buf, 0, len));
             } else {
                 //do not support other addrtype now.
-                throw new Exception("Unsupport addr type!");
+                throw new Exception("Unsupport addr type: " + addrtype + "!");
             }
-            mRemoteAddr = new String(buf, 0, len);
 
             //get port
             ByteBuffer port = ByteBuffer.allocate(2);

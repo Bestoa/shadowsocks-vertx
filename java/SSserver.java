@@ -18,22 +18,19 @@ public class SSserver {
 
         final private int HEAD_BUFF_LEN = 255;
 
+        final private int BUFF_LEN = 4096;
+
         final private int ADDR_TYPE_HOST = 0x03;
 
         private SocketChannel mClientChannel;
         private String mRemoteAddr;
         private int mRemotePort;
 
-        public SServerInstance(SocketChannel c)
-        {
-            mClientChannel = c;
-        }
-
         /*
          *  |addr type: 1 byte| addr | port: 2 bytes with big endian|
          *
          *  addr type 0x1: addr = ipv4 | 4 bytes
-         *  addr type 0x3: addr = host address string | length 1 byte + string
+         *  addr type 0x3: addr = host address string | 1 byte(string length) + string
          *  addr type 0x4: addr = ipv6 | 19 bytes?
          *
          */
@@ -71,26 +68,59 @@ public class SSserver {
         {
             try{
                 mClientChannel.close();
+                mClientChannel = null;
             }catch(Exception e){
                 e.printStackTrace();
             }
         }
 
-        private void connect()
+        private void connectAndSendData()
         {
-            SocketChannel local = mClientChannel;
-            try(SocketChannel remote = SocketChannel.open(new InetSocketAddress(mRemoteAddr, mRemotePort)))
+            final SocketChannel local = mClientChannel;
+            try(final SocketChannel remote = SocketChannel.open())
             {
                 remote.setOption(StandardSocketOptions.TCP_NODELAY, true);
+                remote.connect(new InetSocketAddress(mRemoteAddr, mRemotePort));
 
-                Thread t1 = new Thread(new handleStream(local, remote));
-                Thread t2 = new Thread(new handleStream(remote, local));
-                t1.start();
-                t2.start();
-                t1.join();
-                t2.join();
+                // Full-Duplex need 2 threads.
+                // Start local -> remote first.
+                Thread t = new Thread(new Runnable() {
+                    public void run() {
+                        sendData(local, remote);
+                    }
+                });
+                t.start();
+
+                sendData(remote, local);
+
+                t.join();
             }catch(Exception e){
                 System.err.println("Exception: " + e.getMessage() + "! Target address: " + mRemoteAddr);
+            }
+        }
+
+
+        private void sendData(SocketChannel in, SocketChannel out)
+        {
+            ByteBuffer bbuf = ByteBuffer.allocate(BUFF_LEN);
+            int size = 0;
+            while (true) {
+                try{
+                    bbuf.clear();
+                    size = in.read(bbuf);
+                    if (size <= 0)
+                        return;
+                    bbuf.flip();
+                    while(bbuf.hasRemaining()) {
+                        out.write(bbuf);
+                    }
+                }catch(SocketTimeoutException e){
+                    // ignore
+                    return;
+                }catch(Exception e){
+                    e.printStackTrace();
+                    return;
+                }
             }
         }
 
@@ -98,60 +128,19 @@ public class SSserver {
         {
             try {
                 parseHead();
-                connect();
+                connectAndSendData();
             }catch(Exception e){
                 e.printStackTrace();
             }finally{
                 close();
             }
         }
-    }
-    // FIXME: this is ugly...
-    private class handleStream implements Runnable {
 
-        final private int BUFF_LEN = 4096;
-
-        private SocketChannel in;
-        private SocketChannel out;
-
-
-        public handleStream(SocketChannel i, SocketChannel o){
-            in = i;
-            out = o;
-        }
-
-        private void send(ByteBuffer bbuf)
+        public SServerInstance(SocketChannel c)
         {
-            int size = 0;
-            try{
-                bbuf.clear();
-                size = in.read(bbuf);
-                if (size <= 0)
-                    return;
-                bbuf.flip();
-                while(bbuf.hasRemaining()) {
-                    out.write(bbuf);
-                }
-            }catch(SocketTimeoutException e){
-                // ignore
-                return;
-            }catch(Exception e){
-                e.printStackTrace();
-                return;
-            }
+            mClientChannel = c;
         }
 
-        public void run()
-        {
-            ByteBuffer bbuf = ByteBuffer.allocate(BUFF_LEN);
-            while (true) {
-                send(bbuf);
-            }
-        }
-    }
-
-    public SSserver()
-    {
     }
 
     public void start()
@@ -164,6 +153,7 @@ public class SSserver {
             while (true) {
                 SocketChannel local = server.accept();
                 local.setOption(StandardSocketOptions.TCP_NODELAY, true);
+                local.setOption(StandardSocketOptions.SO_LINGER, 1000);
                 service.execute(new SServerInstance(local));
             }
         }catch(Exception e){
@@ -173,7 +163,7 @@ public class SSserver {
 
     public static void main(String argv[])
     {
-        System.out.println("Shadowsocks-Java v0.02");
+        System.out.println("Shadowsocks-Java v0.03");
         new SSserver().start();;
     }
 }

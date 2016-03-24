@@ -4,9 +4,9 @@ import java.nio.channels.SocketChannel;
 import java.nio.channels.ServerSocketChannel;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketTimeoutException;
 import java.net.InetSocketAddress;
 import java.net.InetAddress;
 import java.net.StandardSocketOptions;
@@ -36,10 +36,11 @@ public class SSserver {
          *  addr type 0x4: addr = ipv6 | 19 bytes?
          *
          */
-        private void parseHead() throws Exception
+        private void parseHead(SocketChannel client) throws IOException
         {
+            Socket local = client.socket();
             //still use socket I/O here.
-            DataInputStream in = new DataInputStream(mClientChannel.socket().getInputStream());
+            DataInputStream in = new DataInputStream(local.getInputStream());
 
             int len = 0;
             int addrtype = in.read();
@@ -55,7 +56,7 @@ public class SSserver {
                 mRemoteAddr = InetAddress.getByName(new String(buf, 0, len));
             } else {
                 //do not support other addrtype now.
-                throw new Exception("Unsupport addr type: " + addrtype + "!");
+                throw new IOException("Unsupport addr type: " + addrtype + "!");
             }
 
             //get port
@@ -66,29 +67,21 @@ public class SSserver {
             port.put(buf[1]);
             mRemotePort = port.getShort(0);
 
-            System.out.println("Addr type: " + addrtype + " addr: " + mRemoteAddr + ":" + mRemotePort);
+            System.out.println("Addr type: " + addrtype + " addr: " + mRemoteAddr + ":" + mRemotePort
+                    + " from " + local.getRemoteSocketAddress());
             //don't close this input stream
         }
 
-        private void close()
+        private void connectAndSendData(final SocketChannel local)
         {
-            if (mClientChannel == null)
-                return;
-            try{
-                mClientChannel.close();
-                mClientChannel = null;
-            }catch(Exception e){
-                e.printStackTrace();
-            }
-        }
+            int CONNECT_TIMEOUT = 3000;
 
-        private void connectAndSendData()
-        {
-            final SocketChannel local = mClientChannel;
             try(final SocketChannel remote = SocketChannel.open())
             {
                 remote.setOption(StandardSocketOptions.TCP_NODELAY, true);
-                remote.connect(new InetSocketAddress(mRemoteAddr, mRemotePort));
+                //Still use socket with timeout since some time, remote is unreachable, then client closed
+                //but this thread is still hold. This will decrease CLOSE_wait state
+                remote.socket().connect(new InetSocketAddress(mRemoteAddr, mRemotePort), CONNECT_TIMEOUT);
 
                 // Full-Duplex need 2 threads.
                 // Start local -> remote first.
@@ -102,9 +95,13 @@ public class SSserver {
                 sendData(remote, local);
 
                 t.join();
-            }catch(Exception e){
-                System.err.println("Exception: " + e.getMessage() + "! Target address: " + mRemoteAddr);
+            }catch(IOException e){
+                System.err.println("Target address: " + mRemoteAddr);
+                e.printStackTrace();
+            }catch(InterruptedException e){
+                //ignore
             }
+
         }
 
         private void shutDownAll(SocketChannel in, SocketChannel out)
@@ -114,7 +111,7 @@ public class SSserver {
                 out.shutdownInput();
                 in.shutdownOutput();
                 out.shutdownOutput();
-            }catch(Exception e){
+            }catch(IOException e){
                 e.printStackTrace();
             }
         }
@@ -128,15 +125,13 @@ public class SSserver {
                 size = 0;
                 try{
                     size = in.read(bbuf);
-                    if (size <= 0) {
-                        System.out.println(size + "");
+                    if (size <= 0)
                         break;
-                    }
                     r_size += size;
                     bbuf.flip();
                     while(bbuf.hasRemaining())
                         w_size += out.write(bbuf);
-                }catch(Exception e){
+                }catch(IOException e){
                     e.printStackTrace();
                     break;
                 }
@@ -146,19 +141,19 @@ public class SSserver {
                 System.err.println("Read size: " + r_size + " != write size: " + w_size);
             }
             // no mater input/ouput reach eos shutdown all stream
-            // It could avoid CLOST_WAIT issue
+            // otherwise, other IO thread may wait in read when client close the socket.
+            // it could avoid CLOST_WAIT issue
             shutDownAll(in, out);
         }
 
         public void run()
         {
-            try {
-                parseHead();
-                connectAndSendData();
-            }catch(Exception e){
+            //make sure this channel could be closed
+            try(SocketChannel client = mClientChannel){
+                parseHead(client);
+                connectAndSendData(client);
+            }catch(IOException e){
                 e.printStackTrace();
-            }finally{
-                close();
             }
         }
 
@@ -182,7 +177,7 @@ public class SSserver {
                 local.setOption(StandardSocketOptions.SO_LINGER, 1000);
                 service.execute(new SServerInstance(local));
             }
-        }catch(Exception e){
+        }catch(IOException e){
             e.printStackTrace();
         }
     }

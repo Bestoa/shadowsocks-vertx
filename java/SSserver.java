@@ -25,8 +25,7 @@ public class SSserver {
         final private int ADDR_TYPE_HOST = 0x03;
 
         private SocketChannel mClientChannel;
-        private InetAddress mRemoteAddr;
-        private int mRemotePort;
+        private InetSocketAddress mRemoteAddr;
 
         /*
          *  |addr type: 1 byte| addr | port: 2 bytes with big endian|
@@ -47,13 +46,14 @@ public class SSserver {
             byte buf[] = new byte[HEAD_BUFF_LEN];
 
             //get addr
+            InetAddress addr;
             if (addrtype == ADDR_TYPE_IPV4) {
                 byte ipv4[] = new byte[4];
                 in.read(ipv4, 0, 4);
-                mRemoteAddr = InetAddress.getByAddress(ipv4);
+                addr = InetAddress.getByAddress(ipv4);
             }else if (addrtype == ADDR_TYPE_HOST) {
                 len = in.read(buf, 0, in.read());
-                mRemoteAddr = InetAddress.getByName(new String(buf, 0, len));
+                addr = InetAddress.getByName(new String(buf, 0, len));
             } else {
                 //do not support other addrtype now.
                 throw new IOException("Unsupport addr type: " + addrtype + "!");
@@ -65,11 +65,9 @@ public class SSserver {
             in.read(buf, 0, 2);
             port.put(buf[0]);
             port.put(buf[1]);
-            mRemotePort = port.getShort(0);
 
-            System.out.println("Addr type: " + addrtype + " addr: " + mRemoteAddr + ":" + mRemotePort
-                    + " from " + local.getRemoteSocketAddress());
-            //don't close this input stream
+            mRemoteAddr = new InetSocketAddress(addr, port.getShort(0));
+            //don't close this input stream, it will close the socket too.
         }
 
         private void connectAndSendData(final SocketChannel local)
@@ -81,7 +79,8 @@ public class SSserver {
                 remote.setOption(StandardSocketOptions.TCP_NODELAY, true);
                 //Still use socket with timeout since some time, remote is unreachable, then client closed
                 //but this thread is still hold. This will decrease CLOSE_wait state
-                remote.socket().connect(new InetSocketAddress(mRemoteAddr, mRemotePort), CONNECT_TIMEOUT);
+                System.out.println("Connecting " + mRemoteAddr + " from " + local.getRemoteAddress());
+                remote.socket().connect(mRemoteAddr, CONNECT_TIMEOUT);
 
                 // Full-Duplex need 2 threads.
                 // Start local -> remote first.
@@ -184,7 +183,7 @@ public class SSserver {
 
     public static void main(String argv[])
     {
-        System.out.println("Shadowsocks-Java v0.03");
+        System.out.println("Shadowsocks-Java v0.04");
         new SSserver().start();;
     }
 }

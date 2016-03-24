@@ -122,29 +122,31 @@ public class SSserver {
         private void sendData(SocketChannel in, SocketChannel out)
         {
             ByteBuffer bbuf = ByteBuffer.allocate(BUFF_LEN);
-            int size = 0;
+            int size, r_size = 0, w_size = 0;
             while (true) {
+                bbuf.clear();
+                size = 0;
                 try{
-                    bbuf.clear();
                     size = in.read(bbuf);
                     if (size <= 0) {
+                        System.out.println(size + "");
                         break;
                     }
+                    r_size += size;
                     bbuf.flip();
-                    while(bbuf.hasRemaining()) {
-                        out.write(bbuf);
-                    }
-                }catch(SocketTimeoutException e){
-                    // ignore
-                    e.printStackTrace();
-                    break;
+                    while(bbuf.hasRemaining())
+                        w_size += out.write(bbuf);
                 }catch(Exception e){
                     e.printStackTrace();
                     break;
                 }
             }
-            // no mater input/ouput reach eof shutdown all stream
-            // this logic is strange, but it could avoid CLOST_WAIT issue
+            // check read write size
+            if (r_size != w_size) {
+                System.err.println("Read size: " + r_size + " != write size: " + w_size);
+            }
+            // no mater input/ouput reach eos shutdown all stream
+            // It could avoid CLOST_WAIT issue
             shutDownAll(in, out);
         }
 

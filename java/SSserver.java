@@ -24,7 +24,7 @@ public class SSserver {
         final private int ADDR_TYPE_IPV4 = 0x01;
         final private int ADDR_TYPE_HOST = 0x03;
 
-        private SocketChannel mClientChannel;
+        private Socket mClient;
         private InetSocketAddress mRemoteAddr;
 
         /*
@@ -35,10 +35,8 @@ public class SSserver {
          *  addr type 0x4: addr = ipv6 | 19 bytes?
          *
          */
-        private void parseHead(SocketChannel client) throws IOException
+        private void parseHead(Socket local) throws IOException
         {
-            Socket local = client.socket();
-            //still use socket I/O here.
             DataInputStream in = new DataInputStream(local.getInputStream());
 
             int len = 0;
@@ -70,17 +68,17 @@ public class SSserver {
             //don't close this input stream, it will close the socket too.
         }
 
-        private void connectAndSendData(final SocketChannel local)
+        private void connectAndSendData(final Socket local)
         {
             int CONNECT_TIMEOUT = 3000;
 
-            try(final SocketChannel remote = SocketChannel.open())
+            try(final Socket remote = new Socket())
             {
-                remote.setOption(StandardSocketOptions.TCP_NODELAY, true);
+                remote.setTcpNoDelay(true);
                 //Still use socket with timeout since some time, remote is unreachable, then client closed
                 //but this thread is still hold. This will decrease CLOSE_wait state
-                System.out.println("Connecting " + mRemoteAddr + " from " + local.getRemoteAddress());
-                remote.socket().connect(mRemoteAddr, CONNECT_TIMEOUT);
+                System.out.println("Connecting " + mRemoteAddr + " from " + local.getRemoteSocketAddress());
+                remote.connect(mRemoteAddr, CONNECT_TIMEOUT);
 
                 // Full-Duplex need 2 threads.
                 // Start local -> remote first.
@@ -103,37 +101,35 @@ public class SSserver {
 
         }
 
-        private void shutDownAll(SocketChannel in, SocketChannel out)
+        synchronized private void shutDownAll(Socket s)
         {
+            if(s.isInputShutdown()) return;
             try{
-                in.shutdownInput();
-                out.shutdownInput();
-                in.shutdownOutput();
-                out.shutdownOutput();
+                s.shutdownInput();
+                s.shutdownOutput();
             }catch(IOException e){
                 e.printStackTrace();
             }
         }
 
-        private void sendData(SocketChannel in, SocketChannel out)
+        private void sendData(Socket in, Socket out)
         {
-            ByteBuffer bbuf = ByteBuffer.allocate(BUFF_LEN);
+            byte buf[] = new byte[BUFF_LEN];
             int size, r_size = 0, w_size = 0;
-            while (true) {
-                bbuf.clear();
-                size = 0;
-                try{
-                    size = in.read(bbuf);
+            try{
+                DataInputStream input = new DataInputStream(in.getInputStream());
+                DataOutputStream output = new DataOutputStream(out.getOutputStream());
+                while (true) {
+                    size = 0;
+                    size = input.read(buf, 0, BUFF_LEN);
                     if (size <= 0)
                         break;
                     r_size += size;
-                    bbuf.flip();
-                    while(bbuf.hasRemaining())
-                        w_size += out.write(bbuf);
-                }catch(IOException e){
-                    e.printStackTrace();
-                    break;
+                    output.write(buf, 0, size);
                 }
+                w_size = output.size();
+            }catch(IOException e){
+                e.printStackTrace();
             }
             // check read write size
             if (r_size != w_size) {
@@ -142,13 +138,14 @@ public class SSserver {
             // no mater input/ouput reach eos shutdown all stream
             // otherwise, other IO thread may wait in read when client close the socket.
             // it could avoid CLOST_WAIT issue
-            shutDownAll(in, out);
+            shutDownAll(in);
+            shutDownAll(out);
         }
 
         public void run()
         {
             //make sure this channel could be closed
-            try(SocketChannel client = mClientChannel){
+            try(Socket client = mClient){
                 parseHead(client);
                 connectAndSendData(client);
             }catch(IOException e){
@@ -156,9 +153,9 @@ public class SSserver {
             }
         }
 
-        public SServerInstance(SocketChannel c)
+        public SServerInstance(Socket c)
         {
-            mClientChannel = c;
+            mClient = c;
         }
 
     }
@@ -167,13 +164,13 @@ public class SSserver {
     {
         int port = 2048;
         Executor service = Executors.newCachedThreadPool();
-        try(ServerSocketChannel server = ServerSocketChannel.open()) {
+        try(ServerSocket server = new ServerSocket()) {
             server.bind(new InetSocketAddress(port));
-            server.setOption(StandardSocketOptions.SO_REUSEADDR, true);
+            server.setReuseAddress(true);
             while (true) {
-                SocketChannel local = server.accept();
-                local.setOption(StandardSocketOptions.TCP_NODELAY, true);
-                local.setOption(StandardSocketOptions.SO_LINGER, 1000);
+                Socket local = server.accept();
+                local.setTcpNoDelay(true);
+                local.setSoLinger(true, 1);
                 service.execute(new SServerInstance(local));
             }
         }catch(IOException e){

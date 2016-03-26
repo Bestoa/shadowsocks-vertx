@@ -167,18 +167,21 @@ class Encryptor(object):
 
 if __name__ == "__main__":
     password = "881123"
-    method = "aes-128-cfb"
+    method = "aes-256-cfb"
 
     encryptor = Encryptor(password, method)
 
-    source1 = open("source", "rb")
-    target1 = open("py_encrypt", "wb")
+    source1 = open("out/test_source", "rb")
+    target1 = open("out/test_encrypt_py", "wb")
     target1.write(encryptor.encrypt(source1.read()))
     target1.close()
     source1.close()
 
-    source2 = open("py_encrypt", "rb")
-    target2 = open("py_decrypt_py", "wb")
+    if len(sys.argv) > 1:
+        source2 = open("out/test_encrypt_java", "rb")
+    else:
+        source2 = open("out/test_encrypt_py", "rb")
+    target2 = open("out/test_decrypt_py", "wb")
     target2.write(encryptor.decrypt(source2.read()))
     target2.close()
     source2.close()

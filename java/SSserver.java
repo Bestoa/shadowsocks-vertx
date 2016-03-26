@@ -10,6 +10,7 @@ import java.net.Socket;
 import java.net.InetSocketAddress;
 import java.net.InetAddress;
 import java.net.StandardSocketOptions;
+import java.net.SocketTimeoutException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -92,21 +93,21 @@ public class SSserver {
                 sendData(remote, local);
 
                 t.join();
+            }catch(SocketTimeoutException e){
+                //ignore
+            }catch(InterruptedException e){
+                //ignore
             }catch(IOException e){
                 System.err.println("Target address: " + mRemoteAddr);
                 e.printStackTrace();
-            }catch(InterruptedException e){
-                //ignore
             }
 
         }
 
-        synchronized private void shutDownAll(Socket s)
+        synchronized private void shutDownInput(Socket s)
         {
-            if(s.isInputShutdown()) return;
             try{
                 s.shutdownInput();
-                s.shutdownOutput();
             }catch(IOException e){
                 e.printStackTrace();
             }
@@ -135,11 +136,9 @@ public class SSserver {
             if (r_size != w_size) {
                 System.err.println("Read size: " + r_size + " != write size: " + w_size);
             }
-            // no mater input/ouput reach eos shutdown all stream
-            // otherwise, other IO thread may wait in read when client close the socket.
+            // The other thread may wait in read, interrupt it.
             // it could avoid CLOST_WAIT issue
-            shutDownAll(in);
-            shutDownAll(out);
+            shutDownInput(out);
         }
 
         public void run()

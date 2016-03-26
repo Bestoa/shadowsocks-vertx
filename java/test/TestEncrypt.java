@@ -5,15 +5,13 @@ import java.io.OutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
-import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.List;
 
-import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
-import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.CipherOutputStream;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -21,7 +19,7 @@ import javax.crypto.spec.SecretKeySpec;
  * Class created for StackOverflow by owlstead.
  * This is open source, you are free to copy and use for any purpose.
  */
-public class OpenSSLAdapter {
+public class TestEncrypt{
     private static final Charset ASCII = Charset.forName("ASCII");
     private static final int INDEX_KEY = 0;
     private static final int INDEX_IV = 1;
@@ -100,33 +98,47 @@ public class OpenSSLAdapter {
 
     public static void main(String[] args) {
         try {
-
             byte password[] = "881123".getBytes(ASCII);
-
-
-            Cipher aesCFB = Cipher.getInstance("AES/CFB/NoPadding");
             MessageDigest md5 = MessageDigest.getInstance("MD5");
-
-            // --- create key and IV  ---
-
-            // the IV is useless, OpenSSL might as well have use zero's
-            final byte[][] keyAndIV = EVP_BytesToKey( 16, 16, md5, null, password, ITERATIONS);
+            final byte[][] keyAndIV = EVP_BytesToKey(32, 16, md5, null, password, ITERATIONS);
             SecretKeySpec key = new SecretKeySpec(keyAndIV[0], "AES");
-            IvParameterSpec iv = new IvParameterSpec("0000000000000000".getBytes(ASCII));
+            IvParameterSpec encryptIvSpec = new IvParameterSpec(keyAndIV[1]);
 
-            // --- initialize cipher instance and decrypt ---
+            Cipher aesCFBEncrypt = Cipher.getInstance("AES/CFB/NoPadding");
+            aesCFBEncrypt.init(Cipher.ENCRYPT_MODE, key, encryptIvSpec);
 
-            aesCFB.init(Cipher.DECRYPT_MODE, key, iv);
+            byte buf[]  = new byte[4096];
+            InputStream source1 = new FileInputStream("out/test_source");
+            OutputStream target1 = new FileOutputStream("out/test_encrypt_java");
+            target1.write(keyAndIV[1]);
+            CipherOutputStream ctarget1 = new CipherOutputStream(target1, aesCFBEncrypt);
+            while(true) {
+                int size = source1.read(buf);
+                if (size < 0)
+                    break;
+                ctarget1.write(buf, 0, size);
 
-            byte buf[]  = new byte[409600];
-            InputStream source2 = new FileInputStream("py_encrypt");
-            OutputStream target2 = new FileOutputStream("java_encrypt_py");
-            source2.read(buf, 0, 16);
-            CipherInputStream csource2 = new CipherInputStream(source2, aesCFB);
+            }
+            source1.close();
+            ctarget1.close();
+
+            InputStream source2;
+            if (args.length != 1) {
+                source2 = new FileInputStream("out/test_encrypt_java");
+            }else{
+                source2 = new FileInputStream("out/test_encrypt_py");
+            }
+
+            OutputStream target2 = new FileOutputStream("out/test_decrypt_java");
+            byte iv[] = new byte[16];
+            source2.read(iv);
+            IvParameterSpec decryptIvSpec = new IvParameterSpec(iv);
+            Cipher aesCFBDecrypt = Cipher.getInstance("AES/CFB/NoPadding");
+            aesCFBDecrypt.init(Cipher.DECRYPT_MODE, key, decryptIvSpec);
+            CipherInputStream csource2 = new CipherInputStream(source2, aesCFBDecrypt);
             while(true) {
                 int size = csource2.read(buf);
-                System.out.println("size = " + size);
-                if (size <= 0)
+                if (size < 0)
                     break;
                 target2.write(buf, 0, size);
             }

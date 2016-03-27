@@ -20,6 +20,8 @@ import javax.crypto.CipherOutputStream;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import shadowsocks.AES;
+
 public class SSserverUnit implements Runnable {
 
     final private int HEAD_BUFF_LEN = 255;
@@ -31,6 +33,15 @@ public class SSserverUnit implements Runnable {
 
     private Socket mClient;
     private InetSocketAddress mRemoteAddress;
+
+    private void read(InputStream in, byte buf[], int len) throws IOException
+    {
+        int off = 0;
+        while (len > 0) {
+            off += in.read(buf, off, len);
+            len -= off;
+        }
+    }
 
     /*
      *  |addr type: 1 byte| addr | port: 2 bytes with big endian|
@@ -50,10 +61,11 @@ public class SSserverUnit implements Runnable {
         InetAddress addr;
         if (addrtype == ADDR_TYPE_IPV4) {
             byte ipv4[] = new byte[4];
-            in.read(ipv4, 0, 4);
+            read(in, ipv4, 4);
             addr = InetAddress.getByAddress(ipv4);
         }else if (addrtype == ADDR_TYPE_HOST) {
-            len = in.read(buf, 0, in.read());
+            len = in.read();
+            read(in, buf, len);
             addr = InetAddress.getByName(new String(buf, 0, len));
         } else {
             //do not support other addrtype now.
@@ -88,9 +100,11 @@ public class SSserverUnit implements Runnable {
         try{
             while (true) {
                 size = input.read(buf, 0, BUFF_LEN);
+                System.out.println("Size = " + size);
                 if (size < 0)
                     break;
                 output.write(buf, 0, size);
+                output.flush();
             }
         }catch(IOException e){
             e.printStackTrace();
@@ -156,14 +170,23 @@ public class SSserverUnit implements Runnable {
     {
         //make sure this channel could be closed
         try(Socket client = mClient){
-            try(CipherInputStream in = new CipherInputStream(client.getInputStream(), new NullCipher());
-                    CipherOutputStream out = new CipherOutputStream(client.getOutputStream(), new NullCipher()))
+
+            DataInputStream din = new DataInputStream(client.getInputStream());
+            DataOutputStream dout = new DataOutputStream(client.getOutputStream());
+
+            byte iv[] = new byte[16];
+
+            //din.read(iv, 0, 16);
+            //dout.write(iv, 0, 16);
+
+            try(CipherInputStream in = new CipherInputStream(din, new NullCipher()/*AES.getDeCipher("881123", iv, 256)*/);
+                    CipherOutputStream out = new CipherOutputStream(dout, new NullCipher()/*AES.getCipher("881123", iv, 256)*/))
             {
                 handleTCPData(client, in, out);
-            }catch(IOException e){
+            }catch(Exception e){
                 throw e;
             }
-        }catch(IOException e){
+        }catch(Exception e){
             e.printStackTrace();
         }
     }

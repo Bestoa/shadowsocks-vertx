@@ -34,15 +34,6 @@ public class SSserverUnit implements Runnable {
     private Socket mClient;
     private InetSocketAddress mRemoteAddress;
 
-    private void read(InputStream in, byte buf[], int len) throws IOException
-    {
-        int off = 0;
-        while (len > 0) {
-            off += in.read(buf, off, len);
-            len -= off;
-        }
-    }
-
     /*
      *  |addr type: 1 byte| addr | port: 2 bytes with big endian|
      *
@@ -51,8 +42,10 @@ public class SSserverUnit implements Runnable {
      *  addr type 0x4: addr = ipv6 | 19 bytes?
      *
      */
-    private InetSocketAddress parseHead(InputStream in) throws IOException
+    private InetSocketAddress parseHead(Socket local) throws IOException
     {
+
+        DataInputStream in = new DataInputStream(local.getInputStream());
         int len = 0;
         int addrtype = in.read();
         byte buf[] = new byte[HEAD_BUFF_LEN];
@@ -61,11 +54,11 @@ public class SSserverUnit implements Runnable {
         InetAddress addr;
         if (addrtype == ADDR_TYPE_IPV4) {
             byte ipv4[] = new byte[4];
-            read(in, ipv4, 4);
+            in.read(ipv4, 0, 4);
             addr = InetAddress.getByAddress(ipv4);
         }else if (addrtype == ADDR_TYPE_HOST) {
             len = in.read();
-            read(in, buf, len);
+            in.read(buf, 0, len);
             addr = InetAddress.getByName(new String(buf, 0, len));
         } else {
             //do not support other addrtype now.
@@ -84,7 +77,7 @@ public class SSserverUnit implements Runnable {
 
     // The other thread may wait in read, interrupt it.
     // it could avoid CLOST_WAIT issue
-    private synchronized void shutDownInput(Socket s)
+    private synchronized void shutdownInput(Socket s)
     {
         try{
             s.shutdownInput();
@@ -93,56 +86,46 @@ public class SSserverUnit implements Runnable {
         }
     }
 
-    private void send(InputStream input, OutputStream output)
+    private void send(Socket source, Socket target)
     {
         byte buf[] = new byte[BUFF_LEN];
         int size;
         try{
+            DataInputStream in = new DataInputStream(source.getInputStream());
+            DataOutputStream out = new DataOutputStream(target.getOutputStream());
             while (true) {
-                size = input.read(buf, 0, BUFF_LEN);
-                System.out.println("Size = " + size);
+                size = in.read(buf, 0, BUFF_LEN);
                 if (size < 0)
                     break;
-                output.write(buf, 0, size);
-                output.flush();
+                out.write(buf, 0, size);
             }
         }catch(IOException e){
             e.printStackTrace();
         }
+        shutdownInput(target);
     }
 
-    private void doHandleTCPData(final Socket local,
-            final CipherInputStream lin,
-            final CipherOutputStream lout,
-            final Socket remote) throws IOException,InterruptedException
+    private void doHandleTCPData(final Socket local, final Socket remote) throws IOException,InterruptedException
     {
-        try(final DataInputStream rin = new DataInputStream(remote.getInputStream());
-                final DataOutputStream rout = new DataOutputStream(remote.getOutputStream());)
-        {
-            // Full-Duplex need 2 threads.
-            // Start local -> remote first.
-            Thread t = new Thread(new Runnable() {
-                public void run() {
-                    send(lin, rout);
-                    shutDownInput(remote);
-                }
-            });
-            t.start();
+        // Full-Duplex need 2 threads.
+        // Start local -> remote first.
+        Thread t = new Thread(new Runnable() {
+            public void run() {
+                send(local, remote);
+            }
+        });
+        t.start();
 
-            send(rin, lout);
-            shutDownInput(local);
+        send(remote, local);
 
-            t.join();
-        }catch(IOException e){
-            throw e;
-        }
+        t.join();
     }
 
-    private void handleTCPData(Socket local, CipherInputStream lin, CipherOutputStream lout) throws IOException
+    private void handleTCPData(Socket local) throws IOException
     {
         int CONNECT_TIMEOUT = 3000;
 
-        mRemoteAddress = parseHead(lin);
+        mRemoteAddress = parseHead(local);
 
         try(Socket remote = new Socket();)
         {
@@ -152,7 +135,7 @@ public class SSserverUnit implements Runnable {
             System.out.println("Connecting " + mRemoteAddress + " from " + local.getRemoteSocketAddress());
             remote.connect(mRemoteAddress, CONNECT_TIMEOUT);
 
-            doHandleTCPData(local, lin, lout, remote);
+            doHandleTCPData(local, remote);
 
         }catch(SocketTimeoutException e){
             //ignore
@@ -170,22 +153,7 @@ public class SSserverUnit implements Runnable {
     {
         //make sure this channel could be closed
         try(Socket client = mClient){
-
-            DataInputStream din = new DataInputStream(client.getInputStream());
-            DataOutputStream dout = new DataOutputStream(client.getOutputStream());
-
-            byte iv[] = new byte[16];
-
-            //din.read(iv, 0, 16);
-            //dout.write(iv, 0, 16);
-
-            try(CipherInputStream in = new CipherInputStream(din, new NullCipher()/*AES.getDeCipher("881123", iv, 256)*/);
-                    CipherOutputStream out = new CipherOutputStream(dout, new NullCipher()/*AES.getCipher("881123", iv, 256)*/))
-            {
-                handleTCPData(client, in, out);
-            }catch(Exception e){
-                throw e;
-            }
+            handleTCPData(client);
         }catch(Exception e){
             e.printStackTrace();
         }

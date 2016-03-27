@@ -1,7 +1,6 @@
 default:
-	javac SSserver.java -Xlint
-
+	javac shadowsocks/*.java -Xlint
 run:
-	java SSserver
+	java shadowsocks/SSserver
 clean:
-	rm -rf *.class
+	rm -rf shadowsocks/*.class

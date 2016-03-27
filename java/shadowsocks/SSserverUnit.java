@@ -13,6 +13,13 @@ import java.net.InetSocketAddress;
 import java.net.InetAddress;
 import java.net.SocketTimeoutException;
 
+import javax.crypto.Cipher;
+import javax.crypto.NullCipher;
+import javax.crypto.CipherInputStream;
+import javax.crypto.CipherOutputStream;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+
 public class SSserverUnit implements Runnable {
 
     final private int HEAD_BUFF_LEN = 255;
@@ -33,10 +40,8 @@ public class SSserverUnit implements Runnable {
      *  addr type 0x4: addr = ipv6 | 19 bytes?
      *
      */
-    private void parseHead(Socket local) throws IOException
+    private InetSocketAddress parseHead(InputStream in) throws IOException
     {
-        DataInputStream in = new DataInputStream(local.getInputStream());
-
         int len = 0;
         int addrtype = in.read();
         byte buf[] = new byte[HEAD_BUFF_LEN];
@@ -62,7 +67,7 @@ public class SSserverUnit implements Runnable {
         port.put(buf[0]);
         port.put(buf[1]);
 
-        mRemoteAddress = new InetSocketAddress(addr, port.getShort(0));
+        return new InetSocketAddress(addr, port.getShort(0));
     }
 
     // The other thread may wait in read, interrupt it.
@@ -92,11 +97,12 @@ public class SSserverUnit implements Runnable {
         }
     }
 
-    private void doHandleTCPData(final Socket local, final Socket remote) throws IOException,InterruptedException
+    private void doHandleTCPData(final Socket local,
+            final CipherInputStream lin,
+            final CipherOutputStream lout,
+            final Socket remote) throws IOException,InterruptedException
     {
-        try(final DataInputStream lin = new DataInputStream(local.getInputStream());
-                final DataInputStream rin = new DataInputStream(remote.getInputStream());
-                final DataOutputStream lout = new DataOutputStream(local.getOutputStream());
+        try(final DataInputStream rin = new DataInputStream(remote.getInputStream());
                 final DataOutputStream rout = new DataOutputStream(remote.getOutputStream());)
         {
             // Full-Duplex need 2 threads.
@@ -118,9 +124,11 @@ public class SSserverUnit implements Runnable {
         }
     }
 
-    private void handleTCPData(Socket local)
+    private void handleTCPData(Socket local, CipherInputStream lin, CipherOutputStream lout) throws IOException
     {
         int CONNECT_TIMEOUT = 3000;
+
+        mRemoteAddress = parseHead(lin);
 
         try(Socket remote = new Socket();)
         {
@@ -130,7 +138,7 @@ public class SSserverUnit implements Runnable {
             System.out.println("Connecting " + mRemoteAddress + " from " + local.getRemoteSocketAddress());
             remote.connect(mRemoteAddress, CONNECT_TIMEOUT);
 
-            doHandleTCPData(local, remote);
+            doHandleTCPData(local, lin, lout, remote);
 
         }catch(SocketTimeoutException e){
             //ignore
@@ -148,8 +156,13 @@ public class SSserverUnit implements Runnable {
     {
         //make sure this channel could be closed
         try(Socket client = mClient){
-            parseHead(client);
-            handleTCPData(client);
+            try(CipherInputStream in = new CipherInputStream(client.getInputStream(), new NullCipher());
+                    CipherOutputStream out = new CipherOutputStream(client.getOutputStream(), new NullCipher()))
+            {
+                handleTCPData(client, in, out);
+            }catch(IOException e){
+                throw e;
+            }
         }catch(IOException e){
             e.printStackTrace();
         }

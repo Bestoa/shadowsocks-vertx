@@ -21,7 +21,6 @@ import javax.crypto.CipherOutputStream;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-import shadowsocks.AES;
 import shadowsocks.crypto.ICrypt;
 import shadowsocks.crypto.AesCrypt;
 

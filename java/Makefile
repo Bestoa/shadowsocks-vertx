@@ -1,4 +1,4 @@
-default: ss crypto
+default: crypto ss
 crypto:
 	javac -cp lib/bcprov-jdk15on-154.jar shadowsocks/crypto/*.java -Xlint
 ss:

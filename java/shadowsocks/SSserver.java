@@ -32,7 +32,7 @@ public class SSserver {
 
     public static void main(String argv[])
     {
-        System.out.println("Shadowsocks-Java v0.04");
+        System.out.println("Shadowsocks-Java v0.1");
         new SSserver().start();;
     }
 }

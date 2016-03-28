@@ -2,30 +2,37 @@ package shadowsocks.crypto;
 
 import javax.crypto.SecretKey;
 import java.io.UnsupportedEncodingException;
+import java.security.NoSuchAlgorithmException;
 import java.security.MessageDigest;
-import java.util.logging.Logger;
+
+import shadowsocks.crypto.CryptoException;
 
 /**
  * Shadowsocks key generator
  */
 public class ShadowSocksKey implements SecretKey {
 
+    private static final long serialVersionUID = 1L;
+
     private final static int KEY_LENGTH = 32;
     private byte[] mKey;
     private int mLength;
 
-    public ShadowSocksKey(String password) {
+    public ShadowSocksKey(String password) throws CryptoException
+    {
         mLength = KEY_LENGTH;
         mKey = init(password);
     }
 
-    public ShadowSocksKey(String password, int length) {
+    public ShadowSocksKey(String password, int length) throws CryptoException
+    {
         // TODO: Invalid key length
         mLength = length;
         mKey = init(password);
     }
 
-    private byte[] init(String password) {
+    private byte[] init(String password) throws CryptoException
+    {
         MessageDigest md = null;
         byte[] keys = new byte[KEY_LENGTH];
         byte[] temp = null;
@@ -33,17 +40,11 @@ public class ShadowSocksKey implements SecretKey {
         byte[] passwordBytes = null;
         int i = 0;
 
-        try {
+        try{
             md = MessageDigest.getInstance("MD5");
             passwordBytes = password.getBytes("ASCII");
-        }
-        /*
-        catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
-        */
-        catch (Exception e) {
-            return null;
+        }catch(NoSuchAlgorithmException | UnsupportedEncodingException e){
+            throw new CryptoException(e);
         }
 
         while (i < keys.length) {

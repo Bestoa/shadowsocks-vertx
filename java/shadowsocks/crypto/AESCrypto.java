@@ -13,10 +13,12 @@ import java.security.InvalidAlgorithmParameterException;
 import java.util.HashMap;
 import java.util.Map;
 
+import shadowsocks.crypto.CryptoException;
+
 /**
  * AES Crypt implementation
  */
-public class AesCrypt extends CryptBase {
+public class AESCrypto extends BaseCrypto {
 
     public final static String CIPHER_AES_128_CFB = "aes-128-cfb";
     public final static String CIPHER_AES_192_CFB = "aes-192-cfb";
@@ -25,19 +27,7 @@ public class AesCrypt extends CryptBase {
     public final static String CIPHER_AES_192_OFB = "aes-192-ofb";
     public final static String CIPHER_AES_256_OFB = "aes-256-ofb";
 
-    public static Map<String, String> getCiphers() {
-        Map<String, String> ciphers = new HashMap<>();
-        ciphers.put(CIPHER_AES_128_CFB, AesCrypt.class.getName());
-        ciphers.put(CIPHER_AES_192_CFB, AesCrypt.class.getName());
-        ciphers.put(CIPHER_AES_256_CFB, AesCrypt.class.getName());
-        ciphers.put(CIPHER_AES_128_OFB, AesCrypt.class.getName());
-        ciphers.put(CIPHER_AES_192_OFB, AesCrypt.class.getName());
-        ciphers.put(CIPHER_AES_256_OFB, AesCrypt.class.getName());
-
-        return ciphers;
-    }
-
-    public AesCrypt(String name, String password) {
+    public AESCrypto(String name, String password) throws CryptoException {
         super(name, password);
     }
 
@@ -57,7 +47,8 @@ public class AesCrypt extends CryptBase {
     }
 
     @Override
-    protected StreamBlockCipher getCipher(boolean isEncrypted) throws InvalidAlgorithmParameterException {
+    protected StreamBlockCipher getCipher(boolean isEncrypted) throws CryptoException
+    {
         AESFastEngine engine = new AESFastEngine();
         StreamBlockCipher cipher;
 
@@ -80,7 +71,7 @@ public class AesCrypt extends CryptBase {
             cipher = new OFBBlockCipher(engine, getIVLength() * 8);
         }
         else {
-            throw new InvalidAlgorithmParameterException(mName);
+            throw new CryptoException("Invalid AlgorithmParameter: " + mName);
         }
 
         return cipher;
@@ -94,25 +85,24 @@ public class AesCrypt extends CryptBase {
     }
 
     @Override
-    protected SecretKey getKey() {
-        return new SecretKeySpec(mSSKey.getEncoded(), "AES");
+    protected SecretKey generateKey(ShadowSocksKey key) {
+        return new SecretKeySpec(key.getEncoded(), "AES");
     }
 
     @Override
     protected void doEncrypt(byte[] data, ByteArrayOutputStream stream) {
-        int noBytesProcessed;
+        int size;
         byte[] buffer = new byte[data.length];
-
-        noBytesProcessed = mEncryptCipher.processBytes(data, 0, data.length, buffer, 0);
-        stream.write(buffer, 0, noBytesProcessed);
+        size = mEncryptCipher.processBytes(data, 0, data.length, buffer, 0);
+        stream.write(buffer, 0, size);
     }
 
     @Override
     protected void doDecrypt(byte[] data, ByteArrayOutputStream stream) {
-        int noBytesProcessed;
+        int size;
         byte[] buffer = new byte[data.length];
 
-        noBytesProcessed = mDecryptCipher.processBytes(data, 0, data.length, buffer, 0);
-        stream.write(buffer, 0, noBytesProcessed);
+        size = mDecryptCipher.processBytes(data, 0, data.length, buffer, 0);
+        stream.write(buffer, 0, size);
     }
 }

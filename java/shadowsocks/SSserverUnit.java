@@ -14,15 +14,11 @@ import java.net.InetSocketAddress;
 import java.net.InetAddress;
 import java.net.SocketTimeoutException;
 
-import javax.crypto.Cipher;
-import javax.crypto.NullCipher;
-import javax.crypto.CipherInputStream;
-import javax.crypto.CipherOutputStream;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
+import shadowsocks.crypto.SSCrypto;
+import shadowsocks.crypto.AESCrypto;
+import shadowsocks.crypto.CryptoException;
 
-import shadowsocks.crypto.ICrypt;
-import shadowsocks.crypto.AesCrypt;
+import shadowsocks.util.Config;
 
 public class SSserverUnit implements Runnable {
 
@@ -37,41 +33,40 @@ public class SSserverUnit implements Runnable {
     private InetSocketAddress mRemoteAddress;
 
     /*
-     *  |addr type: 1 byte| addr | port: 2 bytes with big endian|
+     *  IV |addr type: 1 byte| addr | port: 2 bytes with big endian|
      *
      *  addr type 0x1: addr = ipv4 | 4 bytes
      *  addr type 0x3: addr = host address string | 1 byte(string length) + string
      *  addr type 0x4: addr = ipv6 | 19 bytes?
      *
      */
-    private InetSocketAddress parseHead(Socket local) throws IOException
+    private InetSocketAddress parseHead(Socket local) throws IOException, CryptoException
     {
 
         DataInputStream in = new DataInputStream(local.getInputStream());
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ByteArrayOutputStream data = new ByteArrayOutputStream();
 
-        int len = 0;
-        int addrtype;
         byte buf[] = new byte[HEAD_BUFF_LEN];
 
-        in.read(buf, 0, 17);
+        // Read IV + address type length.
+        in.read(buf, 0, mCryptor.getIVLength() + 1);
 
-        mCrypt.decrypt(buf, 17, baos);
-        addrtype = baos.toByteArray()[0];
+        mCryptor.decrypt(buf, mCryptor.getIVLength() + 1, data);
+        int addrtype = data.toByteArray()[0];
         //get addr
         InetAddress addr;
         if (addrtype == ADDR_TYPE_IPV4) {
             byte ipv4[] = new byte[4];
             in.read(ipv4, 0, 4);
-            mCrypt.decrypt(ipv4, baos);
-            addr = InetAddress.getByAddress(baos.toByteArray());
+            mCryptor.decrypt(ipv4, data);
+            addr = InetAddress.getByAddress(data.toByteArray());
         }else if (addrtype == ADDR_TYPE_HOST) {
             in.read(buf, 0, 1);
-            mCrypt.decrypt(buf, 1, baos);
-            len = baos.toByteArray()[0];
+            mCryptor.decrypt(buf, 1, data);
+            int len = data.toByteArray()[0];
             in.read(buf, 0, len);
-            mCrypt.decrypt(buf, len, baos);
-            addr = InetAddress.getByName(new String(baos.toByteArray(), 0, len));
+            mCryptor.decrypt(buf, len, data);
+            addr = InetAddress.getByName(new String(data.toByteArray(), 0, len));
         } else {
             //do not support other addrtype now.
             throw new IOException("Unsupport addr type: " + addrtype + "!");
@@ -79,12 +74,13 @@ public class SSserverUnit implements Runnable {
 
         //get port
         in.read(buf, 0, 2);
-        mCrypt.decrypt(buf, 2, baos);
+        mCryptor.decrypt(buf, 2, data);
         ByteBuffer port = ByteBuffer.allocate(2);
         port.order(ByteOrder.BIG_ENDIAN);
-        port.put(baos.toByteArray()[0]);
-        port.put(baos.toByteArray()[1]);
+        port.put(data.toByteArray()[0]);
+        port.put(data.toByteArray()[1]);
 
+        // if port > 32767 the short will < 0
         return new InetSocketAddress(addr, (int)(port.getShort(0)&0xFFFF));
     }
 
@@ -106,7 +102,7 @@ public class SSserverUnit implements Runnable {
     {
         byte rbuf[] = new byte[BUFF_LEN];
         byte wbuf[];
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ByteArrayOutputStream data = new ByteArrayOutputStream();
         int size;
         try{
             DataInputStream in = new DataInputStream(source.getInputStream());
@@ -116,14 +112,14 @@ public class SSserverUnit implements Runnable {
                 if (size < 0)
                     break;
                 if (direct == LOCAL2REMOTE) {
-                    mCrypt.decrypt(rbuf, size, baos);
+                    mCryptor.decrypt(rbuf, size, data);
                 }else{
-                    mCrypt.encrypt(rbuf, size, baos);
+                    mCryptor.encrypt(rbuf, size, data);
                 }
-                wbuf = baos.toByteArray();
+                wbuf = data.toByteArray();
                 out.write(wbuf, 0, wbuf.length);
             }
-        }catch(IOException e){
+        }catch(IOException | CryptoException e){
             e.printStackTrace();
         }
         shutdownInput(target);
@@ -145,7 +141,7 @@ public class SSserverUnit implements Runnable {
         t.join();
     }
 
-    private void handleTCPData(Socket local) throws IOException
+    private void handleTCPData(Socket local) throws IOException, CryptoException
     {
         int CONNECT_TIMEOUT = 3000;
 
@@ -172,13 +168,13 @@ public class SSserverUnit implements Runnable {
 
     }
 
-    public ICrypt mCrypt;
+    public SSCrypto mCryptor;
 
     public void run()
     {
         //make sure this channel could be closed
         try(Socket client = mClient){
-            mCrypt = new AesCrypt("aes-128-cfb", "881123");
+            mCryptor = new AESCrypto(Config.get().getMethod(), Config.get().getPassword());
             handleTCPData(client);
         }catch(Exception e){
             e.printStackTrace();

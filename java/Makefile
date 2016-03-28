@@ -1,13 +1,12 @@
-default: crypto util ss
+default: crypto util ss jar
 crypto:
 	javac -cp lib/bcprov-jdk15on-154.jar shadowsocks/crypto/*.java -Xlint
 ss:
 	javac shadowsocks/*.java -Xlint
 util:
 	javac -cp lib/java-getopt-1.0.13.jar shadowsocks/util/*.java -Xlint
-run:
-	java -cp ".:lib/bcprov-jdk15on-154.jar:lib/java-getopt-1.0.13.jar" shadowsocks.SSserver
+jar:
+	 jar cvfm ss.jar build.mf `find . -name *.class|xargs`
 clean:
-	rm -rf shadowsocks/*.class
-	rm -rf shadowsocks/crypto/*.class
-	rm -rf shadowsocks/util/*.class
+	rm -rf *.jar
+	rm -rf `find . -name *.class|xargs`

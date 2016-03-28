@@ -8,13 +8,14 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import shadowsocks.SSserverUnit;
+import shadowsocks.util.Config;
 
 public class SSserver {
 
 
     public void start()
     {
-        int port = 2048;
+        int port = Config.get().getPort();
         Executor service = Executors.newCachedThreadPool();
         try(ServerSocket server = new ServerSocket()) {
             server.bind(new InetSocketAddress(port));
@@ -32,7 +33,8 @@ public class SSserver {
 
     public static void main(String argv[])
     {
-        System.out.println("Shadowsocks-Java v0.1");
+        System.out.println("Shadowsocks-Java v0.2");
+        Config.getConfigFromArgv(argv);
         new SSserver().start();;
     }
 }

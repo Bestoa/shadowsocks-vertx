@@ -1,4 +1,4 @@
-sadowsocks-java
+shadowsocks-java
 ================
 
 Prepare to rewrite simple Shadowsock with Java.
@@ -10,10 +10,18 @@ Simple server, support -m -k -p.
 Crypto method, AES-128-CFB/AES-192-CFB/AES-256/CFB.
 
 #How to run:
-cd  java
+=======
+### (1) Before you start
+You must have 'gradle' installed first.
 
-./setup.sh (Will download bc.jar + getopt.jar and make).
+### (2.1) instant run
+$ gradle run
 
-The default password is 123456, port is 2048, method is aes-256-cfb.
+Then you get your ss server ready on default port 2048 with default password '123456'.
 
-java -jar ss.jar
+### (2.2) generate distributable jar
+$ gradle jar
+
+Then you get build/lib/xx.jar, now you can run it as:
+
+$ java -jar build/lib/xx.jar -p 2048 -k 123456

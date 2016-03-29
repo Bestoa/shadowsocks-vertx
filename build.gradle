@@ -1,0 +1,30 @@
+version '1.0'
+
+apply plugin: 'java'
+
+sourceCompatibility = 1.7
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile 'gnu.getopt:java-getopt:1.0.13'
+    compile 'org.bouncycastle:bcprov-jdk15on:1.54'
+}
+
+task run(type: JavaExec, dependsOn: 'classes') {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'shadowsocks.SSserver'
+    args = ['-p', '2048', '-k', '123456']
+}
+
+jar() {
+    manifest {
+        attributes 'Implementation-Title': 'ShadowSocks-Java',
+                   'Implementation-Version': version,
+                   'Main-Class': 'shadowsocks.SSserver'
+    }
+    from {configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }} //pack dependent jar
+    exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA' 
+}

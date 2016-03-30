@@ -16,7 +16,7 @@ dependencies {
 task run(type: JavaExec, dependsOn: 'classes') {
     classpath = sourceSets.main.runtimeClasspath
     main = 'shadowsocks.SSserver'
-    args = ['-p', '2048', '-k', '123456']
+    args = ['-p', '8388', '-k', '123456']
 }
 
 jar() {

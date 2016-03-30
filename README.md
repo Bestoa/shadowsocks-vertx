@@ -17,7 +17,7 @@ You must have 'gradle' installed first.
 ### (2.1) instant run
 $ gradle run
 
-Then you get your ss server ready on default port 2048 with default password '123456'.
+Then you get your ss server ready on default port 8388 with default password '123456'.
 
 ### (2.2) generate distributable jar
 $ gradle jar

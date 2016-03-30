@@ -13,7 +13,7 @@ public class Config{
 
     final private static String DEFAULT_METHOD = "aes-256-cfb";
     final private static String DEFAULT_PASSWORD = "123456";
-    final private static int DEFAULT_PORT = 2048;
+    final private static int DEFAULT_PORT = 8388;
 
 
     public void setPassowrd(String p)

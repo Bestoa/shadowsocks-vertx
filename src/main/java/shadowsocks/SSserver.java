@@ -20,6 +20,7 @@ public class SSserver {
         try(ServerSocket server = new ServerSocket()) {
             server.bind(new InetSocketAddress(port));
             server.setReuseAddress(true);
+            System.out.println("starting server at " + server.getLocalSocketAddress());
             while (true) {
                 Socket local = server.accept();
                 local.setTcpNoDelay(true);

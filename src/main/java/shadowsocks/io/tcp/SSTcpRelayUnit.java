@@ -1,4 +1,4 @@
-package shadowsocks;
+package shadowsocks.io.tcp;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteOrder;
@@ -20,7 +20,7 @@ import shadowsocks.crypto.CryptoException;
 
 import shadowsocks.util.Config;
 
-public class SSserverUnit implements Runnable {
+public class SSTcpRelayUnit implements Runnable {
 
     final private int HEAD_BUFF_LEN = 255;
 
@@ -31,6 +31,12 @@ public class SSserverUnit implements Runnable {
 
     private Socket mClient;
     private InetSocketAddress mRemoteAddress;
+
+    public SSCrypto mCryptor;
+
+    final private int LOCAL2REMOTE = 1;
+    final private int REMOTE2LOCAL = 2;
+
 
     /*
      *  IV |addr type: 1 byte| addr | port: 2 bytes with big endian|
@@ -95,9 +101,6 @@ public class SSserverUnit implements Runnable {
         }
     }
 
-    final private int LOCAL2REMOTE = 1;
-    final private int REMOTE2LOCAL = 2;
-
     private void send(Socket source, Socket target, int direct)
     {
         byte rbuf[] = new byte[BUFF_LEN];
@@ -125,7 +128,7 @@ public class SSserverUnit implements Runnable {
         shutdownInput(target);
     }
 
-    private void doHandleTCPData(final Socket local, final Socket remote) throws IOException,InterruptedException
+    private void doTcpRelay(final Socket local, final Socket remote) throws IOException,InterruptedException
     {
         // Full-Duplex need 2 threads.
         // Start local -> remote first.
@@ -141,7 +144,7 @@ public class SSserverUnit implements Runnable {
         t.join();
     }
 
-    private void handleTCPData(Socket local) throws IOException, CryptoException
+    private void TcpRelay(Socket local) throws IOException, CryptoException
     {
         int CONNECT_TIMEOUT = 3000;
 
@@ -155,7 +158,7 @@ public class SSserverUnit implements Runnable {
             System.out.println("Connecting " + mRemoteAddress + " from " + local.getRemoteSocketAddress());
             remote.connect(mRemoteAddress, CONNECT_TIMEOUT);
 
-            doHandleTCPData(local, remote);
+            doTcpRelay(local, remote);
 
         }catch(SocketTimeoutException e){
             //ignore
@@ -168,20 +171,18 @@ public class SSserverUnit implements Runnable {
 
     }
 
-    public SSCrypto mCryptor;
-
     public void run()
     {
         //make sure this channel could be closed
         try(Socket client = mClient){
             mCryptor = new AESCrypto(Config.get().getMethod(), Config.get().getPassword());
-            handleTCPData(client);
+            TcpRelay(client);
         }catch(Exception e){
             e.printStackTrace();
         }
     }
 
-    public SSserverUnit(Socket c)
+    public SSTcpRelayUnit (Socket c)
     {
         mClient = c;
     }

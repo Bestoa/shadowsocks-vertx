@@ -7,8 +7,8 @@ import java.io.IOException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-import shadowsocks.SSserverUnit;
 import shadowsocks.util.Config;
+import shadowsocks.io.tcp.SSTcpRelayUnit;
 
 public class SSserver {
 
@@ -25,7 +25,7 @@ public class SSserver {
                 Socket local = server.accept();
                 local.setTcpNoDelay(true);
                 local.setSoLinger(true, 1);
-                service.execute(new SSserverUnit(local));
+                service.execute(new SSTcpRelayUnit(local));
             }
         }catch(IOException e){
             e.printStackTrace();

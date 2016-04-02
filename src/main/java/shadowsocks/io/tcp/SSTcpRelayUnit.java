@@ -131,15 +131,14 @@ public class SSTcpRelayUnit implements Runnable {
     private void doTcpRelay(final Socket local, final Socket remote) throws IOException,InterruptedException
     {
         // Full-Duplex need 2 threads.
-        // Start local -> remote first.
         Thread t = new Thread(new Runnable() {
             public void run() {
-                send(local, remote, LOCAL2REMOTE);
+                send(remote, local, REMOTE2LOCAL);
             }
         });
         t.start();
 
-        send(remote, local, REMOTE2LOCAL);
+        send(local, remote, LOCAL2REMOTE);
 
         t.join();
     }

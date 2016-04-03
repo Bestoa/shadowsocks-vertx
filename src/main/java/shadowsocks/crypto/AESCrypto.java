@@ -101,7 +101,6 @@ public class AESCrypto extends BaseCrypto {
     protected void doDecrypt(byte[] data, ByteArrayOutputStream stream) {
         int size;
         byte[] buffer = new byte[data.length];
-
         size = mDecryptCipher.processBytes(data, 0, data.length, buffer, 0);
         stream.write(buffer, 0, size);
     }

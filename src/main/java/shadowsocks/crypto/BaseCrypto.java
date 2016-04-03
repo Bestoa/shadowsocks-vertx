@@ -91,7 +91,6 @@ public abstract class BaseCrypto implements SSCrypto
     public synchronized void decrypt(byte[] data, ByteArrayOutputStream stream) throws CryptoException
     {
         byte[] temp;
-
         stream.reset();
         if (mDecryptCipher == null) {
             mDecryptCipher = createCipher(data, false);

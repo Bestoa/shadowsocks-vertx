@@ -8,10 +8,10 @@ It will remove complex funtions.
 Simple server, support -m -k -p.
 
 Crypto method: 
-1. AES-128-CFB
-2. AES-192-CFB
-3. AES-256-CFB
-4. Chacha20
+  1. AES-128-CFB
+  2. AES-192-CFB
+  3. AES-256-CFB
+  4. Chacha20
 
 #How to run:
 =======

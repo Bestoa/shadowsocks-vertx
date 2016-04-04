@@ -1,19 +1,12 @@
 package shadowsocks.crypto;
 
-import org.bouncycastle.crypto.StreamBlockCipher;
-import org.bouncycastle.crypto.params.KeyParameter;
-import org.bouncycastle.crypto.params.ParametersWithIV;
-
-import javax.crypto.SecretKey;
+import org.bouncycastle.crypto.StreamCipher;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.security.SecureRandom;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.NoSuchAlgorithmException;
 
 import shadowsocks.crypto.CryptoException;
+import shadowsocks.crypto.Utils;
 
 /**
  * Crypt base class implementation
@@ -21,93 +14,81 @@ import shadowsocks.crypto.CryptoException;
 public abstract class BaseCrypto implements SSCrypto
 {
 
-    protected abstract StreamBlockCipher getCipher(boolean isEncrypted) throws CryptoException;
-    protected abstract SecretKey generateKey(ShadowSocksKey key);
-    protected abstract void doEncrypt(byte[] data, ByteArrayOutputStream stream);
-    protected abstract void doDecrypt(byte[] data, ByteArrayOutputStream stream);
+    protected abstract StreamCipher createCipher(byte[] iv, boolean encrypt) throws CryptoException;
+    protected abstract void process(byte[] in, ByteArrayOutputStream out, boolean encrypt);
 
     protected final String mName;
-    protected final SecretKey mKey;
-
-    protected final int mIvLength;
+    protected final byte[] mKey;
+    protected final int mIVLength;
     protected final int mKeyLength;
 
-    protected StreamBlockCipher mEncryptCipher = null;
-    protected StreamBlockCipher mDecryptCipher = null;
+    protected StreamCipher mEncryptCipher = null;
+    protected StreamCipher mDecryptCipher = null;
 
     public BaseCrypto(String name, String password) throws CryptoException
     {
         mName = name.toLowerCase();
-        mIvLength = getIVLength();
+        mIVLength = getIVLength();
         mKeyLength = getKeyLength();
         if (mKeyLength == 0) {
             throw new CryptoException("Unsupport method: " + mName);
         }
-        mKey = generateKey(new ShadowSocksKey(password, mKeyLength));
-    }
-
-    protected StreamBlockCipher createCipher(byte[] i, boolean encrypt) throws CryptoException
-    {
-        byte[] iv = new byte[mIvLength];
-        System.arraycopy(i, 0, iv, 0, mIvLength);
-        StreamBlockCipher c = null;
-        c = getCipher(encrypt);
-        ParametersWithIV parameterIV = new ParametersWithIV(new KeyParameter(mKey.getEncoded()), iv);
-        c.init(encrypt, parameterIV);
-        return c;
-    }
-
-    public static byte[] randomBytes(int size) {
-        byte[] bytes = new byte[size];
-        new SecureRandom().nextBytes(bytes);
-        return bytes;
+        mKey = Utils.getKey(password, mKeyLength, mIVLength);
     }
 
     @Override
-    public synchronized void encrypt(byte[] data, ByteArrayOutputStream stream) throws CryptoException
+    public synchronized void encrypt(byte[] in, ByteArrayOutputStream out) throws CryptoException
     {
-        stream.reset();
+        out.reset();
         if (mEncryptCipher == null) {
-            byte[] iv = randomBytes(mIvLength);
+            byte[] iv = Utils.randomBytes(mIVLength);
             mEncryptCipher = createCipher(iv, true);
             try {
-                stream.write(iv);
+                out.write(iv);
             } catch (IOException e) {
                 throw new CryptoException(e);
             }
         }
-        doEncrypt(data, stream);
+        process(in, out, true);
     }
 
     @Override
-    public synchronized void encrypt(byte[] data, int length, ByteArrayOutputStream stream) throws CryptoException
+    public synchronized void encrypt(byte[] in, int length, ByteArrayOutputStream out) throws CryptoException
     {
-        byte[] d = new byte[length];
-        System.arraycopy(data, 0, d, 0, length);
-        encrypt(d, stream);
-    }
-
-    @Override
-    public synchronized void decrypt(byte[] data, ByteArrayOutputStream stream) throws CryptoException
-    {
-        byte[] temp;
-        stream.reset();
-        if (mDecryptCipher == null) {
-            mDecryptCipher = createCipher(data, false);
-            temp = new byte[data.length - mIvLength];
-            System.arraycopy(data, mIvLength, temp, 0, data.length - mIvLength);
-        } else {
-            temp = data;
+        if (length != in.length){
+            byte[] tmp = new byte[length];
+            System.arraycopy(in, 0, tmp, 0, length);
+            encrypt(tmp, out);
+        }else{
+            encrypt(in, out);
         }
 
-        doDecrypt(temp, stream);
     }
 
     @Override
-    public synchronized void decrypt(byte[] data, int length, ByteArrayOutputStream stream) throws CryptoException
+    public synchronized void decrypt(byte[] in, ByteArrayOutputStream out) throws CryptoException
     {
-        byte[] d = new byte[length];
-        System.arraycopy(data, 0, d, 0, length);
-        decrypt(d, stream);
+        byte[] tmp;
+        out.reset();
+        if (mDecryptCipher == null) {
+            mDecryptCipher = createCipher(in, false);
+            tmp = new byte[in.length - mIVLength];
+            System.arraycopy(in, mIVLength, tmp, 0, in.length - mIVLength);
+        } else {
+            tmp = in;
+        }
+        process(tmp, out, false);
+    }
+
+    @Override
+    public synchronized void decrypt(byte[] in, int length, ByteArrayOutputStream out) throws CryptoException
+    {
+        if (length != in.length) {
+            byte[] tmp = new byte[length];
+            System.arraycopy(in, 0, tmp, 0, length);
+            decrypt(tmp, out);
+        }else{
+            decrypt(in, out);
+        }
     }
 }

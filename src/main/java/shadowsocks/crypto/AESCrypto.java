@@ -1,17 +1,14 @@
 package shadowsocks.crypto;
 
 import org.bouncycastle.crypto.StreamBlockCipher;
-import org.bouncycastle.crypto.engines.AESEngine;
+import org.bouncycastle.crypto.StreamCipher;
 import org.bouncycastle.crypto.engines.AESFastEngine;
 import org.bouncycastle.crypto.modes.CFBBlockCipher;
 import org.bouncycastle.crypto.modes.OFBBlockCipher;
+import org.bouncycastle.crypto.params.KeyParameter;
+import org.bouncycastle.crypto.params.ParametersWithIV;
 
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayOutputStream;
-import java.security.InvalidAlgorithmParameterException;
-import java.util.HashMap;
-import java.util.Map;
 
 import shadowsocks.crypto.CryptoException;
 
@@ -27,8 +24,15 @@ public class AESCrypto extends BaseCrypto {
     public final static String CIPHER_AES_192_OFB = "aes-192-ofb";
     public final static String CIPHER_AES_256_OFB = "aes-256-ofb";
 
+    private final static int IV_LENGTH = 16;
+
     public AESCrypto(String name, String password) throws CryptoException {
         super(name, password);
+    }
+
+    @Override
+    public int getIVLength() {
+        return IV_LENGTH;
     }
 
     @Override
@@ -42,11 +46,9 @@ public class AESCrypto extends BaseCrypto {
         else if (mName.equals(CIPHER_AES_256_CFB) || mName.equals(CIPHER_AES_256_OFB)) {
             return 32;
         }
-
         return 0;
     }
 
-    @Override
     protected StreamBlockCipher getCipher(boolean isEncrypted) throws CryptoException
     {
         AESFastEngine engine = new AESFastEngine();
@@ -77,31 +79,26 @@ public class AESCrypto extends BaseCrypto {
         return cipher;
     }
 
-    final static int IV_LENGTH = 16;
-
     @Override
-    public int getIVLength() {
-        return IV_LENGTH;
+    protected StreamCipher createCipher(byte[] iv, boolean encrypt) throws CryptoException
+    {
+        StreamBlockCipher c = getCipher(encrypt);
+        ParametersWithIV parameterIV = new ParametersWithIV(new KeyParameter(mKey), iv, 0, mIVLength);
+        c.init(encrypt, parameterIV);
+        return c;
     }
 
     @Override
-    protected SecretKey generateKey(ShadowSocksKey key) {
-        return new SecretKeySpec(key.getEncoded(), "AES");
-    }
-
-    @Override
-    protected void doEncrypt(byte[] data, ByteArrayOutputStream stream) {
+    protected void process(byte[] in, ByteArrayOutputStream out, boolean encrypt){
         int size;
-        byte[] buffer = new byte[data.length];
-        size = mEncryptCipher.processBytes(data, 0, data.length, buffer, 0);
-        stream.write(buffer, 0, size);
-    }
-
-    @Override
-    protected void doDecrypt(byte[] data, ByteArrayOutputStream stream) {
-        int size;
-        byte[] buffer = new byte[data.length];
-        size = mDecryptCipher.processBytes(data, 0, data.length, buffer, 0);
-        stream.write(buffer, 0, size);
+        byte[] buffer = new byte[in.length];
+        StreamBlockCipher cipher;
+        if (encrypt){
+            cipher = (StreamBlockCipher)mEncryptCipher;
+        }else{
+            cipher = (StreamBlockCipher)mDecryptCipher;
+        }
+        size = cipher.processBytes(in, 0, in.length, buffer, 0);
+        out.write(buffer, 0, size);
     }
 }

@@ -10,6 +10,7 @@ import java.util.concurrent.Executors;
 
 import shadowsocks.util.Config;
 import shadowsocks.nio.tcp.SSNioTcpRelayUnit;
+import shadowsocks.crypto.CryptoFactory;
 
 public class SSServer {
 
@@ -34,8 +35,15 @@ public class SSServer {
 
     public static void main(String argv[])
     {
-        System.out.println("Shadowsocks-Java v0.3");
+        System.out.println("Shadowsocks v0.3");
         Config.getConfigFromArgv(argv);
+        //make sure this method could work.
+        try{
+            CryptoFactory.create(Config.get().getMethod(), Config.get().getPassword());
+        }catch(Exception e){
+            e.printStackTrace();
+            return;
+        }
         new SSServer().start();;
     }
 }

@@ -1,18 +1,11 @@
 package shadowsocks.nio.tcp;
 
 import java.io.ByteArrayOutputStream;
-import java.nio.ByteOrder;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.Selector;
 import java.nio.channels.SelectionKey;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.net.InetSocketAddress;
 import java.net.InetAddress;
 import java.net.SocketTimeoutException;
@@ -20,7 +13,7 @@ import java.net.StandardSocketOptions;
 import java.util.Iterator;
 
 import shadowsocks.crypto.SSCrypto;
-import shadowsocks.crypto.AESCrypto;
+import shadowsocks.crypto.CryptoFactory;
 import shadowsocks.crypto.CryptoException;
 
 import shadowsocks.util.Config;
@@ -187,7 +180,7 @@ public class SSNioTcpRelayUnit implements Runnable {
     {
         //make sure this channel could be closed
         try(SocketChannel client = mClient){
-            mCryptor = new AESCrypto(Config.get().getMethod(), Config.get().getPassword());
+            mCryptor = CryptoFactory.create(Config.get().getMethod(), Config.get().getPassword());
             mData = new ByteArrayOutputStream();
             mBuffer = ByteBuffer.allocate(BUFF_LEN);
             TcpRelay(client);

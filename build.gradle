@@ -1,4 +1,4 @@
-version '0.2.1'
+version '0.3'
 
 apply plugin: 'java'
 
@@ -15,15 +15,15 @@ dependencies {
 
 task run(type: JavaExec, dependsOn: 'classes') {
     classpath = sourceSets.main.runtimeClasspath
-    main = 'shadowsocks.SSserver'
+    main = 'shadowsocks.SSServer'
     args = ['-p', '8388', '-k', '123456']
 }
 
 jar() {
     manifest {
-        attributes 'Implementation-Title': 'ShadowSocks-Java',
+        attributes 'Implementation-Title': 'Shadowsocks-Java',
                    'Implementation-Version': version,
-                   'Main-Class': 'shadowsocks.SSserver'
+                   'Main-Class': 'shadowsocks.SSServer'
     }
     from {configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }} //pack dependent jar
     exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA' 

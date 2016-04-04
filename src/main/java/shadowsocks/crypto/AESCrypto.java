@@ -46,7 +46,6 @@ public class AESCrypto extends BaseCrypto {
         else if (mName.equals(CIPHER_AES_256_CFB) || mName.equals(CIPHER_AES_256_OFB)) {
             return 32;
         }
-
         return 0;
     }
 

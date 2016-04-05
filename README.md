@@ -1,6 +1,8 @@
 shadowsocks-java
 ================
 
+[![Build Status](https://travis-ci.org/bestoa/shadowsocks-java.svg?branch=master)](https://travis-ci.org/bestoa/shadowsocks-java)
+
 Rewrite simple Shadowsock with Java.
 It will remove complex funtions.
 

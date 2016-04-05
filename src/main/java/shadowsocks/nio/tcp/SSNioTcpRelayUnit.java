@@ -28,6 +28,8 @@ public class SSNioTcpRelayUnit implements Runnable {
     final private int LOCAL2REMOTE = 1;
     final private int REMOTE2LOCAL = 2;
 
+    final private int OTA_FLAG = 0x10;
+
     private SocketChannel mClient;
 
     private InetSocketAddress mRemoteAddress;
@@ -40,12 +42,41 @@ public class SSNioTcpRelayUnit implements Runnable {
     // Read buffer
     private ByteBuffer mBuffer;
 
+    private boolean mOneTimeAuth = false;
+
+    private StateMachine mSM;
+
+
+    private class StateMachine{
+        public final static int START_STATE = 0;
+        public final static int AUTH_HEAD = 0;
+        public final static int DATA = 1;
+        public final static int END_STATE  = 1;
+
+        // OTA auth head is 12 bytes
+        // 2 bytes for data len, 10 bytes for HMAC-SHA1
+        public int mLenToRead[] = {12, 0};
+
+        private int mState;
+
+        public int getState(){
+            return mState;
+        }
+        public void nextState(){
+            if (++mState > END_STATE){
+                mState = START_STATE;
+            }
+        }
+    }
+
     private void prepareBuffer(){
         mBuffer.clear();
     }
     private void prepareBuffer(int size){
         prepareBuffer();
-        mBuffer.limit(size);
+        // if data len is longer than buffer size, just read buffer size one time.
+        if (size < BUFF_LEN)
+            mBuffer.limit(size);
     }
     /*
      *  IV |addr type: 1 byte| addr | port: 2 bytes with big endian|
@@ -53,6 +84,8 @@ public class SSNioTcpRelayUnit implements Runnable {
      *  addr type 0x1: addr = ipv4 | 4 bytes
      *  addr type 0x3: addr = host address byte array | 1 byte(array length) + byte array
      *  addr type 0x4: addr = ipv6 | 19 bytes?
+     *
+     *  OTA will add 10 bytes HMAC-SHA1 in the end of the head.
      *
      */
     private InetSocketAddress parseHead(SocketChannel local) throws IOException, CryptoException
@@ -63,7 +96,13 @@ public class SSNioTcpRelayUnit implements Runnable {
         local.read(mBuffer);
 
         mCryptor.decrypt(mBuffer.array(), len, mData);
-        int addrtype = mData.toByteArray()[0];
+        int addrtype = (int)(mData.toByteArray()[0] & 0xff);
+
+        if ((addrtype & OTA_FLAG) == OTA_FLAG) {
+            mOneTimeAuth = true;
+            addrtype &= 0x0f;
+        }
+
         //get addr
         InetAddress addr;
         if (addrtype == ADDR_TYPE_IPV4) {
@@ -94,16 +133,78 @@ public class SSNioTcpRelayUnit implements Runnable {
         mBuffer.put(mData.toByteArray()[1]);
 
         // if port > 32767 the short will < 0
-        return new InetSocketAddress(addr, (int)(mBuffer.getShort(0)&0xFFFF));
+        int port = (int)(mBuffer.getShort(0)&0xFFFF);
+        // Just discard the sha1 now...
+        if (mOneTimeAuth){
+            prepareBuffer(10);
+            local.read(mBuffer);
+            //Even we don't need this sha1, we need decrypt it
+            //otherwise, the follow-up data can't be decrypted
+            mCryptor.decrypt(mBuffer.array(), 10, mData);
+
+        }
+        return new InetSocketAddress(addr, port);
+    }
+
+    // For OTA the chunck will be:
+    // Data len 2 bytes | HMAC-SHA1 10 bytes | Data
+    // Parse the auth head
+    private boolean readAuthHead(SocketChannel sc) throws IOException,CryptoException
+    {
+        int size = 0;
+        int total_size = 0;
+        int authHeadLen = mSM.mLenToRead[StateMachine.AUTH_HEAD];
+        prepareBuffer(authHeadLen);
+        //In fact it should be send together, but we'd better to ensure we could read full head.
+        while(mBuffer.hasRemaining()){
+            size = sc.read(mBuffer);
+            if (size < 0)
+                break;
+            else
+                total_size += size;
+        }
+        if (total_size < authHeadLen){
+            // Actually, we reach the end of stream.
+            if (total_size == 0)
+                return true;
+            throw new IOException("Auth head is too short");
+
+        }
+        mCryptor.decrypt(mBuffer.array(), authHeadLen, mData);
+        prepareBuffer(2);
+        mBuffer.put(mData.toByteArray()[0]);
+        mBuffer.put(mData.toByteArray()[1]);
+        mSM.mLenToRead[StateMachine.DATA] = (int)(mBuffer.getShort(0)&0xFFFF);
+        mSM.nextState();
+
+        return false;
     }
 
     private boolean send(SocketChannel source, SocketChannel target, int direct) throws IOException,CryptoException
     {
         int size;
-        prepareBuffer();
+        if (mOneTimeAuth && direct == LOCAL2REMOTE)
+        {
+            switch (mSM.getState()){
+                case StateMachine.AUTH_HEAD:
+                    return readAuthHead(source);
+                case StateMachine.DATA:
+                    prepareBuffer(mSM.mLenToRead[StateMachine.DATA]);
+                    break;
+            }
+        }else{
+            prepareBuffer();
+        }
         size = source.read(mBuffer);
         if (size < 0)
             return true;
+        if (mOneTimeAuth && direct == LOCAL2REMOTE)
+        {
+            mSM.mLenToRead[StateMachine.DATA] -= size;
+            if (mSM.mLenToRead[StateMachine.DATA] == 0){
+                mSM.nextState();
+            }
+        }
         if (direct == LOCAL2REMOTE) {
             mCryptor.decrypt(mBuffer.array(), size, mData);
         }else{
@@ -183,6 +284,7 @@ public class SSNioTcpRelayUnit implements Runnable {
             mCryptor = CryptoFactory.create(Config.get().getMethod(), Config.get().getPassword());
             mData = new ByteArrayOutputStream();
             mBuffer = ByteBuffer.allocate(BUFF_LEN);
+            mSM = new StateMachine();
             TcpRelay(client);
         }catch(Exception e){
             e.printStackTrace();

@@ -7,13 +7,15 @@ Rewrite simple Shadowsock with Java.
 It will remove complex funtions.
 
 #Current state:
-Simple server, support -m -k -p.
+Simple server v0.4, support -m -k -p.
 
 Crypto method: 
   1. AES-128-CFB
   2. AES-192-CFB
   3. AES-256-CFB
   4. Chacha20
+
+One time auth feature done.
 
 #How to run:
 =======

@@ -25,6 +25,9 @@ public abstract class BaseCrypto implements SSCrypto
     protected StreamCipher mEncryptCipher = null;
     protected StreamCipher mDecryptCipher = null;
 
+    protected byte[] mEncryptIV;
+    protected byte[] mDecryptIV;
+
     // One SSCrypto could only do one decrypt/encrypt at the same time.
     protected ByteArrayOutputStream mData;
 
@@ -42,14 +45,25 @@ public abstract class BaseCrypto implements SSCrypto
         mData = new ByteArrayOutputStream();
     }
 
+    public byte [] getKey(){
+        return mKey;
+    }
+
+    public byte [] getIV(boolean encrypt){
+        if (encrypt)
+            return mEncryptIV;
+        else
+            return mDecryptIV;
+    }
+
     private byte [] encryptLocked(byte[] in) throws CryptoException
     {
         mData.reset();
         if (mEncryptCipher == null) {
-            byte[] iv = Utils.randomBytes(mIVLength);
-            mEncryptCipher = createCipher(iv, true);
+            mEncryptIV = Utils.randomBytes(mIVLength);
+            mEncryptCipher = createCipher(mEncryptIV, true);
             try {
-                mData.write(iv);
+                mData.write(mEncryptIV);
             } catch (IOException e) {
                 throw new CryptoException(e);
             }
@@ -63,9 +77,9 @@ public abstract class BaseCrypto implements SSCrypto
     {
         synchronized(mLock) {
             if (length != in.length){
-                byte[] tmp = new byte[length];
-                System.arraycopy(in, 0, tmp, 0, length);
-                return encryptLocked(tmp);
+                byte[] data = new byte[length];
+                System.arraycopy(in, 0, data, 0, length);
+                return encryptLocked(data);
             }else{
                 return encryptLocked(in);
             }
@@ -74,16 +88,18 @@ public abstract class BaseCrypto implements SSCrypto
 
     private byte[] decryptLocked(byte[] in) throws CryptoException
     {
-        byte[] tmp;
+        byte[] data;
         mData.reset();
         if (mDecryptCipher == null) {
             mDecryptCipher = createCipher(in, false);
-            tmp = new byte[in.length - mIVLength];
-            System.arraycopy(in, mIVLength, tmp, 0, in.length - mIVLength);
+            mDecryptIV = new byte[mIVLength];
+            data = new byte[in.length - mIVLength];
+            System.arraycopy(in, 0, mDecryptIV, 0, mIVLength);
+            System.arraycopy(in, mIVLength, data, 0, in.length - mIVLength);
         } else {
-            tmp = in;
+            data = in;
         }
-        process(tmp, mData, false);
+        process(data, mData, false);
         return mData.toByteArray();
     }
 
@@ -92,9 +108,9 @@ public abstract class BaseCrypto implements SSCrypto
     {
         synchronized(mLock) {
             if (length != in.length) {
-                byte[] tmp = new byte[length];
-                System.arraycopy(in, 0, tmp, 0, length);
-                return decryptLocked(tmp);
+                byte[] data = new byte[length];
+                System.arraycopy(in, 0, data, 0, length);
+                return decryptLocked(data);
             }else{
                 return decryptLocked(in);
             }

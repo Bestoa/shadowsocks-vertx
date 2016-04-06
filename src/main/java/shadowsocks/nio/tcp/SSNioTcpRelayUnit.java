@@ -18,6 +18,10 @@ import shadowsocks.crypto.CryptoException;
 
 import shadowsocks.util.Config;
 
+import shadowsocks.auth.SSAuth;
+import shadowsocks.auth.HmacSHA1;
+import shadowsocks.auth.AuthException;
+
 public class SSNioTcpRelayUnit implements Runnable {
 
     final private int BUFF_LEN = 16384; /* 16K */
@@ -36,8 +40,6 @@ public class SSNioTcpRelayUnit implements Runnable {
 
     public SSCrypto mCryptor;
 
-    // For encrypt/decrypt data
-    private ByteArrayOutputStream mData;
 
     // Read buffer
     private ByteBuffer mBuffer;
@@ -46,6 +48,14 @@ public class SSNioTcpRelayUnit implements Runnable {
 
     private StateMachine mSM;
 
+    private SSAuth mAuthor;
+
+    // Store the data to do one time auth
+    private ByteArrayOutputStream mAuthData;
+    // Store the expect auth result from client
+    private byte [] mExpectAuthResult;
+
+    private int mChunkCount = 0;
 
     private class StateMachine{
         public final static int START_STATE = 0;
@@ -88,8 +98,9 @@ public class SSNioTcpRelayUnit implements Runnable {
      *  OTA will add 10 bytes HMAC-SHA1 in the end of the head.
      *
      */
-    private InetSocketAddress parseHead(SocketChannel local) throws IOException, CryptoException
+    private InetSocketAddress parseHead(SocketChannel local) throws IOException, CryptoException, AuthException
     {
+        mAuthData.reset();
         // Read IV + address type length.
         int len = mCryptor.getIVLength() + 1;
         prepareBuffer(len);
@@ -102,23 +113,30 @@ public class SSNioTcpRelayUnit implements Runnable {
             mOneTimeAuth = true;
             addrtype &= 0x0f;
         }
+        mAuthData.write(result[0]);
 
         //get addr
         InetAddress addr;
         if (addrtype == ADDR_TYPE_IPV4) {
+            //get IPV4 address
             prepareBuffer(4);
             local.read(mBuffer);
             result = mCryptor.decrypt(mBuffer.array(), 4);
             addr = InetAddress.getByAddress(result);
+            mAuthData.write(result, 0, 4);
         }else if (addrtype == ADDR_TYPE_HOST) {
+            //get address len
             prepareBuffer(1);
             local.read(mBuffer);
             result = mCryptor.decrypt(mBuffer.array(), 1);
             len = result[0];
+            mAuthData.write(result[0]);
+            //get address
             prepareBuffer(len);
             local.read(mBuffer);
             result = mCryptor.decrypt(mBuffer.array(), len);
             addr = InetAddress.getByName(new String(result, 0, len));
+            mAuthData.write(result, 0, len);
         } else {
             //do not support other addrtype now.
             throw new IOException("Unsupport addr type: " + addrtype + "!");
@@ -131,17 +149,22 @@ public class SSNioTcpRelayUnit implements Runnable {
         prepareBuffer(2);
         mBuffer.put(result[0]);
         mBuffer.put(result[1]);
+        mAuthData.write(result, 0, 2);
 
         // if port > 32767 the short will < 0
         int port = (int)(mBuffer.getShort(0)&0xFFFF);
-        // Just discard the sha1 now...
+        // Auth head
         if (mOneTimeAuth){
-            prepareBuffer(10);
+            prepareBuffer(HmacSHA1.AUTH_LEN);
             local.read(mBuffer);
             //Even we don't need this sha1, we need decrypt it
             //otherwise, the follow-up data can't be decrypted
-            mCryptor.decrypt(mBuffer.array(), 10);
-
+            result = mCryptor.decrypt(mBuffer.array(), HmacSHA1.AUTH_LEN);
+            byte [] authKey = SSAuth.prepareKey(mCryptor.getIV(false), mCryptor.getKey());
+            byte [] authData = mAuthData.toByteArray();
+            if (!mAuthor.doAuth(authKey, authData, result)){
+                throw new AuthException("Auth head failed");
+            }
         }
         return new InetSocketAddress(addr, port);
     }
@@ -177,12 +200,18 @@ public class SSNioTcpRelayUnit implements Runnable {
         mSM.mLenToRead[StateMachine.DATA] = (int)(mBuffer.getShort(0)&0xFFFF);
         mSM.nextState();
 
+        // store the pre-calculated auth result
+        System.arraycopy(result, 2, mExpectAuthResult, 0, HmacSHA1.AUTH_LEN);
+
+        mAuthData.reset();
+
         return false;
     }
 
-    private boolean send(SocketChannel source, SocketChannel target, int direct) throws IOException,CryptoException
+    private boolean send(SocketChannel source, SocketChannel target, int direct) throws IOException,CryptoException,AuthException
     {
         int size;
+        boolean chunkFinish = false;
         if (mOneTimeAuth && direct == LOCAL2REMOTE)
         {
             switch (mSM.getState()){
@@ -202,6 +231,7 @@ public class SSNioTcpRelayUnit implements Runnable {
         {
             mSM.mLenToRead[StateMachine.DATA] -= size;
             if (mSM.mLenToRead[StateMachine.DATA] == 0){
+                chunkFinish = true;
                 mSM.nextState();
             }
         }
@@ -211,13 +241,26 @@ public class SSNioTcpRelayUnit implements Runnable {
         }else{
             result = mCryptor.encrypt(mBuffer.array(), size);
         }
+        if (mOneTimeAuth && direct == LOCAL2REMOTE)
+        {
+            mAuthData.write(result, 0, size);
+            if (chunkFinish) {
+                byte [] authKey = SSAuth.prepareKey(mCryptor.getIV(false), mChunkCount);
+                byte [] authData = mAuthData.toByteArray();
+                if (!mAuthor.doAuth(authKey, authData, mExpectAuthResult)){
+                    throw new AuthException("Auth chunk " + mChunkCount + " failed!");
+                }
+                mChunkCount++;
+            }
+        }
         ByteBuffer out = ByteBuffer.wrap(result);
         while(out.hasRemaining())
             target.write(out);
         return false;
     }
 
-    private void doTcpRelay(Selector selector, SocketChannel local, SocketChannel remote) throws IOException,InterruptedException,CryptoException
+    private void doTcpRelay(Selector selector, SocketChannel local, SocketChannel remote)
+        throws IOException,InterruptedException,CryptoException,AuthException
     {
         local.configureBlocking(false);
         remote.configureBlocking(false);
@@ -250,7 +293,7 @@ public class SSNioTcpRelayUnit implements Runnable {
         }
     }
 
-    private void TcpRelay(SocketChannel local) throws IOException, CryptoException
+    private void TcpRelay(SocketChannel local) throws IOException, CryptoException, AuthException
     {
         int CONNECT_TIMEOUT = 3000;
 
@@ -283,9 +326,12 @@ public class SSNioTcpRelayUnit implements Runnable {
         //make sure this channel could be closed
         try(SocketChannel client = mClient){
             mCryptor = CryptoFactory.create(Config.get().getMethod(), Config.get().getPassword());
-            mData = new ByteArrayOutputStream();
             mBuffer = ByteBuffer.allocate(BUFF_LEN);
+            // for one time auth
             mSM = new StateMachine();
+            mAuthor = new HmacSHA1();
+            mAuthData = new ByteArrayOutputStream();
+            mExpectAuthResult = new byte[HmacSHA1.AUTH_LEN];
             TcpRelay(client);
         }catch(Exception e){
             e.printStackTrace();

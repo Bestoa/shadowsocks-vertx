@@ -13,4 +13,6 @@ public interface SSCrypto {
     byte [] decrypt(byte[] data, int length) throws CryptoException;
     int getIVLength();
     int getKeyLength();
+    byte [] getIV(boolean encrypt);
+    byte [] getKey();
 }

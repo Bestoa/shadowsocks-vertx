@@ -95,8 +95,8 @@ public class SSNioTcpRelayUnit implements Runnable {
         prepareBuffer(len);
         local.read(mBuffer);
 
-        mCryptor.decrypt(mBuffer.array(), len, mData);
-        int addrtype = (int)(mData.toByteArray()[0] & 0xff);
+        byte [] result = mCryptor.decrypt(mBuffer.array(), len);
+        int addrtype = (int)(result[0] & 0xff);
 
         if ((addrtype & OTA_FLAG) == OTA_FLAG) {
             mOneTimeAuth = true;
@@ -108,17 +108,17 @@ public class SSNioTcpRelayUnit implements Runnable {
         if (addrtype == ADDR_TYPE_IPV4) {
             prepareBuffer(4);
             local.read(mBuffer);
-            mCryptor.decrypt(mBuffer.array(), 4, mData);
-            addr = InetAddress.getByAddress(mData.toByteArray());
+            result = mCryptor.decrypt(mBuffer.array(), 4);
+            addr = InetAddress.getByAddress(result);
         }else if (addrtype == ADDR_TYPE_HOST) {
             prepareBuffer(1);
             local.read(mBuffer);
-            mCryptor.decrypt(mBuffer.array(), 1, mData);
-            len = mData.toByteArray()[0];
+            result = mCryptor.decrypt(mBuffer.array(), 1);
+            len = result[0];
             prepareBuffer(len);
             local.read(mBuffer);
-            mCryptor.decrypt(mBuffer.array(), len, mData);
-            addr = InetAddress.getByName(new String(mData.toByteArray(), 0, len));
+            result = mCryptor.decrypt(mBuffer.array(), len);
+            addr = InetAddress.getByName(new String(result, 0, len));
         } else {
             //do not support other addrtype now.
             throw new IOException("Unsupport addr type: " + addrtype + "!");
@@ -127,10 +127,10 @@ public class SSNioTcpRelayUnit implements Runnable {
         //get port
         prepareBuffer(2);
         local.read(mBuffer);
-        mCryptor.decrypt(mBuffer.array(), 2, mData);
+        result = mCryptor.decrypt(mBuffer.array(), 2);
         prepareBuffer(2);
-        mBuffer.put(mData.toByteArray()[0]);
-        mBuffer.put(mData.toByteArray()[1]);
+        mBuffer.put(result[0]);
+        mBuffer.put(result[1]);
 
         // if port > 32767 the short will < 0
         int port = (int)(mBuffer.getShort(0)&0xFFFF);
@@ -140,7 +140,7 @@ public class SSNioTcpRelayUnit implements Runnable {
             local.read(mBuffer);
             //Even we don't need this sha1, we need decrypt it
             //otherwise, the follow-up data can't be decrypted
-            mCryptor.decrypt(mBuffer.array(), 10, mData);
+            mCryptor.decrypt(mBuffer.array(), 10);
 
         }
         return new InetSocketAddress(addr, port);
@@ -170,10 +170,10 @@ public class SSNioTcpRelayUnit implements Runnable {
             throw new IOException("Auth head is too short");
 
         }
-        mCryptor.decrypt(mBuffer.array(), authHeadLen, mData);
+        byte [] result = mCryptor.decrypt(mBuffer.array(), authHeadLen);
         prepareBuffer(2);
-        mBuffer.put(mData.toByteArray()[0]);
-        mBuffer.put(mData.toByteArray()[1]);
+        mBuffer.put(result[0]);
+        mBuffer.put(result[1]);
         mSM.mLenToRead[StateMachine.DATA] = (int)(mBuffer.getShort(0)&0xFFFF);
         mSM.nextState();
 
@@ -205,12 +205,13 @@ public class SSNioTcpRelayUnit implements Runnable {
                 mSM.nextState();
             }
         }
+        byte [] result;
         if (direct == LOCAL2REMOTE) {
-            mCryptor.decrypt(mBuffer.array(), size, mData);
+            result = mCryptor.decrypt(mBuffer.array(), size);
         }else{
-            mCryptor.encrypt(mBuffer.array(), size, mData);
+            result = mCryptor.encrypt(mBuffer.array(), size);
         }
-        ByteBuffer out = ByteBuffer.wrap(mData.toByteArray());
+        ByteBuffer out = ByteBuffer.wrap(result);
         while(out.hasRemaining())
             target.write(out);
         return false;

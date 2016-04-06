@@ -25,6 +25,11 @@ public abstract class BaseCrypto implements SSCrypto
     protected StreamCipher mEncryptCipher = null;
     protected StreamCipher mDecryptCipher = null;
 
+    // One SSCrypto could only do one decrypt/encrypt at the same time.
+    protected ByteArrayOutputStream mData;
+
+    private Object mLock = new Object();
+
     public BaseCrypto(String name, String password) throws CryptoException
     {
         mName = name.toLowerCase();
@@ -34,42 +39,43 @@ public abstract class BaseCrypto implements SSCrypto
             throw new CryptoException("Unsupport method: " + mName);
         }
         mKey = Utils.getKey(password, mKeyLength, mIVLength);
+        mData = new ByteArrayOutputStream();
     }
 
-    @Override
-    public synchronized void encrypt(byte[] in, ByteArrayOutputStream out) throws CryptoException
+    private byte [] encryptLocked(byte[] in) throws CryptoException
     {
-        out.reset();
+        mData.reset();
         if (mEncryptCipher == null) {
             byte[] iv = Utils.randomBytes(mIVLength);
             mEncryptCipher = createCipher(iv, true);
             try {
-                out.write(iv);
+                mData.write(iv);
             } catch (IOException e) {
                 throw new CryptoException(e);
             }
         }
-        process(in, out, true);
+        process(in, mData, true);
+        return mData.toByteArray();
     }
 
     @Override
-    public synchronized void encrypt(byte[] in, int length, ByteArrayOutputStream out) throws CryptoException
+    public byte [] encrypt(byte[] in, int length) throws CryptoException
     {
-        if (length != in.length){
-            byte[] tmp = new byte[length];
-            System.arraycopy(in, 0, tmp, 0, length);
-            encrypt(tmp, out);
-        }else{
-            encrypt(in, out);
+        synchronized(mLock) {
+            if (length != in.length){
+                byte[] tmp = new byte[length];
+                System.arraycopy(in, 0, tmp, 0, length);
+                return encryptLocked(tmp);
+            }else{
+                return encryptLocked(in);
+            }
         }
-
     }
 
-    @Override
-    public synchronized void decrypt(byte[] in, ByteArrayOutputStream out) throws CryptoException
+    private byte[] decryptLocked(byte[] in) throws CryptoException
     {
         byte[] tmp;
-        out.reset();
+        mData.reset();
         if (mDecryptCipher == null) {
             mDecryptCipher = createCipher(in, false);
             tmp = new byte[in.length - mIVLength];
@@ -77,18 +83,21 @@ public abstract class BaseCrypto implements SSCrypto
         } else {
             tmp = in;
         }
-        process(tmp, out, false);
+        process(tmp, mData, false);
+        return mData.toByteArray();
     }
 
     @Override
-    public synchronized void decrypt(byte[] in, int length, ByteArrayOutputStream out) throws CryptoException
+    public byte [] decrypt(byte[] in, int length) throws CryptoException
     {
-        if (length != in.length) {
-            byte[] tmp = new byte[length];
-            System.arraycopy(in, 0, tmp, 0, length);
-            decrypt(tmp, out);
-        }else{
-            decrypt(in, out);
+        synchronized(mLock) {
+            if (length != in.length) {
+                byte[] tmp = new byte[length];
+                System.arraycopy(in, 0, tmp, 0, length);
+                return decryptLocked(tmp);
+            }else{
+                return decryptLocked(in);
+            }
         }
     }
 }

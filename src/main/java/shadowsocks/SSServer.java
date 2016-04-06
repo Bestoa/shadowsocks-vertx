@@ -35,7 +35,7 @@ public class SSServer {
 
     public static void main(String argv[])
     {
-        System.out.println("Shadowsocks v0.3");
+        System.out.println("Shadowsocks v0.4");
         Config.getConfigFromArgv(argv);
         //make sure this method could work.
         try{

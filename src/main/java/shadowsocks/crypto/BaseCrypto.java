@@ -25,6 +25,14 @@ public abstract class BaseCrypto implements SSCrypto
     protected StreamCipher mEncryptCipher = null;
     protected StreamCipher mDecryptCipher = null;
 
+    protected byte[] mEncryptIV;
+    protected byte[] mDecryptIV;
+
+    // One SSCrypto could only do one decrypt/encrypt at the same time.
+    protected ByteArrayOutputStream mData;
+
+    private Object mLock = new Object();
+
     public BaseCrypto(String name, String password) throws CryptoException
     {
         mName = name.toLowerCase();
@@ -34,61 +42,78 @@ public abstract class BaseCrypto implements SSCrypto
             throw new CryptoException("Unsupport method: " + mName);
         }
         mKey = Utils.getKey(password, mKeyLength, mIVLength);
+        mData = new ByteArrayOutputStream();
     }
 
-    @Override
-    public synchronized void encrypt(byte[] in, ByteArrayOutputStream out) throws CryptoException
+    public byte [] getKey(){
+        return mKey;
+    }
+
+    public byte [] getIV(boolean encrypt){
+        if (encrypt)
+            return mEncryptIV;
+        else
+            return mDecryptIV;
+    }
+
+    private byte [] encryptLocked(byte[] in) throws CryptoException
     {
-        out.reset();
+        mData.reset();
         if (mEncryptCipher == null) {
-            byte[] iv = Utils.randomBytes(mIVLength);
-            mEncryptCipher = createCipher(iv, true);
+            mEncryptIV = Utils.randomBytes(mIVLength);
+            mEncryptCipher = createCipher(mEncryptIV, true);
             try {
-                out.write(iv);
+                mData.write(mEncryptIV);
             } catch (IOException e) {
                 throw new CryptoException(e);
             }
         }
-        process(in, out, true);
+        process(in, mData, true);
+        return mData.toByteArray();
     }
 
     @Override
-    public synchronized void encrypt(byte[] in, int length, ByteArrayOutputStream out) throws CryptoException
+    public byte [] encrypt(byte[] in, int length) throws CryptoException
     {
-        if (length != in.length){
-            byte[] tmp = new byte[length];
-            System.arraycopy(in, 0, tmp, 0, length);
-            encrypt(tmp, out);
-        }else{
-            encrypt(in, out);
+        synchronized(mLock) {
+            if (length != in.length){
+                byte[] data = new byte[length];
+                System.arraycopy(in, 0, data, 0, length);
+                return encryptLocked(data);
+            }else{
+                return encryptLocked(in);
+            }
         }
-
     }
 
-    @Override
-    public synchronized void decrypt(byte[] in, ByteArrayOutputStream out) throws CryptoException
+    private byte[] decryptLocked(byte[] in) throws CryptoException
     {
-        byte[] tmp;
-        out.reset();
+        byte[] data;
+        mData.reset();
         if (mDecryptCipher == null) {
             mDecryptCipher = createCipher(in, false);
-            tmp = new byte[in.length - mIVLength];
-            System.arraycopy(in, mIVLength, tmp, 0, in.length - mIVLength);
+            mDecryptIV = new byte[mIVLength];
+            data = new byte[in.length - mIVLength];
+            System.arraycopy(in, 0, mDecryptIV, 0, mIVLength);
+            System.arraycopy(in, mIVLength, data, 0, in.length - mIVLength);
         } else {
-            tmp = in;
+            data = in;
         }
-        process(tmp, out, false);
+        process(data, mData, false);
+        return mData.toByteArray();
     }
 
     @Override
-    public synchronized void decrypt(byte[] in, int length, ByteArrayOutputStream out) throws CryptoException
+    public byte [] decrypt(byte[] in, int length) throws CryptoException
     {
-        if (length != in.length) {
-            byte[] tmp = new byte[length];
-            System.arraycopy(in, 0, tmp, 0, length);
-            decrypt(tmp, out);
-        }else{
-            decrypt(in, out);
+        synchronized(mLock) {
+            if (length != in.length) {
+                byte[] data = new byte[length];
+                System.arraycopy(in, 0, data, 0, length);
+                return decryptLocked(data);
+            }else{
+                return decryptLocked(in);
+            }
         }
     }
 }

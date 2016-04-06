@@ -9,10 +9,10 @@ import shadowsocks.crypto.CryptoException;
  * Interface of crypt
  */
 public interface SSCrypto {
-    void encrypt(byte[] data, ByteArrayOutputStream stream) throws CryptoException;
-    void encrypt(byte[] data, int length, ByteArrayOutputStream stream) throws CryptoException;
-    void decrypt(byte[] data, ByteArrayOutputStream stream) throws CryptoException;
-    void decrypt(byte[] data, int length, ByteArrayOutputStream stream) throws CryptoException;
+    byte [] encrypt(byte[] data, int length) throws CryptoException;
+    byte [] decrypt(byte[] data, int length) throws CryptoException;
     int getIVLength();
     int getKeyLength();
+    byte [] getIV(boolean encrypt);
+    byte [] getKey();
 }

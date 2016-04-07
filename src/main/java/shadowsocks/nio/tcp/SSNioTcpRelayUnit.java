@@ -130,6 +130,10 @@ public class SSNioTcpRelayUnit implements Runnable {
         }
         mAuthData.write(result[0]);
 
+        if (!mOneTimeAuth && Config.get().isOTAEnabled()) {
+            throw new AuthException("OTA is not enabled!");
+        }
+
         //get addr
         InetAddress addr;
         if (addrtype == ADDR_TYPE_IPV4) {

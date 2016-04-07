@@ -25,11 +25,12 @@ public class Config{
     private String mMethod;
     private Object portLock = new Object();
     private int mPort;
+    private Object otaLock = new Object();
+    private boolean mOneTimeAuth;
 
     final private static String DEFAULT_METHOD = "aes-256-cfb";
     final private static String DEFAULT_PASSWORD = "123456";
     final private static int DEFAULT_PORT = 8388;
-
 
     public void setPassowrd(String p)
     {
@@ -72,6 +73,19 @@ public class Config{
         }
     }
 
+    public boolean isOTAEnabled()
+    {
+        synchronized(otaLock){
+            return mOneTimeAuth;
+        }
+    }
+    public void setOTAEnabled(boolean enable){
+        synchronized(otaLock){
+            mOneTimeAuth = enable;
+        }
+    }
+
+
     public synchronized static Config get()
     {
         if (mConfig == null)
@@ -86,12 +100,13 @@ public class Config{
         mMethod = DEFAULT_METHOD;
         mPassword = DEFAULT_PASSWORD;
         mPort = DEFAULT_PORT;
+        mOneTimeAuth = false;
     }
 
     public static void getConfigFromArgv(String argv[])
     {
 
-        Getopt g = new Getopt("shadowsocks", argv, "m:k:p:");
+        Getopt g = new Getopt("shadowsocks", argv, "m:k:p:a");
         int c;
         String arg;
         while ((c = g.getopt()) != -1)
@@ -113,6 +128,10 @@ public class Config{
                     int port = Integer.parseInt(arg);
                     System.out.println("Get port: " + port);
                     Config.get().setPort(port);
+                    break;
+                case 'a':
+                    System.out.println("OTA enforcing mode.");
+                    Config.get().setOTAEnabled(true);
                     break;
                 case '?':
                 default:

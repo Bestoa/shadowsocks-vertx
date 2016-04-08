@@ -21,7 +21,7 @@ import shadowsocks.crypto.CryptoFactory;
 public class SSMain{
     public static void main(String argv[])
     {
-        System.out.println("Shadowsocks v0.4");
+        System.out.println("Shadowsocks v0.5");
         Config.getConfigFromArgv(argv);
         //make sure this method could work.
         try{
@@ -30,6 +30,10 @@ public class SSMain{
             e.printStackTrace();
             return;
         }
-        new SSServer().start();;
+        if(Config.get().isServerMode()){
+            new SSServer().start();;
+        }else{
+            new SSLocal().start();;
+        }
     }
 }

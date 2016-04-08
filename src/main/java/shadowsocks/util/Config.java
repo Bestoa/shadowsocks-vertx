@@ -1,4 +1,4 @@
-/*   
+/*
  *   Copyright 2016 Author:NU11 bestoapache@gmail.com
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,68 +23,77 @@ public class Config{
 
     private String mPassword;
     private String mMethod;
-    private Object portLock = new Object();
+    private String mServer;
     private int mPort;
-    private Object otaLock = new Object();
+    private int mLocalPort;
     private boolean mOneTimeAuth;
+    private boolean mIsServerMode;
 
     final private static String DEFAULT_METHOD = "aes-256-cfb";
     final private static String DEFAULT_PASSWORD = "123456";
+    final private static String DEFAULT_SERVER = "127.0.0.1";
     final private static int DEFAULT_PORT = 8388;
+    final private static int DEFAULT_LOCAL_PORT = 9999;
 
     public void setPassowrd(String p)
     {
-        synchronized(mPassword){
-            mPassword = new String(p);
-        }
+        mPassword = new String(p);
     }
-    
     public String getPassword()
     {
-        synchronized(mPassword){
-            return mPassword;
-        }
+        return mPassword;
     }
 
     public void setMethod(String m)
     {
-        synchronized(mMethod){
-            mMethod = new String(m);
-        }
+        mMethod = new String(m);
     }
-
     public String getMethod()
     {
-        synchronized(mMethod){
-            return mMethod;
-        }
+        return mMethod;
+    }
+
+    public void setServer(String s)
+    {
+        mServer = new String(s);
+    }
+    public String getServer()
+    {
+        return mServer;
     }
 
     public void setPort(int p)
     {
-        synchronized(portLock){
-            mPort = p;
-        }
+        mPort = p;
     }
     public int getPort()
     {
-        synchronized(portLock){
-            return mPort;
-        }
+        return mPort;
+    }
+
+    public void setLocalPort(int p)
+    {
+        mLocalPort = p;
+    }
+    public int getLocalPort()
+    {
+        return mLocalPort;
     }
 
     public boolean isOTAEnabled()
     {
-        synchronized(otaLock){
-            return mOneTimeAuth;
-        }
+        return mOneTimeAuth;
     }
     public void setOTAEnabled(boolean enable){
-        synchronized(otaLock){
-            mOneTimeAuth = enable;
-        }
+        mOneTimeAuth = enable;
     }
 
+    public boolean isServerMode(){
+        return mIsServerMode;
+    }
+    public void setServerMode(boolean isServer){
+        mIsServerMode = isServer;
+    }
 
     public synchronized static Config get()
     {
@@ -99,14 +108,17 @@ public class Config{
     {
         mMethod = DEFAULT_METHOD;
         mPassword = DEFAULT_PASSWORD;
+        mServer = DEFAULT_SERVER;
         mPort = DEFAULT_PORT;
+        mLocalPort = DEFAULT_LOCAL_PORT;
         mOneTimeAuth = false;
+        mIsServerMode = true;
     }
 
     public static void getConfigFromArgv(String argv[])
     {
 
-        Getopt g = new Getopt("shadowsocks", argv, "m:k:p:a");
+        Getopt g = new Getopt("shadowsocks", argv, "SLm:k:p:as:l:");
         int c;
         String arg;
         while ((c = g.getopt()) != -1)
@@ -133,6 +145,25 @@ public class Config{
                     System.out.println("OTA enforcing mode.");
                     Config.get().setOTAEnabled(true);
                     break;
+                case 'S':
+                    System.out.println("Server mode.");
+                    Config.get().setServerMode(true);
+                    break;
+                case 'L':
+                    System.out.println("Local mode.");
+                    Config.get().setServerMode(false);
+                    break;
+                case 's':
+                    arg = g.getOptarg();
+                    System.out.println("Get server: " + arg);
+                    Config.get().setServer(arg);
+                    break;
+                case 'l':
+                    arg = g.getOptarg();
+                    int lport = Integer.parseInt(arg);
+                    System.out.println("Get local port: " + lport);
+                    Config.get().setLocalPort(lport);
+                    break;
                 case '?':
                 default:
                     help();
@@ -143,6 +174,7 @@ public class Config{
 
     private static void help()
     {
+        //TODO
         System.out.println("HELP");
     }
 }

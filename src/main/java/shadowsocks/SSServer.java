@@ -24,11 +24,10 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import shadowsocks.util.Config;
-import shadowsocks.nio.tcp.SSNioTcpRelayUnit;
+import shadowsocks.nio.tcp.SSNioTcpRelayServerUnit;
 import shadowsocks.crypto.CryptoFactory;
 
 public class SSServer {
-
 
     public void start()
     {
@@ -41,24 +40,10 @@ public class SSServer {
             while (true) {
                 SocketChannel local = server.accept();
                 local.setOption(StandardSocketOptions.TCP_NODELAY, true);
-                service.execute(new SSNioTcpRelayUnit(local));
+                service.execute(new SSNioTcpRelayServerUnit(local));
             }
         }catch(IOException e){
             e.printStackTrace();
         }
-    }
-
-    public static void main(String argv[])
-    {
-        System.out.println("Shadowsocks v0.4");
-        Config.getConfigFromArgv(argv);
-        //make sure this method could work.
-        try{
-            CryptoFactory.create(Config.get().getMethod(), Config.get().getPassword());
-        }catch(Exception e){
-            e.printStackTrace();
-            return;
-        }
-        new SSServer().start();;
     }
 }

@@ -27,6 +27,9 @@ import java.net.SocketTimeoutException;
 import java.net.StandardSocketOptions;
 import java.util.Iterator;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import shadowsocks.crypto.SSCrypto;
 import shadowsocks.crypto.CryptoFactory;
 import shadowsocks.crypto.CryptoException;
@@ -37,7 +40,9 @@ import shadowsocks.auth.SSAuth;
 import shadowsocks.auth.HmacSHA1;
 import shadowsocks.auth.AuthException;
 
-public class SSNioTcpRelayLocalUnit implements Runnable {
+public class SSTcpRelayLocalUnit implements Runnable {
+
+    public static Logger log = LogManager.getLogger(SSTcpRelayLocalUnit.class.getName());
 
     final private int BUFF_LEN = 16384; /* 16K */
 
@@ -50,6 +55,8 @@ public class SSNioTcpRelayLocalUnit implements Runnable {
     final private int OTA_FLAG = 0x10;
 
     private SocketChannel mClient;
+
+    InetSocketAddress mTargetAddress;
 
     public SSCrypto mCryptor;
 
@@ -175,7 +182,8 @@ public class SSNioTcpRelayLocalUnit implements Runnable {
         while(mBuffer.hasRemaining())
             local.write(mBuffer);
 
-        System.out.println("Target = " + addr + " port = " + port);
+        mTargetAddress = new InetSocketAddress(addr, port);
+        log.info("Target address is " + mTargetAddress);
 
         // Create auth head
         if (mOneTimeAuth){
@@ -284,7 +292,7 @@ public class SSNioTcpRelayLocalUnit implements Runnable {
         }catch(InterruptedException e){
             //ignore
         }catch(IOException | CryptoException e){
-            e.printStackTrace();
+            log.error("Target address is " + mTargetAddress, e);
         }
 
     }
@@ -301,11 +309,11 @@ public class SSNioTcpRelayLocalUnit implements Runnable {
             mOneTimeAuth = Config.get().isOTAEnabled();
             TcpRelay(client);
         }catch(Exception e){
-            e.printStackTrace();
+            log.error("Target address is " + mTargetAddress, e);
         }
     }
 
-    public SSNioTcpRelayLocalUnit (SocketChannel c)
+    public SSTcpRelayLocalUnit (SocketChannel c)
     {
         mClient = c;
     }

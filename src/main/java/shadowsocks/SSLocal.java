@@ -23,11 +23,16 @@ import java.io.IOException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import shadowsocks.util.Config;
-import shadowsocks.nio.tcp.SSNioTcpRelayLocalUnit;
+import shadowsocks.nio.tcp.SSTcpRelayLocalUnit;
 import shadowsocks.crypto.CryptoFactory;
 
 public class SSLocal {
+
+    public static Logger log = LogManager.getLogger(SSLocal.class.getName());
 
     public void start()
     {
@@ -36,11 +41,11 @@ public class SSLocal {
         try(ServerSocketChannel server = ServerSocketChannel.open()) {
             server.bind(new InetSocketAddress(lport));
             server.setOption(StandardSocketOptions.SO_REUSEADDR, true);
-            System.out.println("starting client at " + server.socket().getLocalSocketAddress());
+            log.info("Starting local at " + server.socket().getLocalSocketAddress());
             while (true) {
                 SocketChannel local = server.accept();
                 local.setOption(StandardSocketOptions.TCP_NODELAY, true);
-                service.execute(new SSNioTcpRelayLocalUnit(local));
+                service.execute(new SSTcpRelayLocalUnit(local));
             }
         }catch(IOException e){
             e.printStackTrace();

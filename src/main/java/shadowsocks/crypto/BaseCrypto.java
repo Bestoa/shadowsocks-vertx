@@ -65,9 +65,12 @@ public abstract class BaseCrypto implements SSCrypto
     }
 
     public byte [] getIV(boolean encrypt){
-        if (encrypt)
+        if (encrypt){
+            if (mEncryptIV == null){
+                mEncryptIV = Utils.randomBytes(mIVLength);
+            }
             return mEncryptIV;
-        else
+        }else
             return mDecryptIV;
     }
 
@@ -75,7 +78,7 @@ public abstract class BaseCrypto implements SSCrypto
     {
         mData.reset();
         if (mEncryptCipher == null) {
-            mEncryptIV = Utils.randomBytes(mIVLength);
+            mEncryptIV = getIV(true);
             mEncryptCipher = createCipher(mEncryptIV, true);
             try {
                 mData.write(mEncryptIV);

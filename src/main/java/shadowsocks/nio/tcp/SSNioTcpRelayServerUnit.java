@@ -37,7 +37,7 @@ import shadowsocks.auth.SSAuth;
 import shadowsocks.auth.HmacSHA1;
 import shadowsocks.auth.AuthException;
 
-public class SSNioTcpRelayUnit implements Runnable {
+public class SSNioTcpRelayServerUnit implements Runnable {
 
     final private int BUFF_LEN = 16384; /* 16K */
 
@@ -357,7 +357,7 @@ public class SSNioTcpRelayUnit implements Runnable {
         }
     }
 
-    public SSNioTcpRelayUnit (SocketChannel c)
+    public SSNioTcpRelayServerUnit (SocketChannel c)
     {
         mClient = c;
     }

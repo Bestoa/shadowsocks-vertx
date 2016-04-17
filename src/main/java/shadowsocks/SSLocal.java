@@ -24,23 +24,23 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import shadowsocks.util.Config;
-import shadowsocks.nio.tcp.SSNioTcpRelayServerUnit;
+import shadowsocks.nio.tcp.SSNioTcpRelayLocalUnit;
 import shadowsocks.crypto.CryptoFactory;
 
-public class SSServer {
+public class SSLocal {
 
     public void start()
     {
-        int port = Config.get().getPort();
+        int lport = Config.get().getLocalPort();
         Executor service = Executors.newCachedThreadPool();
         try(ServerSocketChannel server = ServerSocketChannel.open()) {
-            server.bind(new InetSocketAddress(port));
+            server.bind(new InetSocketAddress(lport));
             server.setOption(StandardSocketOptions.SO_REUSEADDR, true);
-            System.out.println("starting server at " + server.socket().getLocalSocketAddress());
+            System.out.println("starting client at " + server.socket().getLocalSocketAddress());
             while (true) {
                 SocketChannel local = server.accept();
                 local.setOption(StandardSocketOptions.TCP_NODELAY, true);
-                service.execute(new SSNioTcpRelayServerUnit(local));
+                service.execute(new SSNioTcpRelayLocalUnit(local));
             }
         }catch(IOException e){
             e.printStackTrace();

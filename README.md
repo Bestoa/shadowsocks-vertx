@@ -7,14 +7,18 @@ Rewrite simple Shadowsock with Java.
 It will remove complex funtions.
 
 #Current state:
-Simple server v0.4.
+Simple server + client. Version 0.5
 
 Support these args:
 
     1. -m crypto method
     2. -k password
-    3. -p bind port
+    3. -p bind port(server)/remote port(client)
     4. -a OTA enforcing mode
+    5. -l local port
+    6. -s server
+    7. -S server mode(default)
+    8. -L Local mode(client)
 
 Crypto method: 
 
@@ -25,17 +29,15 @@ Crypto method:
 
 One time auth feature done.
 
+For server you could use: -m -k -p -a -S
+For client you could use: -m -k -p -s -l -a -L
+
 How to run:
 ===========
 ### (1) Before you start
 You must have 'gradle' installed first.
 
-### (2.1) instant run
-$ gradle run
-
-Then you get your ss server ready on default port 8388 with default password '123456'.
-
-### (2.2) generate distributable jar
+### (2) generate distributable jar
 $ gradle jar
 
 Then you get build/lib/xx.jar, now you can run it as:

@@ -24,6 +24,7 @@ import shadowsocks.auth.AuthException;
  */
 public abstract class SSAuth{
     
+    public abstract byte [] doAuth(byte[] key, byte[] data) throws AuthException;
     public abstract boolean doAuth(byte[] key, byte[] data, byte[] auth) throws AuthException;
 
     public static byte [] prepareKey(byte [] i, int c){

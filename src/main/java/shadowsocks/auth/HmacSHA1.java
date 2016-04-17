@@ -33,9 +33,10 @@ public class HmacSHA1 extends SSAuth{
     public static final int AUTH_LEN = 10;
 
     @Override
-    public boolean doAuth(byte[] key, byte [] data, byte [] expect) throws AuthException
+
+    public byte[] doAuth(byte[] key, byte [] data) throws AuthException
     {
-        try {
+        try{
             SecretKeySpec signingKey = new SecretKeySpec(key, HMAC_SHA1_ALGORITHM);
             Mac mac = Mac.getInstance(HMAC_SHA1_ALGORITHM);
             mac.init(signingKey);
@@ -43,9 +44,15 @@ public class HmacSHA1 extends SSAuth{
             byte [] result = new byte[AUTH_LEN];
             original_result = mac.doFinal(data);
             System.arraycopy(original_result, 0, result, 0, AUTH_LEN);
-            return Arrays.equals(expect, result);
+            return result;
         }catch(NoSuchAlgorithmException | InvalidKeyException e){
             throw new AuthException(e);
         }
+    }
+
+    @Override
+    public boolean doAuth(byte[] key, byte [] data, byte [] expect) throws AuthException
+    {
+        return Arrays.equals(expect, doAuth(key, data));
     }
 }

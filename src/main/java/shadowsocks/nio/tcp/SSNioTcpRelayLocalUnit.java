@@ -63,8 +63,6 @@ public class SSNioTcpRelayLocalUnit implements Runnable {
     // Store the data to do one time auth
     // For client it's also the tmp buffer for send data
     private ByteArrayOutputStream mSendData;
-    // Store the expect auth result from client
-    private byte [] mExpectAuthResult;
 
     private int mChunkCount = 0;
 
@@ -78,7 +76,10 @@ public class SSNioTcpRelayLocalUnit implements Runnable {
             mBuffer.limit(size);
     }
     /*
-     *  IV |addr type: 1 byte| addr | port: 2 bytes with big endian|
+     *  Reply 05 00
+     *        05 00 00 01 + ip 0.0.0.0 + port 2222 (fake)
+     *  Send to remote
+     *  addr type: 1 byte| addr | port: 2 bytes with big endian
      *
      *  addr type 0x1: addr = ipv4 | 4 bytes
      *  addr type 0x3: addr = host address byte array | 1 byte(array length) + byte array
@@ -89,9 +90,10 @@ public class SSNioTcpRelayLocalUnit implements Runnable {
      */
     private void parseHead(SocketChannel local, SocketChannel remote) throws IOException, CryptoException, AuthException
     {
-        //Skip 262 bytes
-        prepareBuffer(262);
+        //skip method list (max 1+1+255)
+        prepareBuffer(257);
         local.read(mBuffer);
+        //reply 0x05(Socks version) 0x00 (no password)
         prepareBuffer(2);
         mBuffer.put((byte)0x05);
         mBuffer.put((byte)0x00);
@@ -105,13 +107,19 @@ public class SSNioTcpRelayLocalUnit implements Runnable {
 
         byte [] data = mBuffer.array();
         //check mode
+        // 1 connect
+        // 2 bind
+        // 3 udp associate
+        // just support mode 1 now
         if (data[1] != 1) {
             throw new IOException("Mode = " + data[1] + ", should be 1");
         }
 
         mSendData.reset();
         int addrtype = (int)(data[3] & 0xff);
-
+        if (mOneTimeAuth) {
+            data[3] |= OTA_FLAG;
+        }
         mSendData.write(data[3]);
 
         //get addr
@@ -152,10 +160,10 @@ public class SSNioTcpRelayLocalUnit implements Runnable {
         prepareBuffer(2);
         mBuffer.put(data[0]);
         mBuffer.put(data[1]);
-        mSendData.write(data, 0, 2);
-
         // if port > 32767 the short will < 0
         int port = (int)(mBuffer.getShort(0)&0xFFFF);
+
+        mSendData.write(data, 0, 2);
 
         //reply
         prepareBuffer(10);
@@ -168,6 +176,14 @@ public class SSNioTcpRelayLocalUnit implements Runnable {
             local.write(mBuffer);
 
         System.out.println("Target = " + addr + " port = " + port);
+
+        // Create auth head
+        if (mOneTimeAuth){
+            byte [] authKey = SSAuth.prepareKey(mCryptor.getIV(true), mCryptor.getKey());
+            byte [] authData = mSendData.toByteArray();
+            byte [] authResult = mAuthor.doAuth(authKey, authData);
+            mSendData.write(authResult);
+        }
 
         data = mSendData.toByteArray();
         byte [] result = mCryptor.encrypt(data, data.length);
@@ -184,7 +200,22 @@ public class SSNioTcpRelayLocalUnit implements Runnable {
 
         byte [] result;
         if (direct == LOCAL2REMOTE) {
-            result = mCryptor.encrypt(mBuffer.array(), size);
+            mSendData.reset();
+            if (mOneTimeAuth) {
+                ByteBuffer bb = ByteBuffer.allocate(2);
+                bb.putShort((short)size);
+                //chunk len 2 bytes
+                mSendData.write(bb.array());
+                //auth result 10 bytes
+                byte [] authKey = SSAuth.prepareKey(mCryptor.getIV(true), mChunkCount);
+                byte [] authData = new byte[size];
+                System.arraycopy(mBuffer.array(), 0, authData, 0, size);
+                byte [] authResult = mAuthor.doAuth(authKey, authData);
+                mSendData.write(authResult);
+                mChunkCount++;
+            }
+            mSendData.write(mBuffer.array(), 0, size);
+            result = mCryptor.encrypt(mSendData.toByteArray(), mSendData.toByteArray().length);
         }else{
             result = mCryptor.decrypt(mBuffer.array(), size);
         }
@@ -264,10 +295,10 @@ public class SSNioTcpRelayLocalUnit implements Runnable {
         try(SocketChannel client = mClient){
             mCryptor = CryptoFactory.create(Config.get().getMethod(), Config.get().getPassword());
             mBuffer = ByteBuffer.allocate(BUFF_LEN);
+            mSendData = new ByteArrayOutputStream();
             // for one time auth
             mAuthor = new HmacSHA1();
-            mSendData = new ByteArrayOutputStream();
-            mExpectAuthResult = new byte[HmacSHA1.AUTH_LEN];
+            mOneTimeAuth = Config.get().isOTAEnabled();
             TcpRelay(client);
         }catch(Exception e){
             e.printStackTrace();

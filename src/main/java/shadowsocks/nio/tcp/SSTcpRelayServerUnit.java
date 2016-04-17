@@ -27,6 +27,9 @@ import java.net.SocketTimeoutException;
 import java.net.StandardSocketOptions;
 import java.util.Iterator;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import shadowsocks.crypto.SSCrypto;
 import shadowsocks.crypto.CryptoFactory;
 import shadowsocks.crypto.CryptoException;
@@ -37,7 +40,9 @@ import shadowsocks.auth.SSAuth;
 import shadowsocks.auth.HmacSHA1;
 import shadowsocks.auth.AuthException;
 
-public class SSNioTcpRelayServerUnit implements Runnable {
+public class SSTcpRelayServerUnit implements Runnable {
+
+    public static Logger log = LogManager.getLogger(SSTcpRelayServerUnit.class.getName());
 
     final private int BUFF_LEN = 16384; /* 16K */
 
@@ -322,7 +327,7 @@ public class SSNioTcpRelayServerUnit implements Runnable {
                 Selector selector = Selector.open();)
         {
             remote.setOption(StandardSocketOptions.TCP_NODELAY, true);
-            System.out.println("Connecting " + mRemoteAddress + " from " + local.socket().getRemoteSocketAddress());
+            log.info("Connecting " + mRemoteAddress + " from " + local.socket().getRemoteSocketAddress());
             //Still use socket with timeout since some time, remote is unreachable, then client closed
             //but this thread is still hold. This will decrease CLOSE_wait state
             remote.socket().connect(mRemoteAddress, CONNECT_TIMEOUT);
@@ -334,8 +339,7 @@ public class SSNioTcpRelayServerUnit implements Runnable {
         }catch(InterruptedException e){
             //ignore
         }catch(IOException | CryptoException e){
-            System.err.println("Target address: " + mRemoteAddress);
-            e.printStackTrace();
+            log.error("Target address is " + mRemoteAddress, e);
         }
 
     }
@@ -353,11 +357,11 @@ public class SSNioTcpRelayServerUnit implements Runnable {
             mExpectAuthResult = new byte[HmacSHA1.AUTH_LEN];
             TcpRelay(client);
         }catch(Exception e){
-            e.printStackTrace();
+            log.error("Target address is " + mRemoteAddress, e);
         }
     }
 
-    public SSNioTcpRelayServerUnit (SocketChannel c)
+    public SSTcpRelayServerUnit (SocketChannel c)
     {
         mClient = c;
     }

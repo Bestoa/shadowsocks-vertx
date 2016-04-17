@@ -15,9 +15,14 @@
  */
 package shadowsocks.util;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import gnu.getopt.Getopt;
 
 public class Config{
+
+    public static Logger log = LogManager.getLogger(Config.class.getName());
 
     private static Config mConfig;
 
@@ -127,41 +132,41 @@ public class Config{
             {
                 case 'm':
                     arg = g.getOptarg();
-                    System.out.println("Get method: " + arg);
+                    log.info("Crypto method: " + arg);
                     Config.get().setMethod(arg);
                     break;
                 case 'k':
                     arg = g.getOptarg();
-                    System.out.println("Get key: " + arg);
+                    log.info("Password: " + arg);
                     Config.get().setPassowrd(arg);
                     break;
                 case 'p':
                     arg = g.getOptarg();
                     int port = Integer.parseInt(arg);
-                    System.out.println("Get port: " + port);
+                    log.info("Port: " + port);
                     Config.get().setPort(port);
                     break;
                 case 'a':
-                    System.out.println("OTA enforcing mode.");
+                    log.info("OTA enforcing mode.");
                     Config.get().setOTAEnabled(true);
                     break;
                 case 'S':
-                    System.out.println("Server mode.");
+                    log.info("Server mode.");
                     Config.get().setServerMode(true);
                     break;
                 case 'L':
-                    System.out.println("Local mode.");
+                    log.info("Local mode.");
                     Config.get().setServerMode(false);
                     break;
                 case 's':
                     arg = g.getOptarg();
-                    System.out.println("Get server: " + arg);
+                    log.info("Server address: " + arg);
                     Config.get().setServer(arg);
                     break;
                 case 'l':
                     arg = g.getOptarg();
                     int lport = Integer.parseInt(arg);
-                    System.out.println("Get local port: " + lport);
+                    log.info("Local port: " + lport);
                     Config.get().setLocalPort(lport);
                     break;
                 case '?':
@@ -175,6 +180,5 @@ public class Config{
     private static void help()
     {
         //TODO
-        System.out.println("HELP");
     }
 }

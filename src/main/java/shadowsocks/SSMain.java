@@ -15,19 +15,27 @@
  */
 package shadowsocks;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import shadowsocks.util.Config;
 import shadowsocks.crypto.CryptoFactory;
 
 public class SSMain{
+
+    public static Logger log = LogManager.getLogger(SSMain.class.getName());
+
+    public static final String VERSION = "0.5.1";
+
     public static void main(String argv[])
     {
-        System.out.println("Shadowsocks v0.5");
+        log.info("Shadowsocks " + VERSION);
         Config.getConfigFromArgv(argv);
         //make sure this method could work.
         try{
             CryptoFactory.create(Config.get().getMethod(), Config.get().getPassword());
         }catch(Exception e){
-            e.printStackTrace();
+            log.error("Error crypto method", e);
             return;
         }
         if(Config.get().isServerMode()){

@@ -17,7 +17,6 @@ package shadowsocks;
 
 import java.nio.channels.SocketChannel;
 import java.nio.channels.ServerSocketChannel;
-import java.net.StandardSocketOptions;
 import java.net.InetSocketAddress;
 import java.io.IOException;
 import java.util.concurrent.Executor;
@@ -39,12 +38,12 @@ public class SSServer {
         int port = Config.get().getPort();
         Executor service = Executors.newCachedThreadPool();
         try(ServerSocketChannel server = ServerSocketChannel.open()) {
-            server.bind(new InetSocketAddress(port));
-            server.setOption(StandardSocketOptions.SO_REUSEADDR, true);
+            server.socket().bind(new InetSocketAddress(port));
+            server.socket().setReuseAddress(true);
             log.info("Starting server at " + server.socket().getLocalSocketAddress());
             while (true) {
                 SocketChannel local = server.accept();
-                local.setOption(StandardSocketOptions.TCP_NODELAY, true);
+                local.socket().setTcpNoDelay(true);
                 service.execute(new SSTcpRelayServerUnit(local));
             }
         }catch(IOException e){

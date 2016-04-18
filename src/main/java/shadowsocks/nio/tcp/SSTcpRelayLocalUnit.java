@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.InetAddress;
 import java.net.SocketTimeoutException;
-import java.net.StandardSocketOptions;
 import java.util.Iterator;
 
 import org.apache.logging.log4j.LogManager;
@@ -278,7 +277,7 @@ public class SSTcpRelayLocalUnit implements Runnable {
         try(SocketChannel remote = SocketChannel.open();
                 Selector selector = Selector.open();)
         {
-            remote.setOption(StandardSocketOptions.TCP_NODELAY, true);
+            remote.socket().setTcpNoDelay(true);
             //Still use socket with timeout since some time, remote is unreachable, then client closed
             //but this thread is still hold. This will decrease CLOSE_wait state
             remote.socket().connect(server, CONNECT_TIMEOUT);

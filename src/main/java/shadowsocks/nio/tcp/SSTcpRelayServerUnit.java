@@ -43,24 +43,13 @@ public class SSTcpRelayServerUnit implements Runnable {
 
     public static Logger log = LogManager.getLogger(SSTcpRelayServerUnit.class.getName());
 
-    final private int BUFF_LEN = 16384; /* 16K */
-
-    final private int ADDR_TYPE_IPV4 = 0x01;
-    final private int ADDR_TYPE_HOST = 0x03;
-
-    final private int LOCAL2REMOTE = 1;
-    final private int REMOTE2LOCAL = 2;
-
-    final private int OTA_FLAG = 0x10;
-
     private SocketChannel mClient;
 
     private InetSocketAddress mRemoteAddress;
 
     public SSCrypto mCryptor;
 
-
-    // Read buffer
+    private SSBufferWrap mBufferWrap;
     private ByteBuffer mBuffer;
 
     private boolean mOneTimeAuth = false;
@@ -98,15 +87,6 @@ public class SSTcpRelayServerUnit implements Runnable {
         }
     }
 
-    private void prepareBuffer(){
-        mBuffer.clear();
-    }
-    private void prepareBuffer(int size){
-        prepareBuffer();
-        // if data len is longer than buffer size, just read buffer size one time.
-        if (size < BUFF_LEN)
-            mBuffer.limit(size);
-    }
     /*
      *  IV |addr type: 1 byte| addr | port: 2 bytes with big endian|
      *
@@ -122,13 +102,13 @@ public class SSTcpRelayServerUnit implements Runnable {
         mAuthData.reset();
         // Read IV + address type length.
         int len = mCryptor.getIVLength() + 1;
-        prepareBuffer(len);
-        local.read(mBuffer);
+        mBufferWrap.prepare(len);
+        mBufferWrap.readWithCheck(local, len);
 
         byte [] result = mCryptor.decrypt(mBuffer.array(), len);
         int addrtype = (int)(result[0] & 0xff);
 
-        if ((addrtype & OTA_FLAG) == OTA_FLAG) {
+        if ((addrtype & SSTcpConstant.OTA_FLAG) == SSTcpConstant.OTA_FLAG) {
             mOneTimeAuth = true;
             addrtype &= 0x0f;
         }
@@ -140,23 +120,23 @@ public class SSTcpRelayServerUnit implements Runnable {
 
         //get addr
         InetAddress addr;
-        if (addrtype == ADDR_TYPE_IPV4) {
+        if (addrtype == SSTcpConstant.ADDR_TYPE_IPV4) {
             //get IPV4 address
-            prepareBuffer(4);
-            local.read(mBuffer);
+            mBufferWrap.prepare(4);
+            mBufferWrap.readWithCheck(local, 4);
             result = mCryptor.decrypt(mBuffer.array(), 4);
             addr = InetAddress.getByAddress(result);
             mAuthData.write(result, 0, 4);
-        }else if (addrtype == ADDR_TYPE_HOST) {
+        }else if (addrtype == SSTcpConstant.ADDR_TYPE_HOST) {
             //get address len
-            prepareBuffer(1);
-            local.read(mBuffer);
+            mBufferWrap.prepare(1);
+            mBufferWrap.readWithCheck(local, 1);
             result = mCryptor.decrypt(mBuffer.array(), 1);
             len = result[0];
             mAuthData.write(result[0]);
             //get address
-            prepareBuffer(len);
-            local.read(mBuffer);
+            mBufferWrap.prepare(len);
+            mBufferWrap.readWithCheck(local, len);
             result = mCryptor.decrypt(mBuffer.array(), len);
             addr = InetAddress.getByName(new String(result, 0, len));
             mAuthData.write(result, 0, len);
@@ -166,22 +146,20 @@ public class SSTcpRelayServerUnit implements Runnable {
         }
 
         //get port
-        prepareBuffer(2);
-        local.read(mBuffer);
+        mBufferWrap.prepare(2);
+        mBufferWrap.readWithCheck(local, 2);
         result = mCryptor.decrypt(mBuffer.array(), 2);
-        prepareBuffer(2);
+        mBufferWrap.prepare(2);
         mBuffer.put(result[0]);
         mBuffer.put(result[1]);
         mAuthData.write(result, 0, 2);
-
         // if port > 32767 the short will < 0
         int port = (int)(mBuffer.getShort(0)&0xFFFF);
+
         // Auth head
         if (mOneTimeAuth){
-            prepareBuffer(HmacSHA1.AUTH_LEN);
-            local.read(mBuffer);
-            //Even we don't need this sha1, we need decrypt it
-            //otherwise, the follow-up data can't be decrypted
+            mBufferWrap.prepare(HmacSHA1.AUTH_LEN);
+            mBufferWrap.readWithCheck(local, HmacSHA1.AUTH_LEN);
             result = mCryptor.decrypt(mBuffer.array(), HmacSHA1.AUTH_LEN);
             byte [] authKey = SSAuth.prepareKey(mCryptor.getIV(false), mCryptor.getKey());
             byte [] authData = mAuthData.toByteArray();
@@ -200,7 +178,7 @@ public class SSTcpRelayServerUnit implements Runnable {
         int size = 0;
         int total_size = 0;
         int authHeadLen = mSM.mLenToRead[StateMachine.AUTH_HEAD];
-        prepareBuffer(authHeadLen);
+        mBufferWrap.prepare(authHeadLen);
         //In fact it should be send together, but we'd better to ensure we could read full head.
         while(mBuffer.hasRemaining()){
             size = sc.read(mBuffer);
@@ -217,7 +195,7 @@ public class SSTcpRelayServerUnit implements Runnable {
 
         }
         byte [] result = mCryptor.decrypt(mBuffer.array(), authHeadLen);
-        prepareBuffer(2);
+        mBufferWrap.prepare(2);
         mBuffer.put(result[0]);
         mBuffer.put(result[1]);
         mSM.mLenToRead[StateMachine.DATA] = (int)(mBuffer.getShort(0)&0xFFFF);
@@ -235,22 +213,22 @@ public class SSTcpRelayServerUnit implements Runnable {
     {
         int size;
         boolean chunkFinish = false;
-        if (mOneTimeAuth && direct == LOCAL2REMOTE)
+        if (mOneTimeAuth && direct == SSTcpConstant.LOCAL2REMOTE)
         {
             switch (mSM.getState()){
                 case StateMachine.AUTH_HEAD:
                     return readAuthHead(source);
                 case StateMachine.DATA:
-                    prepareBuffer(mSM.mLenToRead[StateMachine.DATA]);
+                    mBufferWrap.prepare(mSM.mLenToRead[StateMachine.DATA]);
                     break;
             }
         }else{
-            prepareBuffer();
+            mBufferWrap.prepare();
         }
         size = source.read(mBuffer);
         if (size < 0)
             return true;
-        if (mOneTimeAuth && direct == LOCAL2REMOTE)
+        if (mOneTimeAuth && direct == SSTcpConstant.LOCAL2REMOTE)
         {
             mSM.mLenToRead[StateMachine.DATA] -= size;
             if (mSM.mLenToRead[StateMachine.DATA] == 0){
@@ -259,12 +237,12 @@ public class SSTcpRelayServerUnit implements Runnable {
             }
         }
         byte [] result;
-        if (direct == LOCAL2REMOTE) {
+        if (direct == SSTcpConstant.LOCAL2REMOTE) {
             result = mCryptor.decrypt(mBuffer.array(), size);
         }else{
             result = mCryptor.encrypt(mBuffer.array(), size);
         }
-        if (mOneTimeAuth && direct == LOCAL2REMOTE)
+        if (mOneTimeAuth && direct == SSTcpConstant.LOCAL2REMOTE)
         {
             mAuthData.write(result, 0, size);
             if (chunkFinish) {
@@ -304,9 +282,9 @@ public class SSTcpRelayServerUnit implements Runnable {
                 if (key.isReadable()) {
                     SocketChannel channel = (SocketChannel)key.channel();
                     if (channel.equals(local)) {
-                        finish = send(local, remote, LOCAL2REMOTE);
+                        finish = send(local, remote, SSTcpConstant.LOCAL2REMOTE);
                     }else{
-                        finish = send(remote, local, REMOTE2LOCAL);
+                        finish = send(remote, local, SSTcpConstant.REMOTE2LOCAL);
                     }
                 }
                 it.remove();
@@ -348,7 +326,8 @@ public class SSTcpRelayServerUnit implements Runnable {
         //make sure this channel could be closed
         try(SocketChannel client = mClient){
             mCryptor = CryptoFactory.create(Config.get().getMethod(), Config.get().getPassword());
-            mBuffer = ByteBuffer.allocate(BUFF_LEN);
+            mBufferWrap = new SSBufferWrap();
+            mBuffer = mBufferWrap.get();
             // for one time auth
             mSM = new StateMachine();
             mAuthor = new HmacSHA1();

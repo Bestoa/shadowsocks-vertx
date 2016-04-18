@@ -25,7 +25,7 @@ public class SSMain{
 
     public static Logger log = LogManager.getLogger(SSMain.class.getName());
 
-    public static final String VERSION = "0.5.1";
+    public static final String VERSION = "0.5.2";
 
     public static void main(String argv[])
     {

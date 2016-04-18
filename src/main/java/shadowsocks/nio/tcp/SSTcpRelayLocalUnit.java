@@ -19,12 +19,10 @@ import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.Selector;
-import java.nio.channels.SelectionKey;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.InetAddress;
 import java.net.SocketTimeoutException;
-import java.util.Iterator;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -39,22 +37,10 @@ import shadowsocks.auth.SSAuth;
 import shadowsocks.auth.HmacSHA1;
 import shadowsocks.auth.AuthException;
 
-public class SSTcpRelayLocalUnit implements Runnable {
-
-    public static Logger log = LogManager.getLogger(SSTcpRelayLocalUnit.class.getName());
-
-    // Socket, program to us
-    private SocketChannel mClient;
-
-    private Session mSession;
-
-    public SSCrypto mCryptor;
+public class SSTcpRelayLocalUnit extends SSTcpRelayBaseUnit {
 
     // Temp buffer for stream up(local to remote) data
     private ByteArrayOutputStream mStreamUpData;
-
-    private SSBufferWrap mBufferWrap;
-    private ByteBuffer mBuffer;
 
     //For OTA
     private boolean mOneTimeAuth = false;
@@ -181,7 +167,8 @@ public class SSTcpRelayLocalUnit implements Runnable {
             remote.write(out);
     }
 
-    private boolean send(SocketChannel source, SocketChannel target, int direct) throws IOException,CryptoException,AuthException
+    @Override
+    protected boolean send(SocketChannel source, SocketChannel target, int direct) throws IOException,CryptoException,AuthException
     {
         int size;
         mBufferWrap.prepare();
@@ -225,98 +212,34 @@ public class SSTcpRelayLocalUnit implements Runnable {
         return false;
     }
 
-    private void doTcpRelay(Selector selector, SocketChannel local, SocketChannel remote)
-        throws IOException,InterruptedException,CryptoException,AuthException
+    @Override
+    protected InetSocketAddress getRemote(SocketChannel local)
+        throws IOException, CryptoException, AuthException
     {
-        local.configureBlocking(false);
-        remote.configureBlocking(false);
-
-        local.register(selector, SelectionKey.OP_READ);
-        remote.register(selector, SelectionKey.OP_READ);
-
-        boolean finish = false;
-
-        while(true){
-            int n = selector.select();
-            if (n == 0){
-                continue;
-            }
-            Iterator it = selector.selectedKeys().iterator();
-            while (it.hasNext()) {
-                SelectionKey key = (SelectionKey)it.next();
-                if (key.isReadable()) {
-                    SocketChannel channel = (SocketChannel)key.channel();
-                    if (channel.equals(local)) {
-                        finish = send(local, remote, SSTcpConstant.LOCAL2REMOTE);
-                    }else{
-                        finish = send(remote, local, SSTcpConstant.REMOTE2LOCAL);
-                    }
-                }
-                it.remove();
-            }
-            if (finish)
-                break;
-        }
+        return new InetSocketAddress(InetAddress.getByName(Config.get().getServer()), Config.get().getPort());
+    }
+    @Override
+    protected void preTcpRelay(SocketChannel local, SocketChannel remote)
+        throws IOException, CryptoException, AuthException
+    {
+        parseHead(local, remote);
+    }
+    @Override
+    protected void postTcpTelay(SocketChannel local, SocketChannel remote)
+        throws IOException, CryptoException, AuthException
+    {
+        //dummy
     }
 
-    private void TcpRelay(SocketChannel local) throws IOException, CryptoException, AuthException
-    {
-        int CONNECT_TIMEOUT = 3000;
-
-        InetSocketAddress server = new InetSocketAddress(
-                InetAddress.getByName(Config.get().getServer()),
-                Config.get().getPort());
-
-        try(SocketChannel remote = SocketChannel.open();
-                Selector selector = Selector.open();)
-        {
-            remote.socket().setTcpNoDelay(true);
-            //Still use socket with timeout since some time, remote is unreachable, then client closed
-            //but this thread is still hold. This will decrease CLOSE_wait state
-            remote.socket().connect(server, CONNECT_TIMEOUT);
-
-            parseHead(local, remote);
-
-            doTcpRelay(selector, local, remote);
-
-        }catch(SocketTimeoutException e){
-            log.error("Remote server " + server + " is unreachable", e);
-        }catch(InterruptedException e){
-            //ignore
-        }catch(IOException | CryptoException e){
-            mSession.dump(log, e);
-        }
-
+    @Override
+    protected void localInit() throws Exception{
+        mStreamUpData = new ByteArrayOutputStream();
+        // for one time auth
+        mAuthor = new HmacSHA1();
+        mOneTimeAuth = Config.get().isOTAEnabled();
     }
 
-    public void run()
-    {
-        //make sure this channel could be closed
-        try(SocketChannel client = mClient){
-
-            mSession = new Session();
-            mSession.set(client.socket().getRemoteSocketAddress(), true);
-
-            mCryptor = CryptoFactory.create(Config.get().getMethod(), Config.get().getPassword());
-
-            mBufferWrap = new SSBufferWrap();
-            mBuffer = mBufferWrap.get();
-
-            mStreamUpData = new ByteArrayOutputStream();
-            // for one time auth
-            mAuthor = new HmacSHA1();
-            mOneTimeAuth = Config.get().isOTAEnabled();
-
-            TcpRelay(client);
-        }catch(Exception e){
-            mSession.dump(log, e);
-        }finally{
-            mSession.destory();
-        }
-    }
-
-    public SSTcpRelayLocalUnit (SocketChannel c)
-    {
-        mClient = c;
+    public SSTcpRelayLocalUnit(SocketChannel s){
+        super(s);
     }
 }

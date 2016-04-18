@@ -19,12 +19,10 @@ import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.Selector;
-import java.nio.channels.SelectionKey;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.InetAddress;
 import java.net.SocketTimeoutException;
-import java.util.Iterator;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -39,31 +37,16 @@ import shadowsocks.auth.SSAuth;
 import shadowsocks.auth.HmacSHA1;
 import shadowsocks.auth.AuthException;
 
-public class SSTcpRelayServerUnit implements Runnable {
+public class SSTcpRelayServerUnit extends SSTcpRelayBaseUnit {
 
-    public static Logger log = LogManager.getLogger(SSTcpRelayServerUnit.class.getName());
-
-    //Client to us
-    private SocketChannel mClient;
-
-    private Session mSession;
-
-    public SSCrypto mCryptor;
-
-    private SSBufferWrap mBufferWrap;
-    private ByteBuffer mBuffer;
-
-    private boolean mOneTimeAuth = false;
-
-    private StateMachine mSM;
-
-    private SSAuth mAuthor;
-
+    // For OTA
     // Store the data to do one time auth
     private ByteArrayOutputStream mAuthData;
     // Store the expect auth result from client
     private byte [] mExpectAuthResult;
-
+    private StateMachine mSM;
+    private boolean mOneTimeAuth = false;
+    private SSAuth mAuthor;
     private int mChunkCount = 0;
 
     private class StateMachine{
@@ -168,7 +151,10 @@ public class SSTcpRelayServerUnit implements Runnable {
                 throw new AuthException("Auth head failed");
             }
         }
-        return new InetSocketAddress(addr, port);
+        InetSocketAddress target = new InetSocketAddress(addr, port);
+        mSession.set(target, false);
+        log.info("Connecting " + target +  " from " + local.socket().getRemoteSocketAddress());
+        return target;
     }
 
     // For OTA the chunck will be:
@@ -210,7 +196,8 @@ public class SSTcpRelayServerUnit implements Runnable {
         return false;
     }
 
-    private boolean send(SocketChannel source, SocketChannel target, int direct) throws IOException,CryptoException,AuthException
+    @Override
+    protected boolean send(SocketChannel source, SocketChannel target, int direct) throws IOException,CryptoException,AuthException
     {
         int size;
         boolean chunkFinish = false;
@@ -263,99 +250,34 @@ public class SSTcpRelayServerUnit implements Runnable {
             target.write(out);
         return false;
     }
-
-    private void doTcpRelay(Selector selector, SocketChannel local, SocketChannel remote)
-        throws IOException,InterruptedException,CryptoException,AuthException
+    @Override
+    protected InetSocketAddress getRemote(SocketChannel local)
+        throws IOException, CryptoException, AuthException
     {
-        local.configureBlocking(false);
-        remote.configureBlocking(false);
-
-        local.register(selector, SelectionKey.OP_READ);
-        remote.register(selector, SelectionKey.OP_READ);
-
-        boolean finish = false;
-
-        while(true){
-            int n = selector.select();
-            if (n == 0){
-                continue;
-            }
-            Iterator it = selector.selectedKeys().iterator();
-            while (it.hasNext()) {
-                SelectionKey key = (SelectionKey)it.next();
-                if (key.isReadable()) {
-                    SocketChannel channel = (SocketChannel)key.channel();
-                    if (channel.equals(local)) {
-                        finish = send(local, remote, SSTcpConstant.LOCAL2REMOTE);
-                    }else{
-                        finish = send(remote, local, SSTcpConstant.REMOTE2LOCAL);
-                    }
-                }
-                it.remove();
-            }
-            if (finish)
-                break;
-        }
+        return parseHead(local);
+    }
+    @Override
+    protected void preTcpRelay(SocketChannel local, SocketChannel remote)
+        throws IOException, CryptoException, AuthException
+    {
+        //dummy
+    }
+    @Override
+    protected void postTcpTelay(SocketChannel local, SocketChannel remote)
+        throws IOException, CryptoException, AuthException
+    {
+        //dummy
+    }
+    @Override
+    protected void localInit() throws Exception{
+        // for one time auth
+        mSM = new StateMachine();
+        mAuthor = new HmacSHA1();
+        mAuthData = new ByteArrayOutputStream();
+        mExpectAuthResult = new byte[HmacSHA1.AUTH_LEN];
     }
 
-    private void TcpRelay(SocketChannel local) throws IOException, CryptoException, AuthException
-    {
-        int CONNECT_TIMEOUT = 3000;
-
-        InetSocketAddress target = parseHead(local);
-
-        mSession.set(target, false);
-
-        try(SocketChannel remote = SocketChannel.open();
-                Selector selector = Selector.open();)
-        {
-            remote.socket().setTcpNoDelay(true);
-            log.info("Connecting " + target + " from " + local.socket().getRemoteSocketAddress());
-            //Still use socket with timeout since some time, remote is unreachable, then client closed
-            //but this thread is still hold. This will decrease CLOSE_wait state
-            remote.socket().connect(target, CONNECT_TIMEOUT);
-
-            doTcpRelay(selector, local, remote);
-
-        }catch(SocketTimeoutException e){
-            log.warn("Target address: " + target + " is unreachable.", e);
-        }catch(InterruptedException e){
-            //ignore
-        }catch(IOException | CryptoException e){
-            mSession.dump(log, e);
-        }
-
-    }
-
-    public void run()
-    {
-        //make sure this channel could be closed
-        try(SocketChannel client = mClient){
-
-            mSession = new Session();
-            mSession.set(client.socket().getRemoteSocketAddress(), true);
-
-            mCryptor = CryptoFactory.create(Config.get().getMethod(), Config.get().getPassword());
-
-            mBufferWrap = new SSBufferWrap();
-            mBuffer = mBufferWrap.get();
-
-            // for one time auth
-            mSM = new StateMachine();
-            mAuthor = new HmacSHA1();
-            mAuthData = new ByteArrayOutputStream();
-            mExpectAuthResult = new byte[HmacSHA1.AUTH_LEN];
-
-            TcpRelay(client);
-        }catch(Exception e){
-            mSession.dump(log, e);
-        }finally{
-            mSession.destory();
-        }
-    }
-
-    public SSTcpRelayServerUnit (SocketChannel c)
-    {
-        mClient = c;
+    public SSTcpRelayServerUnit(SocketChannel s){
+        super(s);
     }
 }

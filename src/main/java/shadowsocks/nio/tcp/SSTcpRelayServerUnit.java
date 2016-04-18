@@ -1,4 +1,4 @@
-/*   
+/*
  *   Copyright 2016 Author:NU11 bestoapache@gmail.com
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,9 +43,10 @@ public class SSTcpRelayServerUnit implements Runnable {
 
     public static Logger log = LogManager.getLogger(SSTcpRelayServerUnit.class.getName());
 
+    //Client to us
     private SocketChannel mClient;
 
-    private InetSocketAddress mRemoteAddress;
+    private Session mSession;
 
     public SSCrypto mCryptor;
 
@@ -228,6 +229,9 @@ public class SSTcpRelayServerUnit implements Runnable {
         size = source.read(mBuffer);
         if (size < 0)
             return true;
+
+        mSession.record(size, direct);
+
         if (mOneTimeAuth && direct == SSTcpConstant.LOCAL2REMOTE)
         {
             mSM.mLenToRead[StateMachine.DATA] -= size;
@@ -298,25 +302,27 @@ public class SSTcpRelayServerUnit implements Runnable {
     {
         int CONNECT_TIMEOUT = 3000;
 
-        mRemoteAddress = parseHead(local);
+        InetSocketAddress target = parseHead(local);
+
+        mSession.set(target, false);
 
         try(SocketChannel remote = SocketChannel.open();
                 Selector selector = Selector.open();)
         {
             remote.socket().setTcpNoDelay(true);
-            log.info("Connecting " + mRemoteAddress + " from " + local.socket().getRemoteSocketAddress());
+            log.info("Connecting " + target + " from " + local.socket().getRemoteSocketAddress());
             //Still use socket with timeout since some time, remote is unreachable, then client closed
             //but this thread is still hold. This will decrease CLOSE_wait state
-            remote.socket().connect(mRemoteAddress, CONNECT_TIMEOUT);
+            remote.socket().connect(target, CONNECT_TIMEOUT);
 
             doTcpRelay(selector, local, remote);
 
         }catch(SocketTimeoutException e){
-            //ignore
+            log.warn("Target address: " + target + " is unreachable.", e);
         }catch(InterruptedException e){
             //ignore
         }catch(IOException | CryptoException e){
-            log.error("Target address is " + mRemoteAddress, e);
+            mSession.dump(log, e);
         }
 
     }
@@ -325,17 +331,26 @@ public class SSTcpRelayServerUnit implements Runnable {
     {
         //make sure this channel could be closed
         try(SocketChannel client = mClient){
+
+            mSession = new Session();
+            mSession.set(client.socket().getRemoteSocketAddress(), true);
+
             mCryptor = CryptoFactory.create(Config.get().getMethod(), Config.get().getPassword());
+
             mBufferWrap = new SSBufferWrap();
             mBuffer = mBufferWrap.get();
+
             // for one time auth
             mSM = new StateMachine();
             mAuthor = new HmacSHA1();
             mAuthData = new ByteArrayOutputStream();
             mExpectAuthResult = new byte[HmacSHA1.AUTH_LEN];
+
             TcpRelay(client);
         }catch(Exception e){
-            log.error("Target address is " + mRemoteAddress, e);
+            mSession.dump(log, e);
+        }finally{
+            mSession.destory();
         }
     }
 

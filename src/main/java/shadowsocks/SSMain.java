@@ -35,7 +35,7 @@ public class SSMain{
         try{
             CryptoFactory.create(Config.get().getMethod(), Config.get().getPassword());
         }catch(Exception e){
-            log.error("Error crypto method", e);
+            log.fatal("Error crypto method", e);
             return;
         }
         if(Config.get().isServerMode()){

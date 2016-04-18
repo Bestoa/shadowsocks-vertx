@@ -43,26 +43,30 @@ public class SSTcpRelayLocalUnit implements Runnable {
 
     public static Logger log = LogManager.getLogger(SSTcpRelayLocalUnit.class.getName());
 
+    // Socket, program to us
     private SocketChannel mClient;
 
-    InetSocketAddress mTargetAddress;
+    private Session mSession;
 
     public SSCrypto mCryptor;
 
-    // Temp buffer for send data, also for OTA
-    private ByteArrayOutputStream mSendData;
+    // Temp buffer for stream up(local to remote) data
+    private ByteArrayOutputStream mStreamUpData;
 
     private SSBufferWrap mBufferWrap;
     private ByteBuffer mBuffer;
 
+    //For OTA
     private boolean mOneTimeAuth = false;
-
     private SSAuth mAuthor;
-
     private int mChunkCount = 0;
     /*
+     *  Receive method list
      *  Reply 05 00
-     *        05 00 00 01 + ip 0.0.0.0 + port 2222 (fake)
+     *  Receive address + port
+     *  Reply
+     *        05 00 00 01 + ip 0.0.0.0 + port 8888(fake)
+     *
      *  Send to remote
      *  addr type: 1 byte| addr | port: 2 bytes with big endian
      *
@@ -102,13 +106,13 @@ public class SSTcpRelayLocalUnit implements Runnable {
             throw new IOException("Mode = " + data[1] + ", should be 1");
         }
 
-        mSendData.reset();
+        mStreamUpData.reset();
         int addrtype = (int)(data[3] & 0xff);
         //add OTA flag
         if (mOneTimeAuth) {
             data[3] |= SSTcpConstant.OTA_FLAG;
         }
-        mSendData.write(data[3]);
+        mStreamUpData.write(data[3]);
 
         //get addr
         InetAddress addr;
@@ -120,20 +124,20 @@ public class SSTcpRelayLocalUnit implements Runnable {
             byte [] ipv4 = new byte[4];
             System.arraycopy(data, 0, ipv4, 0, 4);
             addr = InetAddress.getByAddress(ipv4);
-            mSendData.write(data, 0, 4);
+            mStreamUpData.write(data, 0, 4);
         }else if (addrtype == SSTcpConstant.ADDR_TYPE_HOST) {
             //get address len
             mBufferWrap.prepare(1);
             mBufferWrap.readWithCheck(local, 1);
             data = mBuffer.array();
             int len = data[0];
-            mSendData.write(data[0]);
+            mStreamUpData.write(data[0]);
             //get address
             mBufferWrap.prepare(len);
             mBufferWrap.readWithCheck(local, len);
             data = mBuffer.array();
             addr = InetAddress.getByName(new String(data, 0, len));
-            mSendData.write(data, 0, len);
+            mStreamUpData.write(data, 0, len);
         } else {
             //do not support other addrtype now.
             throw new IOException("Unsupport addr type: " + addrtype + "!");
@@ -145,7 +149,7 @@ public class SSTcpRelayLocalUnit implements Runnable {
         // if port > 32767 the short will < 0
         int port = (int)(mBuffer.getShort(0)&0xFFFF);
 
-        mSendData.write(mBuffer.array(), 0, 2);
+        mStreamUpData.write(mBuffer.array(), 0, 2);
 
         //reply
         mBufferWrap.prepare(10);
@@ -157,18 +161,20 @@ public class SSTcpRelayLocalUnit implements Runnable {
         while(mBuffer.hasRemaining())
             local.write(mBuffer);
 
-        mTargetAddress = new InetSocketAddress(addr, port);
-        log.info("Target address is " + mTargetAddress);
+        InetSocketAddress target = new InetSocketAddress(addr, port);
+        mSession.set(target, false);
+        log.info("Target address: " + target);
 
         // Create auth head
         if (mOneTimeAuth){
             byte [] authKey = SSAuth.prepareKey(mCryptor.getIV(true), mCryptor.getKey());
-            byte [] authData = mSendData.toByteArray();
+            byte [] authData = mStreamUpData.toByteArray();
             byte [] authResult = mAuthor.doAuth(authKey, authData);
-            mSendData.write(authResult);
+            mStreamUpData.write(authResult);
         }
 
-        data = mSendData.toByteArray();
+        //Send head to remote
+        data = mStreamUpData.toByteArray();
         byte [] result = mCryptor.encrypt(data, data.length);
         ByteBuffer out = ByteBuffer.wrap(result);
         while(out.hasRemaining())
@@ -179,28 +185,37 @@ public class SSTcpRelayLocalUnit implements Runnable {
     {
         int size;
         mBufferWrap.prepare();
-        size = source.read(mBuffer);
+        try{
+            size = source.read(mBuffer);
+        }catch(IOException e){
+            // Sometime target is unreachable, so server close the socket will cause IOException.
+            log.warn(e.getMessage());
+            return true;
+        }
         if (size < 0)
             return true;
 
+        mSession.record(size, direct);
+
         byte [] result;
         if (direct == SSTcpConstant.LOCAL2REMOTE) {
-            mSendData.reset();
+            mStreamUpData.reset();
             if (mOneTimeAuth) {
                 ByteBuffer bb = ByteBuffer.allocate(2);
                 bb.putShort((short)size);
                 //chunk length 2 bytes
-                mSendData.write(bb.array());
+                mStreamUpData.write(bb.array());
                 //auth result 10 bytes
                 byte [] authKey = SSAuth.prepareKey(mCryptor.getIV(true), mChunkCount);
                 byte [] authData = new byte[size];
                 System.arraycopy(mBuffer.array(), 0, authData, 0, size);
                 byte [] authResult = mAuthor.doAuth(authKey, authData);
-                mSendData.write(authResult);
+                mStreamUpData.write(authResult);
                 mChunkCount++;
             }
-            mSendData.write(mBuffer.array(), 0, size);
-            result = mCryptor.encrypt(mSendData.toByteArray(), mSendData.toByteArray().length);
+            mStreamUpData.write(mBuffer.array(), 0, size);
+            byte [] data = mStreamUpData.toByteArray();
+            result = mCryptor.encrypt(data, data.length);
         }else{
             result = mCryptor.decrypt(mBuffer.array(), size);
         }
@@ -265,11 +280,11 @@ public class SSTcpRelayLocalUnit implements Runnable {
             doTcpRelay(selector, local, remote);
 
         }catch(SocketTimeoutException e){
-            //ignore
+            log.error("Remote server " + server + " is unreachable", e);
         }catch(InterruptedException e){
             //ignore
         }catch(IOException | CryptoException e){
-            log.error("Target address is " + mTargetAddress, e);
+            mSession.dump(log, e);
         }
 
     }
@@ -278,16 +293,25 @@ public class SSTcpRelayLocalUnit implements Runnable {
     {
         //make sure this channel could be closed
         try(SocketChannel client = mClient){
+
+            mSession = new Session();
+            mSession.set(client.socket().getRemoteSocketAddress(), true);
+
             mCryptor = CryptoFactory.create(Config.get().getMethod(), Config.get().getPassword());
+
             mBufferWrap = new SSBufferWrap();
             mBuffer = mBufferWrap.get();
-            mSendData = new ByteArrayOutputStream();
+
+            mStreamUpData = new ByteArrayOutputStream();
             // for one time auth
             mAuthor = new HmacSHA1();
             mOneTimeAuth = Config.get().isOTAEnabled();
+
             TcpRelay(client);
         }catch(Exception e){
-            log.error("Target address is " + mTargetAddress, e);
+            mSession.dump(log, e);
+        }finally{
+            mSession.destory();
         }
     }
 

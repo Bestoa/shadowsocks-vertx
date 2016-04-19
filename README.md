@@ -8,7 +8,7 @@ Rewrite simple Shadowsocks with Java.
 It will remove complex funtions.
 
 #Current state:
-Simple server + client. Version 0.5
+Simple server + client. Version 0.6
 
 Support these args:
 
@@ -20,6 +20,7 @@ Support these args:
     6. -s server
     7. -S server mode(default)
     8. -L Local mode(client)
+    9. -c config file
 
 Crypto method: 
 
@@ -30,8 +31,9 @@ Crypto method:
 
 One time auth feature done.
 
-For server you could use: -m -k -p -a -S
-For client you could use: -m -k -p -s -l -a -L
+Support JSON config file.(local\_address/timeout/fast\_open/workers is not support)
+
+You could refer to demo config etc/demo.json.
 
 How to run:
 ===========
@@ -41,6 +43,11 @@ You must have 'gradle' installed first.
 ### (2) generate distributable jar
 $ gradle jar
 
-Then you get build/lib/xx.jar, now you can run it as:
+Then you get xx.jar, now you can run it as:
 
-$ java -jar build/lib/xx.jar
+{{{
+//Server
+$ java -jar xx.jar -S ....
+//Local
+$ java -jar xx.jar -L ....
+}}}

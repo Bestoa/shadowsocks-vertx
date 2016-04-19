@@ -31,6 +31,7 @@ public class SSMain{
     {
         log.info("Shadowsocks " + VERSION);
         Config.getConfigFromArgv(argv);
+        Config.getConfigFromFile();
         //make sure this method could work.
         try{
             CryptoFactory.create(Config.get().getMethod(), Config.get().getPassword());

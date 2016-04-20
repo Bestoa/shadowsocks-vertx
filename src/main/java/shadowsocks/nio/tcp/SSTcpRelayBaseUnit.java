@@ -35,23 +35,43 @@ import shadowsocks.crypto.CryptoException;
 
 import shadowsocks.auth.AuthException;
 
+/**
+ * TcpRelay model
+ * A--B--C--D
+ * A is program B is SSLocal C is SSServer D is target
+ * For B/C we hava 2 SocketChannels local/remote
+ * For SSLocal local is the connection between A and B, remote is the connection between B and C
+ * For SSServer local is the connection between B and C, remote is the connection between C and D.
+ */
+
 public abstract class SSTcpRelayBaseUnit implements Runnable {
 
     // Subclass should implement these methods.
-    protected abstract boolean send(SocketChannel source, SocketChannel target, int direct)
-        throws IOException,CryptoException,AuthException;
-    protected abstract InetSocketAddress getRemote(SocketChannel local)
-        throws IOException, CryptoException, AuthException;
-    protected abstract void preTcpRelay(SocketChannel local, SocketChannel remote)
-        throws IOException, CryptoException, AuthException;
-    protected abstract void postTcpTelay(SocketChannel local, SocketChannel remote)
-        throws IOException, CryptoException, AuthException;
+    /**
+     * Transform data from source to target.
+     */
+    protected abstract boolean send(SocketChannel source, SocketChannel target, int direct) throws IOException,CryptoException,AuthException;
+    /**
+     * Get remote address.
+     */
+    protected abstract InetSocketAddress getRemoteAddress(SocketChannel local) throws IOException, CryptoException, AuthException;
+    /**
+     * Do some work before real tcp relay.
+     */
+    protected abstract void preTcpRelay(SocketChannel local, SocketChannel remote) throws IOException, CryptoException, AuthException;
+    /**
+     * Do some work after real tcp relay.
+     */
+    protected abstract void postTcpTelay(SocketChannel local, SocketChannel remote) throws IOException, CryptoException, AuthException;
+    /**
+     * Init server/local special fields.
+     */
     protected abstract void localInit() throws Exception;
 
     // Common work
     protected static Logger log = LogManager.getLogger(SSTcpRelayBaseUnit.class.getName());
 
-    protected SocketChannel mClient;
+    private SocketChannel mLocal;
 
     protected Session mSession;
 
@@ -97,7 +117,9 @@ public abstract class SSTcpRelayBaseUnit implements Runnable {
     {
         int CONNECT_TIMEOUT = 3000;
 
-        InetSocketAddress rAddress = getRemote(local);
+        //For local this is server address, get from config
+        //For server this is target address, get from parse head.
+        InetSocketAddress remoteAddress = getRemoteAddress(local);
 
         try(SocketChannel remote = SocketChannel.open();
                 Selector selector = Selector.open();)
@@ -105,16 +127,19 @@ public abstract class SSTcpRelayBaseUnit implements Runnable {
             remote.socket().setTcpNoDelay(true);
             //Still use socket with timeout since some time, remote is unreachable, then client closed
             //but this thread is still hold. This will decrease CLOSE_wait state
-            remote.socket().connect(rAddress, CONNECT_TIMEOUT);
+            remote.socket().connect(remoteAddress, CONNECT_TIMEOUT);
 
+            //For local we need parse head and reply to proxy program.
+            //For server this is dummy.
             preTcpRelay(local, remote);
 
             doTcpRelay(selector, local, remote);
 
+            //This is dummy for both local and server.
             postTcpTelay(local, remote);
 
         }catch(SocketTimeoutException e){
-            log.warn("Remote address " + rAddress + " is unreachable", e);
+            log.warn("Remote address " + remoteAddress + " is unreachable", e);
         }catch(InterruptedException e){
             //ignore
         }catch(IOException | CryptoException e){
@@ -127,10 +152,10 @@ public abstract class SSTcpRelayBaseUnit implements Runnable {
     @Override
     public void run(){
         //make sure this channel could be closed
-        try(SocketChannel client = mClient){
+        try(SocketChannel local = mLocal){
 
             mSession = new Session();
-            mSession.set(client.socket().getRemoteSocketAddress(), true);
+            mSession.set(local.socket().getRemoteSocketAddress(), true);
 
             mCryptor = CryptoFactory.create(Config.get().getMethod(), Config.get().getPassword());
 
@@ -140,15 +165,15 @@ public abstract class SSTcpRelayBaseUnit implements Runnable {
             //Init subclass special field.
             localInit();
 
-            TcpRelay(client);
+            TcpRelay(local);
         }catch(Exception e){
             mSession.dump(log, e);
         }finally{
             mSession.destory();
         }
     }
-    public SSTcpRelayBaseUnit(SocketChannel c)
+    public SSTcpRelayBaseUnit(SocketChannel sc)
     {
-        mClient = c;
+        mLocal = sc;
     }
 }

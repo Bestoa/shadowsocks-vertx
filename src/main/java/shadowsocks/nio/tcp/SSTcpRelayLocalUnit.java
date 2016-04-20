@@ -213,7 +213,7 @@ public class SSTcpRelayLocalUnit extends SSTcpRelayBaseUnit {
     }
 
     @Override
-    protected InetSocketAddress getRemote(SocketChannel local)
+    protected InetSocketAddress getRemoteAddress(SocketChannel local/*unused*/)
         throws IOException, CryptoException, AuthException
     {
         return new InetSocketAddress(InetAddress.getByName(Config.get().getServer()), Config.get().getPort());

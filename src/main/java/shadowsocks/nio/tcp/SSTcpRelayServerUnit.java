@@ -102,7 +102,7 @@ public class SSTcpRelayServerUnit extends SSTcpRelayBaseUnit {
             throw new AuthException("OTA is not enabled!");
         }
 
-        //get addr
+        //get address
         InetAddress addr;
         if (addrtype == SSTcpConstant.ADDR_TYPE_IPV4) {
             //get IPV4 address
@@ -251,7 +251,7 @@ public class SSTcpRelayServerUnit extends SSTcpRelayBaseUnit {
         return false;
     }
     @Override
-    protected InetSocketAddress getRemote(SocketChannel local)
+    protected InetSocketAddress getRemoteAddress(SocketChannel local)
         throws IOException, CryptoException, AuthException
     {
         return parseHead(local);

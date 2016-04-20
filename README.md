@@ -45,9 +45,9 @@ $ gradle jar
 
 Then you get xx.jar, now you can run it as:
 
-{{{
+```
 //Server
 $ java -jar xx.jar -S ....
 //Local
 $ java -jar xx.jar -L ....
-}}}
+```

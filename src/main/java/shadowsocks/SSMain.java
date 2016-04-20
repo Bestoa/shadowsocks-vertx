@@ -25,19 +25,21 @@ public class SSMain{
 
     public static Logger log = LogManager.getLogger(SSMain.class.getName());
 
-    public static final String VERSION = "0.5.1";
+    public static final String VERSION = "0.6";
 
     public static void main(String argv[])
     {
         log.info("Shadowsocks " + VERSION);
         Config.getConfigFromArgv(argv);
+        Config.getConfigFromFile();
         //make sure this method could work.
         try{
             CryptoFactory.create(Config.get().getMethod(), Config.get().getPassword());
         }catch(Exception e){
-            log.error("Error crypto method", e);
+            log.fatal("Error crypto method", e);
             return;
         }
+        Config.get().printConfig();
         if(Config.get().isServerMode()){
             new SSServer().start();;
         }else{

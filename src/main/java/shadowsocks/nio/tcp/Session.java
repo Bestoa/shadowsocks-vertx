@@ -66,8 +66,8 @@ public class Session {
     }
 
     public void dump(Logger log, Exception e) {
-        log.error("Session ID: " + mSessionID + ". Target address: " + mRemote + ", client address: " + mLocal);
-        log.error("Stream down size: " + mR2LSize + ", stream up size: " + mL2RSize + ".", e);
+        log.error("Session ID: " + mSessionID + ". Target address: " + mRemote + ", client address: " + mLocal
+                + ". Stream down size: " + mR2LSize + ", stream up size: " + mL2RSize + ".", e);
     }
     public int getID(){
         return mSessionID;

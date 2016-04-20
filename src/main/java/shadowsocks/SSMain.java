@@ -38,6 +38,7 @@ public class SSMain{
             log.fatal("Error crypto method", e);
             return;
         }
+        Config.get().printConfig();
         if(Config.get().isServerMode()){
             new SSServer().start();;
         }else{

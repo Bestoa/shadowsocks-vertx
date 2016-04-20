@@ -120,6 +120,21 @@ public class Config{
         mIsServerMode = true;
     }
 
+    public void printConfig(){
+        log.info("Current config is:");
+        log.info("Mode [" + (isServerMode()?"Server":"Local") + "]");
+        log.info("Crypto method [" + getMethod() + "]");
+        log.info("Password [" + getPassword() + "]");
+        log.info("Auth [" + isOTAEnabled() + "]");
+        if (isServerMode()) {
+            log.info("Bind port [" + getPort() + "]");
+        }else{
+            log.info("Server [" + getServer() + "]");
+            log.info("Server port [" + getPort() + "]");
+            log.info("Local port [" + getLocalPort() + "]");
+        }
+    }
+
     public static void getConfigFromArgv(String argv[])
     {
 
@@ -132,41 +147,41 @@ public class Config{
             {
                 case 'm':
                     arg = g.getOptarg();
-                    log.info("Crypto method: " + arg);
+                    log.debug("Crypto method: " + arg);
                     Config.get().setMethod(arg);
                     break;
                 case 'k':
                     arg = g.getOptarg();
-                    log.info("Password: " + arg);
+                    log.debug("Password: " + arg);
                     Config.get().setPassowrd(arg);
                     break;
                 case 'p':
                     arg = g.getOptarg();
                     int port = Integer.parseInt(arg);
-                    log.info("Port: " + port);
+                    log.debug("Port: " + port);
                     Config.get().setPort(port);
                     break;
                 case 'a':
-                    log.info("OTA enforcing mode.");
+                    log.debug("OTA enforcing mode.");
                     Config.get().setOTAEnabled(true);
                     break;
                 case 'S':
-                    log.info("Server mode.");
+                    log.debug("Server mode.");
                     Config.get().setServerMode(true);
                     break;
                 case 'L':
-                    log.info("Local mode.");
+                    log.debug("Local mode.");
                     Config.get().setServerMode(false);
                     break;
                 case 's':
                     arg = g.getOptarg();
-                    log.info("Server address: " + arg);
+                    log.debug("Server address: " + arg);
                     Config.get().setServer(arg);
                     break;
                 case 'l':
                     arg = g.getOptarg();
                     int lport = Integer.parseInt(arg);
-                    log.info("Local port: " + lport);
+                    log.debug("Local port: " + lport);
                     Config.get().setLocalPort(lport);
                     break;
                 case '?':

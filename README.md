@@ -3,7 +3,8 @@ shadowsocks-java
 
 [![Build Status](https://travis-ci.org/bestoa/shadowsocks-java.svg?branch=master)](https://travis-ci.org/bestoa/shadowsocks-java)
 
-Rewrite simple Shadowsock with Java.
+Rewrite simple Shadowsocks with Java.
+
 It will remove complex funtions.
 
 #Current state:
@@ -42,4 +43,4 @@ $ gradle jar
 
 Then you get build/lib/xx.jar, now you can run it as:
 
-$ java -jar build/lib/xx.jar -p 8388 -k 123456
+$ java -jar build/lib/xx.jar

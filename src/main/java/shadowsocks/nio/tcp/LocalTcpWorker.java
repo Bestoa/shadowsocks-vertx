@@ -37,7 +37,7 @@ import shadowsocks.auth.SSAuth;
 import shadowsocks.auth.HmacSHA1;
 import shadowsocks.auth.AuthException;
 
-public class SSTcpRelayLocalUnit extends SSTcpRelayBaseUnit {
+public class LocalTcpWorker extends TcpWorker {
 
     // Temp buffer for stream up(local to remote) data
     private ByteArrayOutputStream mStreamUpData;
@@ -96,13 +96,13 @@ public class SSTcpRelayLocalUnit extends SSTcpRelayBaseUnit {
         int addrtype = (int)(data[3] & 0xff);
         //add OTA flag
         if (mOneTimeAuth) {
-            data[3] |= SSTcpConstant.OTA_FLAG;
+            data[3] |= Session.OTA_FLAG;
         }
         mStreamUpData.write(data[3]);
 
         //get addr
         InetAddress addr;
-        if (addrtype == SSTcpConstant.ADDR_TYPE_IPV4) {
+        if (addrtype == Session.ADDR_TYPE_IPV4) {
             //get IPV4 address
             mBufferWrap.prepare(4);
             mBufferWrap.readWithCheck(local, 4);
@@ -111,7 +111,7 @@ public class SSTcpRelayLocalUnit extends SSTcpRelayBaseUnit {
             System.arraycopy(data, 0, ipv4, 0, 4);
             addr = InetAddress.getByAddress(ipv4);
             mStreamUpData.write(data, 0, 4);
-        }else if (addrtype == SSTcpConstant.ADDR_TYPE_HOST) {
+        }else if (addrtype == Session.ADDR_TYPE_HOST) {
             //get address len
             mBufferWrap.prepare(1);
             mBufferWrap.readWithCheck(local, 1);
@@ -185,7 +185,7 @@ public class SSTcpRelayLocalUnit extends SSTcpRelayBaseUnit {
         mSession.record(size, direct);
 
         byte [] result;
-        if (direct == SSTcpConstant.LOCAL2REMOTE) {
+        if (direct == Session.LOCAL2REMOTE) {
             mStreamUpData.reset();
             if (mOneTimeAuth) {
                 ByteBuffer bb = ByteBuffer.allocate(2);
@@ -239,7 +239,7 @@ public class SSTcpRelayLocalUnit extends SSTcpRelayBaseUnit {
         mOneTimeAuth = Config.get().isOTAEnabled();
     }
 
-    public SSTcpRelayLocalUnit(SocketChannel s){
+    public LocalTcpWorker(SocketChannel s){
         super(s);
     }
 }

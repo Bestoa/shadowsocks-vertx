@@ -44,7 +44,7 @@ import shadowsocks.auth.AuthException;
  * For SSServer local is the connection between B and C, remote is the connection between C and D.
  */
 
-public abstract class SSTcpRelayBaseUnit implements Runnable {
+public abstract class TcpWorker implements Runnable {
 
     // Subclass should implement these methods.
     /**
@@ -69,7 +69,7 @@ public abstract class SSTcpRelayBaseUnit implements Runnable {
     protected abstract void localInit() throws Exception;
 
     // Common work
-    protected static Logger log = LogManager.getLogger(SSTcpRelayBaseUnit.class.getName());
+    protected static Logger log = LogManager.getLogger(TcpWorker.class.getName());
 
     private SocketChannel mLocal;
 
@@ -101,9 +101,9 @@ public abstract class SSTcpRelayBaseUnit implements Runnable {
                 if (key.isReadable()) {
                     SocketChannel channel = (SocketChannel)key.channel();
                     if (channel.equals(local)) {
-                        finish = send(local, remote, SSTcpConstant.LOCAL2REMOTE);
+                        finish = send(local, remote, Session.LOCAL2REMOTE);
                     }else{
-                        finish = send(remote, local, SSTcpConstant.REMOTE2LOCAL);
+                        finish = send(remote, local, Session.REMOTE2LOCAL);
                     }
                 }
                 it.remove();
@@ -172,7 +172,7 @@ public abstract class SSTcpRelayBaseUnit implements Runnable {
             mSession.destory();
         }
     }
-    public SSTcpRelayBaseUnit(SocketChannel sc)
+    public TcpWorker(SocketChannel sc)
     {
         mLocal = sc;
     }

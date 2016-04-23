@@ -26,7 +26,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import shadowsocks.util.Config;
-import shadowsocks.nio.tcp.SSTcpRelayServerUnit;
+import shadowsocks.nio.tcp.ServerTcpWorker;
 import shadowsocks.crypto.CryptoFactory;
 
 public class SSServer {
@@ -44,10 +44,10 @@ public class SSServer {
             while (true) {
                 SocketChannel local = server.accept();
                 local.socket().setTcpNoDelay(true);
-                service.execute(new SSTcpRelayServerUnit(local));
+                service.execute(new ServerTcpWorker(local));
             }
         }catch(IOException e){
-            e.printStackTrace();
+            log.error("Start server exception.", e);
         }
     }
 }

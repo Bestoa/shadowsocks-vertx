@@ -37,7 +37,7 @@ import shadowsocks.auth.SSAuth;
 import shadowsocks.auth.HmacSHA1;
 import shadowsocks.auth.AuthException;
 
-public class SSTcpRelayServerUnit extends SSTcpRelayBaseUnit {
+public class ServerTcpWorker extends TcpWorker {
 
     // For OTA
     // Store the data to do one time auth
@@ -92,7 +92,7 @@ public class SSTcpRelayServerUnit extends SSTcpRelayBaseUnit {
         byte [] result = mCryptor.decrypt(mBuffer.array(), len);
         int addrtype = (int)(result[0] & 0xff);
 
-        if ((addrtype & SSTcpConstant.OTA_FLAG) == SSTcpConstant.OTA_FLAG) {
+        if ((addrtype & Session.OTA_FLAG) == Session.OTA_FLAG) {
             mOneTimeAuth = true;
             addrtype &= 0x0f;
         }
@@ -104,14 +104,14 @@ public class SSTcpRelayServerUnit extends SSTcpRelayBaseUnit {
 
         //get address
         InetAddress addr;
-        if (addrtype == SSTcpConstant.ADDR_TYPE_IPV4) {
+        if (addrtype == Session.ADDR_TYPE_IPV4) {
             //get IPV4 address
             mBufferWrap.prepare(4);
             mBufferWrap.readWithCheck(local, 4);
             result = mCryptor.decrypt(mBuffer.array(), 4);
             addr = InetAddress.getByAddress(result);
             mAuthData.write(result, 0, 4);
-        }else if (addrtype == SSTcpConstant.ADDR_TYPE_HOST) {
+        }else if (addrtype == Session.ADDR_TYPE_HOST) {
             //get address len
             mBufferWrap.prepare(1);
             mBufferWrap.readWithCheck(local, 1);
@@ -201,7 +201,7 @@ public class SSTcpRelayServerUnit extends SSTcpRelayBaseUnit {
     {
         int size;
         boolean chunkFinish = false;
-        if (mOneTimeAuth && direct == SSTcpConstant.LOCAL2REMOTE)
+        if (mOneTimeAuth && direct == Session.LOCAL2REMOTE)
         {
             switch (mSM.getState()){
                 case StateMachine.AUTH_HEAD:
@@ -219,7 +219,7 @@ public class SSTcpRelayServerUnit extends SSTcpRelayBaseUnit {
 
         mSession.record(size, direct);
 
-        if (mOneTimeAuth && direct == SSTcpConstant.LOCAL2REMOTE)
+        if (mOneTimeAuth && direct == Session.LOCAL2REMOTE)
         {
             mSM.mLenToRead[StateMachine.DATA] -= size;
             if (mSM.mLenToRead[StateMachine.DATA] == 0){
@@ -228,12 +228,12 @@ public class SSTcpRelayServerUnit extends SSTcpRelayBaseUnit {
             }
         }
         byte [] result;
-        if (direct == SSTcpConstant.LOCAL2REMOTE) {
+        if (direct == Session.LOCAL2REMOTE) {
             result = mCryptor.decrypt(mBuffer.array(), size);
         }else{
             result = mCryptor.encrypt(mBuffer.array(), size);
         }
-        if (mOneTimeAuth && direct == SSTcpConstant.LOCAL2REMOTE)
+        if (mOneTimeAuth && direct == Session.LOCAL2REMOTE)
         {
             mAuthData.write(result, 0, size);
             if (chunkFinish) {
@@ -277,7 +277,7 @@ public class SSTcpRelayServerUnit extends SSTcpRelayBaseUnit {
         mExpectAuthResult = new byte[HmacSHA1.AUTH_LEN];
     }
 
-    public SSTcpRelayServerUnit(SocketChannel s){
+    public ServerTcpWorker(SocketChannel s){
         super(s);
     }
 }

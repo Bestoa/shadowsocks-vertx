@@ -26,7 +26,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import shadowsocks.util.Config;
-import shadowsocks.nio.tcp.SSTcpRelayLocalUnit;
+import shadowsocks.nio.tcp.LocalTcpWorker;
 import shadowsocks.crypto.CryptoFactory;
 
 public class SSLocal {
@@ -44,10 +44,10 @@ public class SSLocal {
             while (true) {
                 SocketChannel local = server.accept();
                 local.socket().setTcpNoDelay(true);
-                service.execute(new SSTcpRelayLocalUnit(local));
+                service.execute(new LocalTcpWorker(local));
             }
         }catch(IOException e){
-            e.printStackTrace();
+            log.error("Start local exception.", e);
         }
     }
 }

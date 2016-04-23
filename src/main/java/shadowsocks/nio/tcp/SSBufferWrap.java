@@ -47,7 +47,7 @@ public class SSBufferWrap {
         int size = 0;
         size = s.read(mBuffer);
         if (size < min)
-            throw new IOException("Data is too short");
+            throw new IOException("Data is too short, expect " + min + " get " + size);
         return size;
     }
 

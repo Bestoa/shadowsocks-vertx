@@ -21,9 +21,9 @@ import org.apache.logging.log4j.Logger;
 import shadowsocks.util.Config;
 import shadowsocks.crypto.CryptoFactory;
 
-public class SSMain{
+public class Main{
 
-    public static Logger log = LogManager.getLogger(SSMain.class.getName());
+    public static Logger log = LogManager.getLogger(Main.class.getName());
 
     public static final String VERSION = "0.6";
 
@@ -40,10 +40,6 @@ public class SSMain{
             return;
         }
         Config.get().printConfig();
-        if(Config.get().isServerMode()){
-            new SSServer().start();;
-        }else{
-            new SSLocal().start();;
-        }
+        new Shadowsocks(Config.get().isServerMode()).boot();
     }
 }

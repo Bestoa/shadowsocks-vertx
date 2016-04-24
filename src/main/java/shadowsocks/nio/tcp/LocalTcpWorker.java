@@ -238,8 +238,4 @@ public class LocalTcpWorker extends TcpWorker {
         mAuthor = new HmacSHA1();
         mOneTimeAuth = Config.get().isOTAEnabled();
     }
-
-    public LocalTcpWorker(SocketChannel s){
-        super(s);
-    }
 }

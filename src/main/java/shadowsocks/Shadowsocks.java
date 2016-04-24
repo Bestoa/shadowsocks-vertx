@@ -1,4 +1,4 @@
-/*   
+/*
  *   Copyright 2016 Author:NU11 bestoapache@gmail.com
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,28 +26,66 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import shadowsocks.util.Config;
+import shadowsocks.nio.tcp.TcpWorker;
 import shadowsocks.nio.tcp.LocalTcpWorker;
+import shadowsocks.nio.tcp.ServerTcpWorker;
 import shadowsocks.crypto.CryptoFactory;
 
-public class SSLocal {
+public class Shadowsocks{
 
-    public static Logger log = LogManager.getLogger(SSLocal.class.getName());
+    public static Logger log = LogManager.getLogger(Shadowsocks.class.getName());
 
-    public void start()
+    private String mName;
+
+    private int mPort;
+
+    private boolean mExit;
+
+    private TcpWorker mWorker;
+
+    public Shadowsocks(boolean server){
+        mExit  = false;
+        mName = server?"Server":"local";
+        mPort = server?Config.get().getPort():Config.get().getLocalPort();
+        if (server)
+            mWorker = new ServerTcpWorker();
+        else
+            mWorker = new LocalTcpWorker();
+    }
+
+    public void boot()
     {
-        int lport = Config.get().getLocalPort();
         Executor service = Executors.newCachedThreadPool();
+
         try(ServerSocketChannel server = ServerSocketChannel.open()) {
-            server.socket().bind(new InetSocketAddress(lport));
+            server.socket().bind(new InetSocketAddress(mPort));
             server.socket().setReuseAddress(true);
-            log.info("Starting local at " + server.socket().getLocalSocketAddress());
+            log.info("Starting " + mName + " at " + server.socket().getLocalSocketAddress());
             while (true) {
                 SocketChannel local = server.accept();
+
+                if (mExit) {
+                    log.info("Exit.");
+                    return;
+                }
+
                 local.socket().setTcpNoDelay(true);
-                service.execute(new LocalTcpWorker(local));
+                mWorker.setLocalChannel(local);
+                service.execute(mWorker);
             }
         }catch(IOException e){
-            log.error("Start local exception.", e);
+            log.error("Start failed.", e);
+        }
+    }
+
+    public void shutdown()
+    {
+        mExit = true;
+        log.info("Prepare to exit.");
+        try(SocketChannel sc = SocketChannel.open()){
+            sc.connect(new InetSocketAddress("127.0.0.1", mPort));
+        }catch(IOException e){
+            log.error("Stop failed.", e);
         }
     }
 }

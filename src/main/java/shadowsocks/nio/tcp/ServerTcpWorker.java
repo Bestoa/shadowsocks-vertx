@@ -276,4 +276,8 @@ public class ServerTcpWorker extends TcpWorker {
         mAuthData = new ByteArrayOutputStream();
         mExpectAuthResult = new byte[HmacSHA1.AUTH_LEN];
     }
+
+    public ServerTcpWorker(SocketChannel sc){
+        super(sc);
+    }
 }

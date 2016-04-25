@@ -41,16 +41,20 @@ public class Shadowsocks{
 
     private boolean mExit;
 
-    private TcpWorker mWorker;
+    private boolean mIsServer;
 
     public Shadowsocks(boolean server){
         mExit  = false;
+        mIsServer = server;
         mName = server?"Server":"local";
         mPort = server?Config.get().getPort():Config.get().getLocalPort();
+    }
+
+    private TcpWorker createWorker(SocketChannel sc, boolean server){
         if (server)
-            mWorker = new ServerTcpWorker();
+            return new ServerTcpWorker(sc);
         else
-            mWorker = new LocalTcpWorker();
+            return  new LocalTcpWorker(sc);
     }
 
     public void boot()
@@ -70,8 +74,7 @@ public class Shadowsocks{
                 }
 
                 local.socket().setTcpNoDelay(true);
-                mWorker.setLocalChannel(local);
-                service.execute(mWorker);
+                service.execute(createWorker(local, mIsServer));
             }
         }catch(IOException e){
             log.error("Start failed.", e);

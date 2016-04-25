@@ -151,10 +151,6 @@ public abstract class TcpWorker implements Runnable {
 
     @Override
     public void run(){
-        if (!mSet){
-            log.error("Don't set local socket channel.");
-            return;
-        }
         //make sure this channel could be closed
         try(SocketChannel local = mLocal){
 
@@ -177,10 +173,7 @@ public abstract class TcpWorker implements Runnable {
         }
     }
 
-    private boolean mSet = false;
-
-    public void setLocalChannel(SocketChannel sc){
+    public TcpWorker(SocketChannel sc){
         mLocal = sc;
-        mSet = true;
     }
 }

@@ -7,6 +7,8 @@ Rewrite simple Shadowsocks with Java.
 
 It will remove complex funtions.
 
+This need JDK 8.
+
 #Current state:
 Simple server + client. Version 0.6
 
@@ -22,7 +24,7 @@ Support these args:
     8. -L Local mode(client)
     9. -c config file
 
-Crypto method: 
+Crypto method:
 
     1. AES-128-CFB
     2. AES-192-CFB
@@ -40,14 +42,33 @@ How to run:
 ### (1) Before you start
 You must have 'gradle' installed first.
 
-### (2) generate distributable jar
-$ gradle jar
+### (2) generate distributable zip
+```
+$ gradle distZip
+```
 
-Then you get xx.jar, now you can run it as:
+Then you will get shadowsocks-xx.zip in build/distributions.
+Unzip it, the folder should contain bin and lib.
 
+#### How to run
 ```
 //Server
-$ java -jar xx.jar -S ....
+$ bin/shadowsocks -S ...
 //Local
-$ java -jar xx.jar -L ....
+$ bin/shadowsocks -L ...
+```
+
+### (3) generate all-in-one jar
+```
+$ gradle fatJar
+```
+
+Then you will get shadowsocks-java-xx.jar in build/libs.
+
+#### How to run
+```
+//Server
+$ java -jar shadowsocks-java-xx.jar -S ...
+//Local
+$ java -jar shadowsocks-java-xx.jar -L ...
 ```

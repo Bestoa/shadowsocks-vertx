@@ -21,3 +21,13 @@ dependencies {
 mainClassName = 'shadowsocks.Main'
 
 applicationName = 'shadowsocks'
+
+task ('fatJar', type: Jar){
+    manifest {
+        attributes 'Implementation-Title': 'Shadowsocks-Java',
+                   'Implementation-Version': version,
+                   'Main-Class': 'shadowsocks.Main'
+    }
+    from {configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }} //pack dependent jar
+    exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA'
+}

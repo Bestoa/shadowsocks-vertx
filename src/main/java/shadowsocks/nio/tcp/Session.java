@@ -30,7 +30,7 @@ public class Session {
     final static public int OTA_FLAG = 0x10;
 
     private static int mSessionNumber = 0;
-    private static Object mSessionNumberLock = new Object();
+    private static byte [] mSessionNumberLock = new byte[0];
 
     private static int inc(){
         synchronized(mSessionNumberLock){

@@ -106,8 +106,11 @@ public class Shadowsocks{
                 synchronized(finish){
                     finish.notify();
                 }
-                while (getState() == RUNNING) {
+                while (true) {
                     SocketChannel local = server.accept();
+                    if (getState() == STOP) {
+                        break;
+                    }
                     local.socket().setTcpNoDelay(true);
                     mExecutorService.execute(createWorker(local, mIsServer));
                 }

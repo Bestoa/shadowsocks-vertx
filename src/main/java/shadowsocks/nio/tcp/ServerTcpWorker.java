@@ -246,8 +246,15 @@ public class ServerTcpWorker extends TcpWorker {
             }
         }
         ByteBuffer out = ByteBuffer.wrap(result);
-        while(out.hasRemaining())
+        //Add timeout to avoid 100% cpu when write failed for a long time.
+        long timeout = System.currentTimeMillis() + 10*1000L;
+        while(out.hasRemaining()) {
             target.write(out);
+            if (System.currentTimeMillis() > timeout) {
+                mSession.dump(log, new IOException("Some data send failed."));
+                return true;
+            }
+        }
         return false;
     }
     @Override

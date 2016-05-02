@@ -21,8 +21,16 @@ import org.apache.logging.log4j.Logger;
 
 public class Session {
 
+    final static public int ADDR_TYPE_IPV4 = 0x01;
+    final static public int ADDR_TYPE_HOST = 0x03;
+
+    final static public int LOCAL2REMOTE = 1;
+    final static public int REMOTE2LOCAL = 2;
+
+    final static public int OTA_FLAG = 0x10;
+
     private static int mSessionNumber = 0;
-    private static Object mSessionNumberLock = new Object();
+    private static byte [] mSessionNumberLock = new byte[0];
 
     private static int inc(){
         synchronized(mSessionNumberLock){
@@ -59,7 +67,7 @@ public class Session {
     public void record(int size, int direct) {
         if (size <= 0)
             return;
-        if (direct == SSTcpConstant.LOCAL2REMOTE)
+        if (direct == Session.LOCAL2REMOTE)
             mL2RSize += size;
         else
             mR2LSize += size;

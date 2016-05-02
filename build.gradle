@@ -1,8 +1,9 @@
-version '0.6'
+version '0.6.1'
 
 apply plugin: 'java'
+apply plugin: 'application'
 
-sourceCompatibility = 1.7
+sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
@@ -14,14 +15,21 @@ dependencies {
     compile 'org.json:json:20160212'
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.5'
     compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.5'
+    testCompile 'junit:junit:4.12'
 }
 
-jar() {
+mainClassName = 'shadowsocks.Main'
+
+applicationName = 'shadowsocks'
+
+task ('fatJar', type: Jar, dependsOn: classes){
     manifest {
         attributes 'Implementation-Title': 'Shadowsocks-Java',
                    'Implementation-Version': version,
-                   'Main-Class': 'shadowsocks.SSMain'
+                   'Main-Class': 'shadowsocks.Main'
     }
     from {configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }} //pack dependent jar
-    exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA' 
+    from 'build/classes/main'
+    from 'build/resources/main'
+    exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA'
 }

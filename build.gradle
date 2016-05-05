@@ -28,6 +28,8 @@ task ('fatJar', type: Jar, dependsOn: classes){
                    'Implementation-Version': version,
                    'Main-Class': 'shadowsocks.Main'
     }
+    baseName = 'shadowsocks'
+    appendix = 'fat'
     from {configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }} //pack dependent jar
     from 'build/classes/main'
     from 'build/resources/main'

@@ -115,7 +115,7 @@ public abstract class TcpWorker implements Runnable {
 
     protected void TcpRelay(SocketChannel local) throws IOException, CryptoException, AuthException
     {
-        int CONNECT_TIMEOUT = 3000;
+        int CONNECT_TIMEOUT = 5000;
 
         //For local this is server address, get from config
         //For server this is target address, get from parse head.
@@ -139,7 +139,7 @@ public abstract class TcpWorker implements Runnable {
             postTcpTelay(local, remote);
 
         }catch(SocketTimeoutException e){
-            log.warn("Remote address " + remoteAddress + " is unreachable", e);
+            log.warn("Connect " + remoteAddress + " timeout.");
         }catch(InterruptedException e){
             //ignore
         }catch(IOException | CryptoException e){
@@ -155,7 +155,7 @@ public abstract class TcpWorker implements Runnable {
         try(SocketChannel local = mLocal){
 
             mSession = new Session();
-            mSession.set(local.socket().getRemoteSocketAddress(), true);
+            mSession.set(local.socket().getRemoteSocketAddress().toString(), true);
 
             mCryptor = CryptoFactory.create(Config.get().getMethod(), Config.get().getPassword());
 

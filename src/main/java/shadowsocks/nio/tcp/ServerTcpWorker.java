@@ -131,7 +131,7 @@ public class ServerTcpWorker extends TcpWorker {
             }
         }
         InetSocketAddress target = new InetSocketAddress(addr, port);
-        mSession.set(target, false);
+        mSession.set(target.toString(), false);
         log.info("Connecting " + target +  " from " + local.socket().getRemoteSocketAddress());
         return target;
     }

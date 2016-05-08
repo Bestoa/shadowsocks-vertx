@@ -20,8 +20,8 @@ Support these args:
     4. -a OTA enforcing mode
     5. -l local port
     6. -s server
-    7. -S server mode(default)
-    8. -L Local mode(client)
+    7. -S server mode
+    8. -L Local mode(client, default)
     9. -c config file
 
 Crypto method:

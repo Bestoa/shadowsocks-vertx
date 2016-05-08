@@ -133,7 +133,7 @@ public class Config{
         mPort = DEFAULT_PORT;
         mLocalPort = DEFAULT_LOCAL_PORT;
         mOneTimeAuth = false;
-        mIsServerMode = true;
+        mIsServerMode = false;
         mConfigFile = null;
     }
 

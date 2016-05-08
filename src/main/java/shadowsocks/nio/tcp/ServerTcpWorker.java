@@ -41,35 +41,14 @@ public class ServerTcpWorker extends TcpWorker {
 
     // For OTA
     // Store the data to do one time auth
-    private ByteArrayOutputStream mAuthData;
-    // Store the expect auth result from client
-    private byte [] mExpectAuthResult;
-    private StateMachine mSM;
+    private ByteArrayOutputStream mStreamUpData;
     private boolean mOneTimeAuth = false;
     private SSAuth mAuthor;
     private int mChunkCount = 0;
 
-    private class StateMachine{
-        public final static int START_STATE = 0;
-        public final static int AUTH_HEAD = 0;
-        public final static int DATA = 1;
-        public final static int END_STATE  = 1;
-
-        // OTA auth head is 12 bytes
-        // 2 bytes for data len, 10 bytes for HMAC-SHA1
-        public int mLenToRead[] = {12, 0};
-
-        private int mState;
-
-        public int getState(){
-            return mState;
-        }
-        public void nextState(){
-            if (++mState > END_STATE){
-                mState = START_STATE;
-            }
-        }
-    }
+    // Store the expect auth result from client
+    private byte [] mExpectAuthResult;
+    private int mChunkLeft = 0;
 
     /*
      *  IV |addr type: 1 byte| addr | port: 2 bytes with big endian|
@@ -81,9 +60,9 @@ public class ServerTcpWorker extends TcpWorker {
      *  OTA will add 10 bytes HMAC-SHA1 in the end of the head.
      *
      */
-    private InetSocketAddress parseHead(SocketChannel local) throws IOException, CryptoException, AuthException
+    private InetSocketAddress parseHeader(SocketChannel local) throws IOException, CryptoException, AuthException
     {
-        mAuthData.reset();
+        mStreamUpData.reset();
         // Read IV + address type length.
         int len = mCryptor.getIVLength() + 1;
         mBufferWrap.prepare(len);
@@ -96,7 +75,7 @@ public class ServerTcpWorker extends TcpWorker {
             mOneTimeAuth = true;
             addrtype &= 0x0f;
         }
-        mAuthData.write(result[0]);
+        mStreamUpData.write(result[0]);
 
         if (!mOneTimeAuth && Config.get().isOTAEnabled()) {
             throw new AuthException("OTA is not enabled!");
@@ -110,20 +89,20 @@ public class ServerTcpWorker extends TcpWorker {
             mBufferWrap.readWithCheck(local, 4);
             result = mCryptor.decrypt(mBuffer.array(), 4);
             addr = InetAddress.getByAddress(result);
-            mAuthData.write(result, 0, 4);
+            mStreamUpData.write(result, 0, 4);
         }else if (addrtype == Session.ADDR_TYPE_HOST) {
             //get address len
             mBufferWrap.prepare(1);
             mBufferWrap.readWithCheck(local, 1);
             result = mCryptor.decrypt(mBuffer.array(), 1);
             len = result[0];
-            mAuthData.write(result[0]);
+            mStreamUpData.write(result[0]);
             //get address
             mBufferWrap.prepare(len);
             mBufferWrap.readWithCheck(local, len);
             result = mCryptor.decrypt(mBuffer.array(), len);
             addr = InetAddress.getByName(new String(result, 0, len));
-            mAuthData.write(result, 0, len);
+            mStreamUpData.write(result, 0, len);
         } else {
             //do not support other addrtype now.
             throw new IOException("Unsupport addr type: " + addrtype + "!");
@@ -136,7 +115,7 @@ public class ServerTcpWorker extends TcpWorker {
         mBufferWrap.prepare(2);
         mBuffer.put(result[0]);
         mBuffer.put(result[1]);
-        mAuthData.write(result, 0, 2);
+        mStreamUpData.write(result, 0, 2);
         // if port > 32767 the short will < 0
         int port = (int)(mBuffer.getShort(0)&0xFFFF);
 
@@ -146,7 +125,7 @@ public class ServerTcpWorker extends TcpWorker {
             mBufferWrap.readWithCheck(local, HmacSHA1.AUTH_LEN);
             result = mCryptor.decrypt(mBuffer.array(), HmacSHA1.AUTH_LEN);
             byte [] authKey = SSAuth.prepareKey(mCryptor.getIV(false), mCryptor.getKey());
-            byte [] authData = mAuthData.toByteArray();
+            byte [] authData = mStreamUpData.toByteArray();
             if (!mAuthor.doAuth(authKey, authData, result)){
                 throw new AuthException("Auth head failed");
             }
@@ -164,7 +143,8 @@ public class ServerTcpWorker extends TcpWorker {
     {
         int size = 0;
         int total_size = 0;
-        int authHeadLen = mSM.mLenToRead[StateMachine.AUTH_HEAD];
+        // Data len(2) + HMAC-SHA1
+        int authHeadLen = HmacSHA1.AUTH_LEN + 2;
         mBufferWrap.prepare(authHeadLen);
         //In fact it should be send together, but we'd better to ensure we could read full head.
         while(mBuffer.hasRemaining()){
@@ -185,13 +165,17 @@ public class ServerTcpWorker extends TcpWorker {
         mBufferWrap.prepare(2);
         mBuffer.put(result[0]);
         mBuffer.put(result[1]);
-        mSM.mLenToRead[StateMachine.DATA] = (int)(mBuffer.getShort(0)&0xFFFF);
-        mSM.nextState();
+        mChunkLeft = (int)(mBuffer.getShort(0)&0xFFFF);
+
+        // Windows ss may just send a empty package, handle it.
+        if (mChunkLeft == 0) {
+            mChunkCount++;
+        }
 
         // store the pre-calculated auth result
         System.arraycopy(result, 2, mExpectAuthResult, 0, HmacSHA1.AUTH_LEN);
 
-        mAuthData.reset();
+        mStreamUpData.reset();
 
         return false;
     }
@@ -200,16 +184,12 @@ public class ServerTcpWorker extends TcpWorker {
     protected boolean send(SocketChannel source, SocketChannel target, int direct) throws IOException,CryptoException,AuthException
     {
         int size;
-        boolean chunkFinish = false;
         if (mOneTimeAuth && direct == Session.LOCAL2REMOTE)
         {
-            switch (mSM.getState()){
-                case StateMachine.AUTH_HEAD:
-                    return readAuthHead(source);
-                case StateMachine.DATA:
-                    mBufferWrap.prepare(mSM.mLenToRead[StateMachine.DATA]);
-                    break;
-            }
+            if (mChunkLeft == 0)
+                return readAuthHead(source);
+            else
+                mBufferWrap.prepare(mChunkLeft);
         }else{
             mBufferWrap.prepare();
         }
@@ -219,14 +199,6 @@ public class ServerTcpWorker extends TcpWorker {
 
         mSession.record(size, direct);
 
-        if (mOneTimeAuth && direct == Session.LOCAL2REMOTE)
-        {
-            mSM.mLenToRead[StateMachine.DATA] -= size;
-            if (mSM.mLenToRead[StateMachine.DATA] == 0){
-                chunkFinish = true;
-                mSM.nextState();
-            }
-        }
         byte [] result;
         if (direct == Session.LOCAL2REMOTE) {
             result = mCryptor.decrypt(mBuffer.array(), size);
@@ -235,10 +207,11 @@ public class ServerTcpWorker extends TcpWorker {
         }
         if (mOneTimeAuth && direct == Session.LOCAL2REMOTE)
         {
-            mAuthData.write(result, 0, size);
-            if (chunkFinish) {
+            mStreamUpData.write(result, 0, size);
+            mChunkLeft -= size;
+            if (mChunkLeft == 0) {
                 byte [] authKey = SSAuth.prepareKey(mCryptor.getIV(false), mChunkCount);
-                byte [] authData = mAuthData.toByteArray();
+                byte [] authData = mStreamUpData.toByteArray();
                 if (!mAuthor.doAuth(authKey, authData, mExpectAuthResult)){
                     throw new AuthException("Auth chunk " + mChunkCount + " failed!");
                 }
@@ -261,7 +234,7 @@ public class ServerTcpWorker extends TcpWorker {
     protected InetSocketAddress getRemoteAddress(SocketChannel local)
         throws IOException, CryptoException, AuthException
     {
-        return parseHead(local);
+        return parseHeader(local);
     }
     @Override
     protected void preTcpRelay(SocketChannel local, SocketChannel remote)
@@ -278,9 +251,8 @@ public class ServerTcpWorker extends TcpWorker {
     @Override
     protected void localInit() throws Exception{
         // for one time auth
-        mSM = new StateMachine();
         mAuthor = new HmacSHA1();
-        mAuthData = new ByteArrayOutputStream();
+        mStreamUpData = new ByteArrayOutputStream();
         mExpectAuthResult = new byte[HmacSHA1.AUTH_LEN];
     }
 

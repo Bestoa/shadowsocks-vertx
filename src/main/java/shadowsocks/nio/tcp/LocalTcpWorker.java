@@ -63,7 +63,7 @@ public class LocalTcpWorker extends TcpWorker {
      *  OTA will add 10 bytes HMAC-SHA1 in the end of the head.
      *
      */
-    private void parseHead(SocketChannel local, SocketChannel remote) throws IOException, CryptoException, AuthException
+    private void parseHeader(SocketChannel local, SocketChannel remote) throws IOException, CryptoException, AuthException
     {
         //skip method list (max 1+1+255)
         mBufferWrap.prepare(257);
@@ -222,7 +222,7 @@ public class LocalTcpWorker extends TcpWorker {
     protected void preTcpRelay(SocketChannel local, SocketChannel remote)
         throws IOException, CryptoException, AuthException
     {
-        parseHead(local, remote);
+        parseHeader(local, remote);
     }
     @Override
     protected void postTcpTelay(SocketChannel local, SocketChannel remote)

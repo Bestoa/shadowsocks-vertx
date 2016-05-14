@@ -91,7 +91,7 @@ public class SystemTest{
         Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", 2048));
         HttpURLConnection conn = null;
         try{
-            URL url = new URL("http://example.com/");
+            URL url = new URL("http://example.com");
             conn = (HttpURLConnection)url.openConnection(proxy);
             conn.setRequestMethod("GET");
             DataInputStream in1 = new DataInputStream(conn.getInputStream());
@@ -108,9 +108,9 @@ public class SystemTest{
             if (conn != null) {
                 conn.disconnect();
             }
+            assertTrue(server.shutdown());
+            assertTrue(local.shutdown());
         }
-        assertTrue(server.shutdown());
-        assertTrue(local.shutdown());
     }
     @Test
     public void testHttp() {

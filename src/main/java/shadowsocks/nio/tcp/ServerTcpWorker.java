@@ -142,21 +142,13 @@ public class ServerTcpWorker extends TcpWorker {
     private boolean readAuthHead(SocketChannel sc) throws IOException,CryptoException
     {
         int size = 0;
-        int total_size = 0;
         // Data len(2) + HMAC-SHA1
         int authHeadLen = HmacSHA1.AUTH_LEN + 2;
         mBufferWrap.prepare(authHeadLen);
-        //In fact it should be send together, but we'd better to ensure we could read full head.
-        while(mBuffer.hasRemaining()){
-            size = sc.read(mBuffer);
-            if (size < 0)
-                break;
-            else
-                total_size += size;
-        }
-        if (total_size < authHeadLen){
+        size = BufferHelper.readFormRemote(sc, mBuffer);
+        if (size < authHeadLen){
             // Actually, we reach the end of stream.
-            if (total_size == 0)
+            if (size == 0)
                 return true;
             throw new IOException("Auth head is too short");
 
@@ -219,14 +211,9 @@ public class ServerTcpWorker extends TcpWorker {
             }
         }
         ByteBuffer out = ByteBuffer.wrap(result);
-        //Add timeout to avoid 100% cpu when write failed for a long time.
-        long timeout = System.currentTimeMillis() + 10*1000L;
-        while(out.hasRemaining()) {
-            target.write(out);
-            if (System.currentTimeMillis() > timeout) {
-                mSession.dump(log, new IOException("Some data send failed."));
-                return true;
-            }
+        if (!BufferHelper.writeToRemote(target, out)) {
+            mSession.dump(log, new IOException("Some data send failed."));
+            return true;
         }
         return false;
     }

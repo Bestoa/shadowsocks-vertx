@@ -165,8 +165,7 @@ public class LocalTcpWorker extends TcpWorker {
         data = mStreamUpData.toByteArray();
         byte [] result = mCryptor.encrypt(data, data.length);
         ByteBuffer out = ByteBuffer.wrap(result);
-        while(out.hasRemaining())
-            remote.write(out);
+        BufferHelper.writeToRemote(remote, out);
     }
 
     @Override
@@ -209,8 +208,10 @@ public class LocalTcpWorker extends TcpWorker {
             result = mCryptor.decrypt(mBuffer.array(), size);
         }
         ByteBuffer out = ByteBuffer.wrap(result);
-        while(out.hasRemaining())
-            target.write(out);
+        if (!BufferHelper.writeToRemote(target, out)) {
+            mSession.dump(log, new IOException("Some data send failed."));
+            return true;
+        }
         return false;
     }
 

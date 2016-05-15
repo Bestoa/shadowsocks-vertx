@@ -45,9 +45,9 @@ public class Session {
     }
 
     //For server is client IP, for client is local IP(from LAN/localhost)
-    private SocketAddress mLocal;
+    private String mLocal;
     //Target IP
-    private SocketAddress mRemote;
+    private String mRemote;
 
     //Stream up
     private int mL2RSize;
@@ -57,7 +57,7 @@ public class Session {
     //Current Session number as ID
     private int mSessionID;
 
-    public void set(SocketAddress addr, boolean local) {
+    public void set(String addr, boolean local) {
         if (local)
             mLocal = addr;
         else

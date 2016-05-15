@@ -28,17 +28,22 @@ import org.apache.logging.log4j.Logger;
 import shadowsocks.util.Config;
 import shadowsocks.Shadowsocks;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.net.Proxy;
+import java.net.Socket;
+import java.net.Proxy.Type;
+import java.net.InetSocketAddress;
+import java.net.URL;
+import java.net.HttpURLConnection;
+import java.util.Arrays;
+
 public class SystemTest{
 
     public static Logger log = LogManager.getLogger(SystemTest.class.getName());
-
-    private static Shadowsocks mLocal;
-    private static Shadowsocks mServer;
-
-    private static void createShadowsocks(){
-        mServer = new Shadowsocks(true);
-        mLocal = new Shadowsocks(false);
-    }
 
     @Before
     public void setUp(){
@@ -48,7 +53,7 @@ public class SystemTest{
         Config.get().setServer("127.0.0.1");
         Config.get().setPort(1024);
         Config.get().setLocalPort(2048);
-        createShadowsocks();
+        Config.get().setOTAEnabled(true);
     }
     @After
     public void tearDown(){
@@ -56,17 +61,64 @@ public class SystemTest{
     }
     @Test
     public void testStartStop() {
+
+        Shadowsocks server = new Shadowsocks(true);
+        Shadowsocks local = new Shadowsocks(false);
         //Can't shutdown before boot.
-        assertFalse(mServer.shutdown());
+        assertFalse(server.shutdown());
         //Boot and shutdown
-        assertTrue(mServer.boot());
-        assertTrue(mLocal.boot());
-        assertTrue(mServer.shutdown());
-        assertTrue(mLocal.shutdown());
+        assertTrue(server.boot());
+        assertTrue(local.boot());
+        assertTrue(server.shutdown());
+        assertTrue(local.shutdown());
         //Boot again
-        assertTrue(mServer.boot());
+        assertTrue(server.boot());
         //Two instances is not allowed.
-        assertFalse(mServer.boot());
-        assertTrue(mServer.shutdown());
+        assertFalse(server.boot());
+        assertTrue(server.shutdown());
+
+    }
+
+    private void testSimpleHttp(boolean ota) {
+
+        Config.get().setOTAEnabled(ota);
+
+        Shadowsocks server = new Shadowsocks(true);
+        Shadowsocks local = new Shadowsocks(false);
+
+        assertTrue(server.boot());
+        assertTrue(local.boot());
+        Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", 2048));
+        HttpURLConnection conn = null;
+        try{
+            URL url = new URL("http://example.com");
+            conn = (HttpURLConnection)url.openConnection(proxy);
+            conn.setRequestMethod("GET");
+            DataInputStream in1 = new DataInputStream(conn.getInputStream());
+            byte [] result = new byte[8192];
+            in1.read(result);
+            DataInputStream in2 = new DataInputStream(this.getClass().getClassLoader().getResourceAsStream("result-example-com"));
+            byte [] expect = new byte[8192];
+            in2.read(expect);
+            assertTrue(Arrays.equals(result, expect));
+        }catch(IOException e){
+            log.error("Failed with exception.", e);
+            fail();
+        }finally{
+            if (conn != null) {
+                conn.disconnect();
+            }
+            assertTrue(server.shutdown());
+            assertTrue(local.shutdown());
+        }
+    }
+    @Test
+    public void testHttp() {
+        testSimpleHttp(true);
+    }
+
+    @Test
+    public void testHttpWithoutOTA() {
+        testSimpleHttp(false);
     }
 }

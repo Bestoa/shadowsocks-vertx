@@ -63,7 +63,7 @@ public class LocalTcpWorker extends TcpWorker {
      *  OTA will add 10 bytes HMAC-SHA1 in the end of the head.
      *
      */
-    private void parseHead(SocketChannel local, SocketChannel remote) throws IOException, CryptoException, AuthException
+    private void parseHeader(SocketChannel local, SocketChannel remote) throws IOException, CryptoException, AuthException
     {
         //skip method list (max 1+1+255)
         mBufferWrap.prepare(257);
@@ -101,7 +101,7 @@ public class LocalTcpWorker extends TcpWorker {
         mStreamUpData.write(data[3]);
 
         //get addr
-        InetAddress addr;
+        StringBuffer addr = new StringBuffer();
         if (addrtype == Session.ADDR_TYPE_IPV4) {
             //get IPV4 address
             mBufferWrap.prepare(4);
@@ -109,7 +109,7 @@ public class LocalTcpWorker extends TcpWorker {
             data = mBuffer.array();
             byte [] ipv4 = new byte[4];
             System.arraycopy(data, 0, ipv4, 0, 4);
-            addr = InetAddress.getByAddress(ipv4);
+            addr.append(InetAddress.getByAddress(ipv4).toString());
             mStreamUpData.write(data, 0, 4);
         }else if (addrtype == Session.ADDR_TYPE_HOST) {
             //get address len
@@ -122,12 +122,14 @@ public class LocalTcpWorker extends TcpWorker {
             mBufferWrap.prepare(len);
             mBufferWrap.readWithCheck(local, len);
             data = mBuffer.array();
-            addr = InetAddress.getByName(new String(data, 0, len));
+            addr.append(new String(data, 0, len));
             mStreamUpData.write(data, 0, len);
         } else {
             //do not support other addrtype now.
             throw new IOException("Unsupport addr type: " + addrtype + "!");
         }
+
+        addr.append(':');
 
         //get port
         mBufferWrap.prepare(2);
@@ -136,6 +138,10 @@ public class LocalTcpWorker extends TcpWorker {
         int port = (int)(mBuffer.getShort(0)&0xFFFF);
 
         mStreamUpData.write(mBuffer.array(), 0, 2);
+
+        addr.append(port);
+        mSession.set(addr.toString(), false);
+        log.info("Target address: " + addr);
 
         //reply
         mBufferWrap.prepare(10);
@@ -146,10 +152,6 @@ public class LocalTcpWorker extends TcpWorker {
         mBuffer.flip();
         while(mBuffer.hasRemaining())
             local.write(mBuffer);
-
-        InetSocketAddress target = new InetSocketAddress(addr, port);
-        mSession.set(target, false);
-        log.info("Target address: " + target);
 
         // Create auth head
         if (mOneTimeAuth){
@@ -163,8 +165,7 @@ public class LocalTcpWorker extends TcpWorker {
         data = mStreamUpData.toByteArray();
         byte [] result = mCryptor.encrypt(data, data.length);
         ByteBuffer out = ByteBuffer.wrap(result);
-        while(out.hasRemaining())
-            remote.write(out);
+        BufferHelper.writeToRemote(remote, out);
     }
 
     @Override
@@ -207,8 +208,10 @@ public class LocalTcpWorker extends TcpWorker {
             result = mCryptor.decrypt(mBuffer.array(), size);
         }
         ByteBuffer out = ByteBuffer.wrap(result);
-        while(out.hasRemaining())
-            target.write(out);
+        if (!BufferHelper.writeToRemote(target, out)) {
+            mSession.dump(log, new IOException("Some data send failed."));
+            return true;
+        }
         return false;
     }
 
@@ -222,7 +225,7 @@ public class LocalTcpWorker extends TcpWorker {
     protected void preTcpRelay(SocketChannel local, SocketChannel remote)
         throws IOException, CryptoException, AuthException
     {
-        parseHead(local, remote);
+        parseHeader(local, remote);
     }
     @Override
     protected void postTcpTelay(SocketChannel local, SocketChannel remote)

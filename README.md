@@ -10,7 +10,7 @@ It will remove complex funtions.
 This need JDK 8.
 
 #Current state:
-Simple server + client. Version 0.6.1
+Simple server + client. Version 0.6.2
 
 Support these args:
 
@@ -20,8 +20,8 @@ Support these args:
     4. -a OTA enforcing mode
     5. -l local port
     6. -s server
-    7. -S server mode(default)
-    8. -L Local mode(client)
+    7. -S server mode
+    8. -L Local mode(client, default)
     9. -c config file
 
 Crypto method:
@@ -63,12 +63,12 @@ $ bin/shadowsocks -L ...
 $ gradle fatJar
 ```
 
-Then you will get shadowsocks-java-xx.jar in build/libs.
+Then you will get shadowsocks-fat-xx.jar in build/libs.
 
 #### How to run
 ```
 //Server
-$ java -jar shadowsocks-java-xx.jar -S ...
+$ java -jar shadowsocks-fat-xx.jar -S ...
 //Local
-$ java -jar shadowsocks-java-xx.jar -L ...
+$ java -jar shadowsocks-fat-xx.jar -L ...
 ```

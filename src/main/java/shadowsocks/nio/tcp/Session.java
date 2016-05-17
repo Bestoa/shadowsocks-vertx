@@ -15,9 +15,9 @@
  */
 package shadowsocks.nio.tcp;
 
-import java.net.SocketAddress;
-
 import org.apache.logging.log4j.Logger;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Session {
 
@@ -29,19 +29,13 @@ public class Session {
 
     final static public int OTA_FLAG = 0x10;
 
-    private static int mSessionNumber = 0;
-    private static byte [] mSessionNumberLock = new byte[0];
+    private static AtomicInteger mSessionNumber = new AtomicInteger(0);
 
     private static int inc(){
-        synchronized(mSessionNumberLock){
-            mSessionNumber++;
-            return mSessionNumber;
-        }
+            return mSessionNumber.incrementAndGet();
     }
     private static void dec(){
-        synchronized(mSessionNumberLock){
-            mSessionNumber--;
-        }
+            mSessionNumber.decrementAndGet();
     }
 
     //For server is client IP, for client is local IP(from LAN/localhost)

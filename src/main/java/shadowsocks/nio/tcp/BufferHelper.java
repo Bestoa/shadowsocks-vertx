@@ -21,6 +21,33 @@ import java.nio.channels.SocketChannel;
 import java.io.IOException;
 
 public class BufferHelper {
+
+    final private static int BUFF_LEN = 8192; /* 8K */
+
+    public static ByteBuffer prepare(ByteBuffer buffer)
+    {
+        buffer.clear();
+        return buffer;
+    }
+
+    public static ByteBuffer prepare(ByteBuffer buffer, int size)
+    {
+        prepare(buffer);
+        if (size < buffer.capacity())
+            buffer.limit(size);
+        return buffer;
+    }
+
+    public static ByteBuffer create()
+    {
+        return ByteBuffer.allocate(BUFF_LEN);
+    }
+
+    public static ByteBuffer create(int size)
+    {
+        return ByteBuffer.allocate(size);
+    }
+
     /* return true means send success */
     public static boolean writeToRemote(SocketChannel remote, ByteBuffer buffer) throws IOException
     {

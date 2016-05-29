@@ -17,6 +17,8 @@ package shadowsocks.nio.tcp;
 
 import org.apache.logging.log4j.Logger;
 
+import java.io.ByteArrayOutputStream;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Session {
@@ -51,6 +53,38 @@ public class Session {
     //Current Session number as ID
     private int mSessionID;
 
+    private long mTimeout = 300 * 1000;
+
+    private long mLastActiveTime;
+
+    //To store send failed data.
+    private ByteArrayOutputStream mStreamUpBufferedData;
+    private ByteArrayOutputStream mStreamDownBufferedData;
+
+    public void updateActiveTime(){
+        mLastActiveTime = System.currentTimeMillis();
+    }
+
+    public boolean hasStreamUpBufferedData(){
+        return mStreamUpBufferedData.size() != 0;
+    }
+
+    public boolean hasStreamDownBufferedData(){
+        return mStreamDownBufferedData.size() != 0;
+    }
+
+    public ByteArrayOutputStream getStreamUpBufferedData(){
+        return mStreamUpBufferedData;
+    }
+
+    public ByteArrayOutputStream getStreamDownBufferedData(){
+        return mStreamDownBufferedData;
+    }
+
+    public boolean isTimeout() {
+        return System.currentTimeMillis() - mLastActiveTime > mTimeout;
+    }
+
     public void set(String addr, boolean local) {
         if (local)
             mLocal = addr;
@@ -79,5 +113,8 @@ public class Session {
     }
     public Session(){
         mSessionID = Session.inc();
+        updateActiveTime();
+        mStreamUpBufferedData = new ByteArrayOutputStream();
+        mStreamDownBufferedData = new ByteArrayOutputStream();
     }
 }

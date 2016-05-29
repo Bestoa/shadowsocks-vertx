@@ -91,14 +91,27 @@ public abstract class TcpWorker implements Runnable {
         boolean finish = false;
 
         while(true){
-            int n = selector.select();
+            int n = selector.select(1000);
             if (n == 0){
+                if (mSession.isTimeout()) {
+                    log.warn("Close timeout relay");
+                    break;
+                }
+                if (mSession.hasStreamUpBufferedData()) {
+                    log.debug("Resend stream up data");
+                    BufferHelper.send(remote, null, mSession.getStreamUpBufferedData());
+                }
+                if (mSession.hasStreamDownBufferedData()) {
+                    log.debug("Resend stream down data");
+                    BufferHelper.send(local, null, mSession.getStreamDownBufferedData());
+                }
                 continue;
             }
             Iterator it = selector.selectedKeys().iterator();
             while (it.hasNext()) {
                 SelectionKey key = (SelectionKey)it.next();
                 if (key.isReadable()) {
+                    mSession.updateActiveTime();
                     SocketChannel channel = (SocketChannel)key.channel();
                     if (channel.equals(local)) {
                         finish = send(local, remote, Session.LOCAL2REMOTE);

@@ -1,7 +1,7 @@
 shadowsocks-java
 ================
 
-[![Build Status](https://travis-ci.org/bestoa/shadowsocks-java.svg?branch=master)](https://travis-ci.org/bestoa/shadowsocks-java)
+[![Build Status](https://travis-ci.org/Bestoa/shadowsocks-java.svg?branch=master)](https://travis-ci.org/Bestoa/shadowsocks-java)
 
 Rewrite simple Shadowsocks with Java.
 
@@ -10,7 +10,7 @@ It will remove complex funtions.
 This need JDK 8.
 
 #Current state:
-Simple server + client. Version 0.6.2
+Simple server + client. Version 0.6.3a
 
 Support these args:
 

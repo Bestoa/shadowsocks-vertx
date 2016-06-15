@@ -66,7 +66,7 @@ public abstract class TcpWorker implements Runnable {
     /**
      * Init server/local special fields.
      */
-    protected abstract void localInit() throws Exception;
+    protected abstract void init() throws Exception;
 
     // Common work
     protected static Logger log = LogManager.getLogger(TcpWorker.class.getName());
@@ -76,9 +76,6 @@ public abstract class TcpWorker implements Runnable {
     protected Session mSession;
 
     protected SSCrypto mCryptor;
-
-    protected SSBufferWrap mBufferWrap;
-    protected ByteBuffer mBuffer;
 
     protected void doTcpRelay(Selector selector, SocketChannel local, SocketChannel remote) throws IOException,InterruptedException,CryptoException,AuthException
     {
@@ -91,14 +88,27 @@ public abstract class TcpWorker implements Runnable {
         boolean finish = false;
 
         while(true){
-            int n = selector.select();
+            int n = selector.select(1000);
             if (n == 0){
+                if (mSession.isTimeout()) {
+                    log.warn("Close timeout worker");
+                    break;
+                }
+                if (mSession.hasStreamUpBufferedData()) {
+                    log.debug("Resend stream up data");
+                    BufferHelper.send(remote, null, mSession.getStreamUpBufferedData());
+                }
+                if (mSession.hasStreamDownBufferedData()) {
+                    log.debug("Resend stream down data");
+                    BufferHelper.send(local, null, mSession.getStreamDownBufferedData());
+                }
                 continue;
             }
             Iterator it = selector.selectedKeys().iterator();
             while (it.hasNext()) {
                 SelectionKey key = (SelectionKey)it.next();
                 if (key.isReadable()) {
+                    mSession.updateActiveTime();
                     SocketChannel channel = (SocketChannel)key.channel();
                     if (channel.equals(local)) {
                         finish = send(local, remote, Session.LOCAL2REMOTE);
@@ -159,11 +169,8 @@ public abstract class TcpWorker implements Runnable {
 
             mCryptor = CryptoFactory.create(Config.get().getMethod(), Config.get().getPassword());
 
-            mBufferWrap = new SSBufferWrap();
-            mBuffer = mBufferWrap.get();
-
             //Init subclass special field.
-            localInit();
+            init();
 
             TcpRelay(local);
         }catch(Exception e){

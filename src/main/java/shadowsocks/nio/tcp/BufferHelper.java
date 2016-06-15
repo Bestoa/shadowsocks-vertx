@@ -19,8 +19,50 @@ package shadowsocks.nio.tcp;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.io.IOException;
+import java.io.ByteArrayOutputStream;
 
 public class BufferHelper {
+
+    final private static int BUFF_LEN = 8192; /* 8K */
+
+    public static ByteBuffer prepare(ByteBuffer buffer)
+    {
+        buffer.clear();
+        return buffer;
+    }
+
+    public static ByteBuffer prepare(ByteBuffer buffer, int size)
+    {
+        prepare(buffer);
+        if (size < buffer.capacity())
+            buffer.limit(size);
+        return buffer;
+    }
+
+    public static ByteBuffer create()
+    {
+        return ByteBuffer.allocate(BUFF_LEN);
+    }
+
+    public static ByteBuffer create(int size)
+    {
+        return ByteBuffer.allocate(size);
+    }
+
+    public static void send(SocketChannel remote, byte [] newData, ByteArrayOutputStream bufferedData) throws IOException
+    {
+        if (newData != null) {
+            bufferedData.write(newData);
+        }
+        byte [] data = bufferedData.toByteArray();
+        bufferedData.reset();
+        ByteBuffer out = ByteBuffer.wrap(data);
+        remote.write(out);
+        if (out.hasRemaining()) {
+            bufferedData.write(out.slice().array());
+        }
+    }
+
     /* return true means send success */
     public static boolean writeToRemote(SocketChannel remote, ByteBuffer buffer) throws IOException
     {

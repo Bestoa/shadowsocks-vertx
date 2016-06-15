@@ -65,65 +65,73 @@ public class LocalTcpWorker extends TcpWorker {
      */
     private void parseHeader(SocketChannel local, SocketChannel remote) throws IOException, CryptoException, AuthException
     {
+        ByteBuffer bb = BufferHelper.create(512);
         //skip method list (max 1+1+255)
-        mBufferWrap.prepare(257);
-        mBufferWrap.readWithCheck(local, 3);
+        BufferHelper.prepare(bb, 257);
+        local.read(bb);
 
         //reply 0x05(Socks version) 0x00 (no password)
-        mBufferWrap.prepare(2);
-        mBuffer.put((byte)0x05);
-        mBuffer.put((byte)0x00);
-        mBuffer.flip();
-        while(mBuffer.hasRemaining()){
-            local.write(mBuffer);
-        }
+        BufferHelper.prepare(bb, 2);
+        bb.put((byte)0x05).put((byte)0x00).flip();
+        local.write(bb);
+
+        BufferHelper.prepare(bb);
+        int headerSize = local.read(bb);
+        bb.flip();
 
         // 4 bytes: VER MODE RSV ADDRTYPE
-        mBufferWrap.prepare(4);
-        mBufferWrap.readWithCheck(local, 4);
-
-        byte [] data = mBuffer.array();
+        if (headerSize < 4) {
+            throw new IOException("Header info is too short.");
+        }
+        byte [] header = new byte[4];
+        bb.get(header);
+        headerSize -= 4;
         //check mode
         // 1 connect
         // 2 bind
         // 3 udp associate
         // just support mode 1 now
-        if (data[1] != 1) {
-            throw new IOException("Mode = " + data[1] + ", should be 1");
+        if (header[1] != 1) {
+            throw new IOException("Mode = " + header[1] + ", should be 1");
         }
 
         mStreamUpData.reset();
-        int addrtype = (int)(data[3] & 0xff);
+        int addrtype = (int)(header[3] & 0xff);
         //add OTA flag
         if (mOneTimeAuth) {
-            data[3] |= Session.OTA_FLAG;
+            header[3] |= Session.OTA_FLAG;
         }
-        mStreamUpData.write(data[3]);
+        mStreamUpData.write(header[3]);
 
         //get addr
         StringBuffer addr = new StringBuffer();
         if (addrtype == Session.ADDR_TYPE_IPV4) {
             //get IPV4 address
-            mBufferWrap.prepare(4);
-            mBufferWrap.readWithCheck(local, 4);
-            data = mBuffer.array();
             byte [] ipv4 = new byte[4];
-            System.arraycopy(data, 0, ipv4, 0, 4);
+            if (headerSize < 4) {
+                throw new IOException("IPv4 address is too short.");
+            }
+            headerSize -= 4;
+            bb.get(ipv4);
             addr.append(InetAddress.getByAddress(ipv4).toString());
-            mStreamUpData.write(data, 0, 4);
+            mStreamUpData.write(ipv4);
         }else if (addrtype == Session.ADDR_TYPE_HOST) {
             //get address len
-            mBufferWrap.prepare(1);
-            mBufferWrap.readWithCheck(local, 1);
-            data = mBuffer.array();
-            int len = data[0];
-            mStreamUpData.write(data[0]);
+            if (headerSize < 2) {
+                throw new IOException("Host address is too short.");
+            }
+            int len = (bb.get() & 0xff);
+            mStreamUpData.write(len);
+            headerSize -= 1;
             //get address
-            mBufferWrap.prepare(len);
-            mBufferWrap.readWithCheck(local, len);
-            data = mBuffer.array();
-            addr.append(new String(data, 0, len));
-            mStreamUpData.write(data, 0, len);
+            if (headerSize < len) {
+                throw new IOException("Host address is too short.");
+            }
+            byte [] host = new byte[len];
+            bb.get(host);
+            addr.append(new String(host));
+            mStreamUpData.write(host);
+            headerSize -= len;
         } else {
             //do not support other addrtype now.
             throw new IOException("Unsupport addr type: " + addrtype + "!");
@@ -132,26 +140,26 @@ public class LocalTcpWorker extends TcpWorker {
         addr.append(':');
 
         //get port
-        mBufferWrap.prepare(2);
-        mBufferWrap.readWithCheck(local, 2);
+        if (headerSize < 2) {
+            throw new IOException("Port is too short.");
+        }
         // if port > 32767 the short will < 0
-        int port = (int)(mBuffer.getShort(0)&0xFFFF);
-
-        mStreamUpData.write(mBuffer.array(), 0, 2);
+        bb.mark();
+        int port = (int)(bb.getShort()&0xFFFF);
+        headerSize -= 2;
+        bb.reset();
 
         addr.append(port);
         mSession.set(addr.toString(), false);
         log.info("Target address: " + addr);
 
+        mStreamUpData.write(bb.get());
+        mStreamUpData.write(bb.get());
+
         //reply
-        mBufferWrap.prepare(10);
-        // 05 00 00 01 + 0.0.0.0:8888
-        byte [] reply = {0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00};
-        mBuffer.put(reply);
-        mBuffer.putShort((short)8888);
-        mBuffer.flip();
-        while(mBuffer.hasRemaining())
-            local.write(mBuffer);
+        // 05 00 00 01 + 0.0.0.0:4112
+        byte [] reply = {0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x10, 0x10};
+        local.write(ByteBuffer.wrap(reply));
 
         // Create auth head
         if (mOneTimeAuth){
@@ -162,19 +170,18 @@ public class LocalTcpWorker extends TcpWorker {
         }
 
         //Send head to remote
-        data = mStreamUpData.toByteArray();
-        byte [] result = mCryptor.encrypt(data, data.length);
-        ByteBuffer out = ByteBuffer.wrap(result);
-        BufferHelper.writeToRemote(remote, out);
+        byte [] headerData = mStreamUpData.toByteArray();
+        byte [] result = mCryptor.encrypt(headerData, headerData.length);
+        BufferHelper.send(remote, result, mSession.getStreamUpBufferedData());
     }
 
     @Override
     protected boolean send(SocketChannel source, SocketChannel target, int direct) throws IOException,CryptoException,AuthException
     {
         int size;
-        mBufferWrap.prepare();
+        ByteBuffer bb = BufferHelper.create();
         try{
-            size = source.read(mBuffer);
+            size = source.read(bb);
         }catch(IOException e){
             // Sometime target is unreachable, so server close the socket will cause IOException.
             log.warn(e.getMessage());
@@ -189,29 +196,26 @@ public class LocalTcpWorker extends TcpWorker {
         if (direct == Session.LOCAL2REMOTE) {
             mStreamUpData.reset();
             if (mOneTimeAuth) {
-                ByteBuffer bb = ByteBuffer.allocate(2);
-                bb.putShort((short)size);
+                ByteBuffer len = ByteBuffer.allocate(2);
+                len.putShort((short)size);
                 //chunk length 2 bytes
-                mStreamUpData.write(bb.array());
+                mStreamUpData.write(len.array());
                 //auth result 10 bytes
                 byte [] authKey = SSAuth.prepareKey(mCryptor.getIV(true), mChunkCount);
                 byte [] authData = new byte[size];
-                System.arraycopy(mBuffer.array(), 0, authData, 0, size);
+                System.arraycopy(bb.array(), 0, authData, 0, size);
                 byte [] authResult = mAuthor.doAuth(authKey, authData);
                 mStreamUpData.write(authResult);
                 mChunkCount++;
             }
-            mStreamUpData.write(mBuffer.array(), 0, size);
+            mStreamUpData.write(bb.array(), 0, size);
             byte [] data = mStreamUpData.toByteArray();
             result = mCryptor.encrypt(data, data.length);
         }else{
-            result = mCryptor.decrypt(mBuffer.array(), size);
+            result = mCryptor.decrypt(bb.array(), size);
         }
-        ByteBuffer out = ByteBuffer.wrap(result);
-        if (!BufferHelper.writeToRemote(target, out)) {
-            mSession.dump(log, new IOException("Some data send failed."));
-            return true;
-        }
+        ByteArrayOutputStream bufferedData = (direct == Session.LOCAL2REMOTE) ?  mSession.getStreamUpBufferedData() : mSession.getStreamDownBufferedData();
+        BufferHelper.send(target, result, bufferedData);
         return false;
     }
 
@@ -235,7 +239,7 @@ public class LocalTcpWorker extends TcpWorker {
     }
 
     @Override
-    protected void localInit() throws Exception{
+    protected void init() throws Exception{
         mStreamUpData = new ByteArrayOutputStream();
         // for one time auth
         mAuthor = new HmacSHA1();

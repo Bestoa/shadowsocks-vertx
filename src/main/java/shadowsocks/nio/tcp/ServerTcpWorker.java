@@ -39,6 +39,9 @@ import shadowsocks.auth.AuthException;
 
 public class ServerTcpWorker extends TcpWorker {
 
+    private SSBufferWrap mBufferWrap;
+    private ByteBuffer mBuffer;
+
     // For OTA
     // Store the data to do one time auth
     private ByteArrayOutputStream mStreamUpData;
@@ -236,10 +239,14 @@ public class ServerTcpWorker extends TcpWorker {
         //dummy
     }
     @Override
-    protected void localInit() throws Exception{
+    protected void init() throws Exception{
+
+        mBufferWrap = new SSBufferWrap();
+        mBuffer = mBufferWrap.get();
+
+        mStreamUpData = new ByteArrayOutputStream();
         // for one time auth
         mAuthor = new HmacSHA1();
-        mStreamUpData = new ByteArrayOutputStream();
         mExpectAuthResult = new byte[HmacSHA1.AUTH_LEN];
     }
 

@@ -53,7 +53,7 @@ public class Session {
     //Current Session number as ID
     private int mSessionID;
 
-    private long mTimeout = 300 * 1000;
+    private long mTimeout = 30 * 1000;
 
     private long mLastActiveTime;
 

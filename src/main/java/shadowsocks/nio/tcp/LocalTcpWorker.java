@@ -172,17 +172,16 @@ public class LocalTcpWorker extends TcpWorker {
         //Send head to remote
         byte [] headerData = mStreamUpData.toByteArray();
         byte [] result = mCryptor.encrypt(headerData, headerData.length);
-        ByteBuffer out = ByteBuffer.wrap(result);
-        BufferHelper.writeToRemote(remote, out);
+        BufferHelper.send(remote, result, mSession.getStreamUpBufferedData());
     }
 
     @Override
     protected boolean send(SocketChannel source, SocketChannel target, int direct) throws IOException,CryptoException,AuthException
     {
         int size;
-        mBufferWrap.prepare();
+        ByteBuffer bb = BufferHelper.create();
         try{
-            size = source.read(mBuffer);
+            size = source.read(bb);
         }catch(IOException e){
             // Sometime target is unreachable, so server close the socket will cause IOException.
             log.warn(e.getMessage());
@@ -197,23 +196,23 @@ public class LocalTcpWorker extends TcpWorker {
         if (direct == Session.LOCAL2REMOTE) {
             mStreamUpData.reset();
             if (mOneTimeAuth) {
-                ByteBuffer bb = ByteBuffer.allocate(2);
-                bb.putShort((short)size);
+                ByteBuffer len = ByteBuffer.allocate(2);
+                len.putShort((short)size);
                 //chunk length 2 bytes
-                mStreamUpData.write(bb.array());
+                mStreamUpData.write(len.array());
                 //auth result 10 bytes
                 byte [] authKey = SSAuth.prepareKey(mCryptor.getIV(true), mChunkCount);
                 byte [] authData = new byte[size];
-                System.arraycopy(mBuffer.array(), 0, authData, 0, size);
+                System.arraycopy(bb.array(), 0, authData, 0, size);
                 byte [] authResult = mAuthor.doAuth(authKey, authData);
                 mStreamUpData.write(authResult);
                 mChunkCount++;
             }
-            mStreamUpData.write(mBuffer.array(), 0, size);
+            mStreamUpData.write(bb.array(), 0, size);
             byte [] data = mStreamUpData.toByteArray();
             result = mCryptor.encrypt(data, data.length);
         }else{
-            result = mCryptor.decrypt(mBuffer.array(), size);
+            result = mCryptor.decrypt(bb.array(), size);
         }
         ByteArrayOutputStream bufferedData = (direct == Session.LOCAL2REMOTE) ?  mSession.getStreamUpBufferedData() : mSession.getStreamDownBufferedData();
         BufferHelper.send(target, result, bufferedData);
@@ -240,7 +239,7 @@ public class LocalTcpWorker extends TcpWorker {
     }
 
     @Override
-    protected void localInit() throws Exception{
+    protected void init() throws Exception{
         mStreamUpData = new ByteArrayOutputStream();
         // for one time auth
         mAuthor = new HmacSHA1();

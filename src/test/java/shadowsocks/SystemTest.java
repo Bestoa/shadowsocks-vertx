@@ -100,7 +100,13 @@ public class SystemTest{
             DataInputStream in2 = new DataInputStream(this.getClass().getClassLoader().getResourceAsStream("result-example-com"));
             byte [] expect = new byte[8192];
             in2.read(expect);
-            assertTrue(Arrays.equals(result, expect));
+            boolean compareResult = Arrays.equals(result, expect);
+            if (!compareResult) {
+                log.debug("====================");
+                log.debug(new String(result));
+                log.debug("====================");
+            }
+            assertTrue(compareResult);
         }catch(IOException e){
             log.error("Failed with exception.", e);
             fail();

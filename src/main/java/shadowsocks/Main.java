@@ -18,8 +18,9 @@ package shadowsocks;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import shadowsocks.util.Config;
 import shadowsocks.crypto.CryptoFactory;
+
+import shadowsocks.util.GlobalConfig;
 
 public class Main{
 
@@ -30,16 +31,16 @@ public class Main{
     public static void main(String argv[])
     {
         log.info("Shadowsocks " + VERSION);
-        Config.getConfigFromArgv(argv);
-        Config.getConfigFromFile();
+        GlobalConfig.getConfigFromArgv(argv);
+        GlobalConfig.getConfigFromFile();
         //make sure this method could work.
         try{
-            CryptoFactory.create(Config.get().getMethod(), Config.get().getPassword());
+            CryptoFactory.create(GlobalConfig.get().getMethod(), GlobalConfig.get().getPassword());
         }catch(Exception e){
             log.fatal("Error crypto method", e);
             return;
         }
-        Config.get().printConfig();
-        new Shadowsocks(Config.get().isServerMode()).boot();
+        GlobalConfig.get().printConfig();
+        new Shadowsocks(GlobalConfig.get().isServerMode()).boot();
     }
 }

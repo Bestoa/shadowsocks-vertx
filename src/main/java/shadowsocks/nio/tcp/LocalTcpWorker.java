@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.InetAddress;
 import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -31,7 +32,7 @@ import shadowsocks.crypto.SSCrypto;
 import shadowsocks.crypto.CryptoFactory;
 import shadowsocks.crypto.CryptoException;
 
-import shadowsocks.util.Config;
+import shadowsocks.util.LocalConfig;
 
 import shadowsocks.auth.SSAuth;
 import shadowsocks.auth.HmacSHA1;
@@ -39,13 +40,6 @@ import shadowsocks.auth.AuthException;
 
 public class LocalTcpWorker extends TcpWorker {
 
-    // Temp buffer for stream up(local to remote) data
-    private ByteArrayOutputStream mStreamUpData;
-
-    //For OTA
-    private boolean mOneTimeAuth = false;
-    private SSAuth mAuthor;
-    private int mChunkCount = 0;
     /*
      *  Receive method list
      *  Reply 05 00
@@ -63,17 +57,18 @@ public class LocalTcpWorker extends TcpWorker {
      *  OTA will add 10 bytes HMAC-SHA1 in the end of the head.
      *
      */
-    private void parseHeader(SocketChannel local, SocketChannel remote) throws IOException, CryptoException, AuthException
+    private void parseHeader() throws IOException
     {
+        SocketChannel local = mSession.get(true);
+
         ByteBuffer bb = BufferHelper.create(512);
         //skip method list (max 1+1+255)
         BufferHelper.prepare(bb, 257);
         local.read(bb);
 
         //reply 0x05(Socks version) 0x00 (no password)
-        BufferHelper.prepare(bb, 2);
-        bb.put((byte)0x05).put((byte)0x00).flip();
-        local.write(bb);
+        byte [] msg = {0x05, 0x00};
+        replyToProxyProgram(msg);
 
         BufferHelper.prepare(bb);
         int headerSize = local.read(bb);
@@ -150,17 +145,23 @@ public class LocalTcpWorker extends TcpWorker {
         bb.reset();
 
         addr.append(port);
-        mSession.set(addr.toString(), false);
-        log.info("Target address: " + addr);
+        mConfig.target = addr.toString();
 
         mStreamUpData.write(bb.get());
         mStreamUpData.write(bb.get());
 
-        //reply
-        // 05 00 00 01 + 0.0.0.0:4112
-        byte [] reply = {0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x10, 0x10};
-        local.write(ByteBuffer.wrap(reply));
+    }
 
+    private void replyToProxyProgram(byte [] msg) throws IOException
+    {
+        SocketChannel local = mSession.get(true);
+        local.write(ByteBuffer.wrap(msg));
+
+    }
+
+    private void sendHeaderToRemote() throws IOException, AuthException, CryptoException
+    {
+        SocketChannel remote = mSession.get(false);
         // Create auth head
         if (mOneTimeAuth){
             byte [] authKey = SSAuth.prepareKey(mCryptor.getIV(true), mCryptor.getKey());
@@ -184,7 +185,6 @@ public class LocalTcpWorker extends TcpWorker {
             size = source.read(bb);
         }catch(IOException e){
             // Sometime target is unreachable, so server close the socket will cause IOException.
-            log.warn(e.getMessage());
             return true;
         }
         if (size < 0)
@@ -220,33 +220,35 @@ public class LocalTcpWorker extends TcpWorker {
     }
 
     @Override
-    protected InetSocketAddress getRemoteAddress(SocketChannel local/*unused*/)
-        throws IOException, CryptoException, AuthException
+    protected void handleStage(int stage) throws IOException, CryptoException, AuthException
     {
-        return new InetSocketAddress(InetAddress.getByName(Config.get().getServer()), Config.get().getPort());
-    }
-    @Override
-    protected void preTcpRelay(SocketChannel local, SocketChannel remote)
-        throws IOException, CryptoException, AuthException
-    {
-        parseHeader(local, remote);
-    }
-    @Override
-    protected void postTcpTelay(SocketChannel local, SocketChannel remote)
-        throws IOException, CryptoException, AuthException
-    {
-        //dummy
+        switch (stage) {
+            case PARSE_HEADER:
+                parseHeader();
+                break;
+            case BEFORE_TCP_RELAY:
+                //Reply to program and send header info to remote.
+                //reply
+                // 05 00 00 01 + 0.0.0.0:4112
+                byte [] msg = {0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x10, 0x10};
+                replyToProxyProgram(msg);
+                sendHeaderToRemote();
+                break;
+            case AFTER_TCP_RELAY:
+            default:
+                //dummy for default.
+        }
     }
 
     @Override
     protected void init() throws Exception{
-        mStreamUpData = new ByteArrayOutputStream();
-        // for one time auth
-        mAuthor = new HmacSHA1();
-        mOneTimeAuth = Config.get().isOTAEnabled();
+
+        mOneTimeAuth = mConfig.oneTimeAuth;
+
+        mConfig.remoteAddress = new InetSocketAddress(InetAddress.getByName(mConfig.server), mConfig.port);
     }
 
-    public LocalTcpWorker(SocketChannel sc){
-        super(sc);
+    public LocalTcpWorker(SocketChannel sc, LocalConfig lc){
+        super(sc, lc);
     }
 }

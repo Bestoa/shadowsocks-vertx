@@ -62,37 +62,4 @@ public class BufferHelper {
             bufferedData.write(out.slice().array());
         }
     }
-
-    /* return true means send success */
-    public static boolean writeToRemote(SocketChannel remote, ByteBuffer buffer) throws IOException
-    {
-        //Add timeout to avoid 100% cpu when write failed for a long time.
-        long timeout = System.currentTimeMillis() + 15*1000L;
-        while(buffer.hasRemaining()) {
-            remote.write(buffer);
-            if (System.currentTimeMillis() > timeout) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    public static int readFormRemote(SocketChannel remote, ByteBuffer buffer) throws IOException
-    {
-        //Add timeout to avoid 100% cpu when write failed for a long time.
-        long timeout = System.currentTimeMillis() + 15*1000L;
-        int size = 0;
-        int total_size = 0;
-        while(buffer.hasRemaining()) {
-            size = remote.read(buffer);
-            if (size < 0)
-                break;
-            else
-                total_size += size;
-            if (System.currentTimeMillis() > timeout) {
-                break;
-            }
-        }
-        return total_size;
-    }
 }

@@ -40,13 +40,6 @@ import shadowsocks.auth.AuthException;
 
 public class LocalTcpWorker extends TcpWorker {
 
-    // Temp buffer for stream up(local to remote) data
-    private ByteArrayOutputStream mStreamUpData;
-
-    //For OTA
-    private boolean mOneTimeAuth = false;
-    private SSAuth mAuthor;
-    private int mChunkCount = 0;
     /*
      *  Receive method list
      *  Reply 05 00
@@ -74,9 +67,8 @@ public class LocalTcpWorker extends TcpWorker {
         local.read(bb);
 
         //reply 0x05(Socks version) 0x00 (no password)
-        BufferHelper.prepare(bb, 2);
-        bb.put((byte)0x05).put((byte)0x00).flip();
-        local.write(bb);
+        byte [] msg = {0x05, 0x00};
+        replyToProxyProgram(msg);
 
         BufferHelper.prepare(bb);
         int headerSize = local.read(bb);
@@ -160,17 +152,14 @@ public class LocalTcpWorker extends TcpWorker {
 
     }
 
-    private void reply() throws IOException
+    private void replyToProxyProgram(byte [] msg) throws IOException
     {
         SocketChannel local = mSession.get(true);
-        //reply
-        // 05 00 00 01 + 0.0.0.0:4112
-        byte [] reply = {0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x10, 0x10};
-        local.write(ByteBuffer.wrap(reply));
+        local.write(ByteBuffer.wrap(msg));
 
     }
 
-    private void sendHeader() throws IOException, AuthException, CryptoException
+    private void sendHeaderToRemote() throws IOException, AuthException, CryptoException
     {
         SocketChannel remote = mSession.get(false);
         // Create auth head
@@ -239,8 +228,11 @@ public class LocalTcpWorker extends TcpWorker {
                 break;
             case BEFORE_TCP_RELAY:
                 //Reply to program and send header info to remote.
-                reply();
-                sendHeader();
+                //reply
+                // 05 00 00 01 + 0.0.0.0:4112
+                byte [] msg = {0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x10, 0x10};
+                replyToProxyProgram(msg);
+                sendHeaderToRemote();
                 break;
             case AFTER_TCP_RELAY:
             default:
@@ -250,9 +242,7 @@ public class LocalTcpWorker extends TcpWorker {
 
     @Override
     protected void init() throws Exception{
-        mStreamUpData = new ByteArrayOutputStream();
-        // for one time auth
-        mAuthor = new HmacSHA1();
+
         mOneTimeAuth = mConfig.oneTimeAuth;
 
         mConfig.remoteAddress = new InetSocketAddress(InetAddress.getByName(mConfig.server), mConfig.port);

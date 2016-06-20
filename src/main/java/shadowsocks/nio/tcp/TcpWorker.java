@@ -19,6 +19,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.Selector;
 import java.nio.channels.SelectionKey;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
 import java.net.InetSocketAddress;
@@ -33,6 +34,8 @@ import shadowsocks.crypto.SSCrypto;
 import shadowsocks.crypto.CryptoFactory;
 import shadowsocks.crypto.CryptoException;
 
+import shadowsocks.auth.SSAuth;
+import shadowsocks.auth.HmacSHA1;
 import shadowsocks.auth.AuthException;
 
 /**
@@ -74,6 +77,14 @@ public abstract class TcpWorker implements Runnable {
     protected SSCrypto mCryptor;
 
     protected LocalConfig mConfig;
+
+    // For OTA
+    // Store the data to do one time auth
+    protected ByteArrayOutputStream mStreamUpData;
+    protected boolean mOneTimeAuth = false;
+    protected SSAuth mAuthor;
+    protected int mChunkCount = 0;
+
 
     protected void doTcpRelay(Selector selector, SocketChannel local, SocketChannel remote) throws IOException,InterruptedException,CryptoException,AuthException
     {
@@ -162,7 +173,13 @@ public abstract class TcpWorker implements Runnable {
 
             mSession = new Session();
 
+            // for decrypt/encrypt
             mCryptor = CryptoFactory.create(mConfig.method, mConfig.password);
+
+            // for one time auth
+            mAuthor = new HmacSHA1();
+
+            mStreamUpData = new ByteArrayOutputStream();
 
             //Init subclass special field.
             init();

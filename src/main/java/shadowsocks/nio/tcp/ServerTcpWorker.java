@@ -42,13 +42,6 @@ public class ServerTcpWorker extends TcpWorker {
     private SSBufferWrap mBufferWrap;
     private ByteBuffer mBuffer;
 
-    // For OTA
-    // Store the data to do one time auth
-    private ByteArrayOutputStream mStreamUpData;
-    private boolean mOneTimeAuth = false;
-    private SSAuth mAuthor;
-    private int mChunkCount = 0;
-
     // Store the expect auth result from client
     private byte [] mExpectAuthResult;
     private int mChunkLeft = 0;
@@ -239,9 +232,6 @@ public class ServerTcpWorker extends TcpWorker {
         mBufferWrap = new SSBufferWrap();
         mBuffer = mBufferWrap.get();
 
-        mStreamUpData = new ByteArrayOutputStream();
-        // for one time auth
-        mAuthor = new HmacSHA1();
         mExpectAuthResult = new byte[HmacSHA1.AUTH_LEN];
     }
 

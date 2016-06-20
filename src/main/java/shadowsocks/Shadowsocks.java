@@ -28,11 +28,13 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import shadowsocks.util.Config;
 import shadowsocks.nio.tcp.TcpWorker;
 import shadowsocks.nio.tcp.LocalTcpWorker;
 import shadowsocks.nio.tcp.ServerTcpWorker;
 import shadowsocks.crypto.CryptoFactory;
+
+import shadowsocks.util.GlobalConfig;
+import shadowsocks.util.LocalConfig;
 
 public class Shadowsocks{
 
@@ -74,14 +76,15 @@ public class Shadowsocks{
         mExecutorService = Executors.newCachedThreadPool();
         mIsServer = server;
         mName = (server?"server":"local") + "[" + this.hashCode() + "]";
-        mPort = server?Config.get().getPort():Config.get().getLocalPort();
+        mPort = server?GlobalConfig.get().getPort():GlobalConfig.get().getLocalPort();
     }
 
     private TcpWorker createWorker(SocketChannel sc, boolean server){
+        LocalConfig config = GlobalConfig.createLocalConfig();
         if (server)
-            return new ServerTcpWorker(sc);
+            return new ServerTcpWorker(sc, config);
         else
-            return new LocalTcpWorker(sc);
+            return new LocalTcpWorker(sc, config);
     }
 
     public boolean boot()

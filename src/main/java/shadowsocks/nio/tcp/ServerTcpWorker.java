@@ -31,7 +31,7 @@ import shadowsocks.crypto.SSCrypto;
 import shadowsocks.crypto.CryptoFactory;
 import shadowsocks.crypto.CryptoException;
 
-import shadowsocks.util.Config;
+import shadowsocks.util.LocalConfig;
 
 import shadowsocks.auth.SSAuth;
 import shadowsocks.auth.HmacSHA1;
@@ -63,8 +63,10 @@ public class ServerTcpWorker extends TcpWorker {
      *  OTA will add 10 bytes HMAC-SHA1 in the end of the head.
      *
      */
-    private InetSocketAddress parseHeader(SocketChannel local) throws IOException, CryptoException, AuthException
+    private void parseHeader() throws IOException, CryptoException, AuthException
     {
+        SocketChannel local = mSession.get(true);
+
         mStreamUpData.reset();
         // Read IV + address type length.
         int len = mCryptor.getIVLength() + 1;
@@ -80,7 +82,7 @@ public class ServerTcpWorker extends TcpWorker {
         }
         mStreamUpData.write(result[0]);
 
-        if (!mOneTimeAuth && Config.get().isOTAEnabled()) {
+        if (!mOneTimeAuth && mConfig.oneTimeAuth) {
             throw new AuthException("OTA is not enabled!");
         }
 
@@ -133,10 +135,8 @@ public class ServerTcpWorker extends TcpWorker {
                 throw new AuthException("Auth head failed");
             }
         }
-        InetSocketAddress target = new InetSocketAddress(addr, port);
-        mSession.set(target.toString(), false);
-        log.info("Connecting " + target +  " from " + local.socket().getRemoteSocketAddress());
-        return target;
+        mConfig.remoteAddress = new InetSocketAddress(addr, port);
+        mConfig.target = addr + ":" + port;
     }
 
     // For OTA the chunck will be:
@@ -221,22 +221,17 @@ public class ServerTcpWorker extends TcpWorker {
         return false;
     }
     @Override
-    protected InetSocketAddress getRemoteAddress(SocketChannel local)
-        throws IOException, CryptoException, AuthException
+    protected void handleStage(int stage) throws IOException, CryptoException, AuthException
     {
-        return parseHeader(local);
-    }
-    @Override
-    protected void preTcpRelay(SocketChannel local, SocketChannel remote)
-        throws IOException, CryptoException, AuthException
-    {
-        //dummy
-    }
-    @Override
-    protected void postTcpTelay(SocketChannel local, SocketChannel remote)
-        throws IOException, CryptoException, AuthException
-    {
-        //dummy
+        switch (stage) {
+            case PARSE_HEADER:
+                parseHeader();
+                break;
+            case BEFORE_TCP_RELAY:
+            case AFTER_TCP_RELAY:
+            default:
+                //dummy for default.
+        }
     }
     @Override
     protected void init() throws Exception{
@@ -250,7 +245,7 @@ public class ServerTcpWorker extends TcpWorker {
         mExpectAuthResult = new byte[HmacSHA1.AUTH_LEN];
     }
 
-    public ServerTcpWorker(SocketChannel sc){
-        super(sc);
+    public ServerTcpWorker(SocketChannel sc, LocalConfig lc){
+        super(sc, lc);
     }
 }

@@ -27,7 +27,7 @@ import java.net.SocketTimeoutException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import shadowsocks.util.Config;
+import shadowsocks.util.LocalConfig;
 
 import shadowsocks.crypto.SSCrypto;
 import shadowsocks.crypto.CryptoFactory;
@@ -52,21 +52,17 @@ public abstract class TcpWorker implements Runnable {
      */
     protected abstract boolean send(SocketChannel source, SocketChannel target, int direct) throws IOException,CryptoException,AuthException;
     /**
-     * Get remote address.
+     * Handle stage.
      */
-    protected abstract InetSocketAddress getRemoteAddress(SocketChannel local) throws IOException, CryptoException, AuthException;
-    /**
-     * Do some work before real tcp relay.
-     */
-    protected abstract void preTcpRelay(SocketChannel local, SocketChannel remote) throws IOException, CryptoException, AuthException;
-    /**
-     * Do some work after real tcp relay.
-     */
-    protected abstract void postTcpTelay(SocketChannel local, SocketChannel remote) throws IOException, CryptoException, AuthException;
+    protected abstract void handleStage(int stage) throws IOException,CryptoException, AuthException;
     /**
      * Init server/local special fields.
      */
     protected abstract void init() throws Exception;
+
+    protected final static int PARSE_HEADER = 0;
+    protected final static int BEFORE_TCP_RELAY = 1;
+    protected final static int AFTER_TCP_RELAY = 2;
 
     // Common work
     protected static Logger log = LogManager.getLogger(TcpWorker.class.getName());
@@ -76,6 +72,8 @@ public abstract class TcpWorker implements Runnable {
     protected Session mSession;
 
     protected SSCrypto mCryptor;
+
+    protected LocalConfig mConfig;
 
     protected void doTcpRelay(Selector selector, SocketChannel local, SocketChannel remote) throws IOException,InterruptedException,CryptoException,AuthException
     {
@@ -91,15 +89,15 @@ public abstract class TcpWorker implements Runnable {
             int n = selector.select(1000);
             if (n == 0){
                 if (mSession.isTimeout()) {
-                    log.warn("Close timeout worker");
+                    log.debug(mSession.getID() + ": close timeout worker");
                     break;
                 }
                 if (mSession.hasStreamUpBufferedData()) {
-                    log.debug("Resend stream up data");
+                    log.debug(mSession.getID() + ": Resend stream up data");
                     BufferHelper.send(remote, null, mSession.getStreamUpBufferedData());
                 }
                 if (mSession.hasStreamDownBufferedData()) {
-                    log.debug("Resend stream down data");
+                    log.debug(mSession.getID() + ": Resend stream down data");
                     BufferHelper.send(local, null, mSession.getStreamDownBufferedData());
                 }
                 continue;
@@ -123,36 +121,34 @@ public abstract class TcpWorker implements Runnable {
         }
     }
 
-    protected void TcpRelay(SocketChannel local) throws IOException, CryptoException, AuthException
+    protected void TcpRelay(SocketChannel local)
     {
         int CONNECT_TIMEOUT = 5000;
-
-        //For local this is server address, get from config
-        //For server this is target address, get from parse head.
-        InetSocketAddress remoteAddress = getRemoteAddress(local);
 
         try(SocketChannel remote = SocketChannel.open();
                 Selector selector = Selector.open();)
         {
-            remote.socket().setTcpNoDelay(true);
-            //Still use socket with timeout since some time, remote is unreachable, then client closed
-            //but this thread is still hold. This will decrease CLOSE_wait state
-            remote.socket().connect(remoteAddress, CONNECT_TIMEOUT);
+            mSession.set(local, true);
+            mSession.set(remote, false);
 
-            //For local we need parse head and reply to proxy program.
-            //For server this is dummy.
-            preTcpRelay(local, remote);
+            handleStage(PARSE_HEADER);
+
+            log.info(mSession.getID() + ": connecting " + mConfig.target + " from " + local.socket().getLocalSocketAddress());
+
+            remote.socket().setTcpNoDelay(true);
+            remote.socket().connect(mConfig.remoteAddress, CONNECT_TIMEOUT);
+
+            handleStage(BEFORE_TCP_RELAY);
 
             doTcpRelay(selector, local, remote);
 
-            //This is dummy for both local and server.
-            postTcpTelay(local, remote);
+            handleStage(AFTER_TCP_RELAY);
 
         }catch(SocketTimeoutException e){
-            log.warn("Connect " + remoteAddress + " timeout.");
+            log.warn("Connect " + mConfig.remoteAddress + " timeout.");
         }catch(InterruptedException e){
             //ignore
-        }catch(IOException | CryptoException e){
+        }catch(IOException | CryptoException | AuthException e){
             mSession.dump(log, e);
         }
 
@@ -165,9 +161,8 @@ public abstract class TcpWorker implements Runnable {
         try(SocketChannel local = mLocal){
 
             mSession = new Session();
-            mSession.set(local.socket().getRemoteSocketAddress().toString(), true);
 
-            mCryptor = CryptoFactory.create(Config.get().getMethod(), Config.get().getPassword());
+            mCryptor = CryptoFactory.create(mConfig.method, mConfig.password);
 
             //Init subclass special field.
             init();
@@ -180,7 +175,8 @@ public abstract class TcpWorker implements Runnable {
         }
     }
 
-    public TcpWorker(SocketChannel sc){
+    public TcpWorker(SocketChannel sc, LocalConfig lc){
         mLocal = sc;
+        mConfig = lc;
     }
 }

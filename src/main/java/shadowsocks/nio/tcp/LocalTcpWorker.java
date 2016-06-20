@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.InetAddress;
 import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -31,7 +32,7 @@ import shadowsocks.crypto.SSCrypto;
 import shadowsocks.crypto.CryptoFactory;
 import shadowsocks.crypto.CryptoException;
 
-import shadowsocks.util.Config;
+import shadowsocks.util.LocalConfig;
 
 import shadowsocks.auth.SSAuth;
 import shadowsocks.auth.HmacSHA1;
@@ -63,8 +64,10 @@ public class LocalTcpWorker extends TcpWorker {
      *  OTA will add 10 bytes HMAC-SHA1 in the end of the head.
      *
      */
-    private void parseHeader(SocketChannel local, SocketChannel remote) throws IOException, CryptoException, AuthException
+    private void parseHeader() throws IOException
     {
+        SocketChannel local = mSession.get(true);
+
         ByteBuffer bb = BufferHelper.create(512);
         //skip method list (max 1+1+255)
         BufferHelper.prepare(bb, 257);
@@ -150,17 +153,26 @@ public class LocalTcpWorker extends TcpWorker {
         bb.reset();
 
         addr.append(port);
-        mSession.set(addr.toString(), false);
-        log.info("Target address: " + addr);
+        mConfig.target = addr.toString();
 
         mStreamUpData.write(bb.get());
         mStreamUpData.write(bb.get());
 
+    }
+
+    private void reply() throws IOException
+    {
+        SocketChannel local = mSession.get(true);
         //reply
         // 05 00 00 01 + 0.0.0.0:4112
         byte [] reply = {0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x10, 0x10};
         local.write(ByteBuffer.wrap(reply));
 
+    }
+
+    private void sendHeader() throws IOException, AuthException, CryptoException
+    {
+        SocketChannel remote = mSession.get(false);
         // Create auth head
         if (mOneTimeAuth){
             byte [] authKey = SSAuth.prepareKey(mCryptor.getIV(true), mCryptor.getKey());
@@ -184,7 +196,6 @@ public class LocalTcpWorker extends TcpWorker {
             size = source.read(bb);
         }catch(IOException e){
             // Sometime target is unreachable, so server close the socket will cause IOException.
-            log.warn(e.getMessage());
             return true;
         }
         if (size < 0)
@@ -220,22 +231,21 @@ public class LocalTcpWorker extends TcpWorker {
     }
 
     @Override
-    protected InetSocketAddress getRemoteAddress(SocketChannel local/*unused*/)
-        throws IOException, CryptoException, AuthException
+    protected void handleStage(int stage) throws IOException, CryptoException, AuthException
     {
-        return new InetSocketAddress(InetAddress.getByName(Config.get().getServer()), Config.get().getPort());
-    }
-    @Override
-    protected void preTcpRelay(SocketChannel local, SocketChannel remote)
-        throws IOException, CryptoException, AuthException
-    {
-        parseHeader(local, remote);
-    }
-    @Override
-    protected void postTcpTelay(SocketChannel local, SocketChannel remote)
-        throws IOException, CryptoException, AuthException
-    {
-        //dummy
+        switch (stage) {
+            case PARSE_HEADER:
+                parseHeader();
+                break;
+            case BEFORE_TCP_RELAY:
+                //Reply to program and send header info to remote.
+                reply();
+                sendHeader();
+                break;
+            case AFTER_TCP_RELAY:
+            default:
+                //dummy for default.
+        }
     }
 
     @Override
@@ -243,10 +253,12 @@ public class LocalTcpWorker extends TcpWorker {
         mStreamUpData = new ByteArrayOutputStream();
         // for one time auth
         mAuthor = new HmacSHA1();
-        mOneTimeAuth = Config.get().isOTAEnabled();
+        mOneTimeAuth = mConfig.oneTimeAuth;
+
+        mConfig.remoteAddress = new InetSocketAddress(InetAddress.getByName(mConfig.server), mConfig.port);
     }
 
-    public LocalTcpWorker(SocketChannel sc){
-        super(sc);
+    public LocalTcpWorker(SocketChannel sc, LocalConfig lc){
+        super(sc, lc);
     }
 }

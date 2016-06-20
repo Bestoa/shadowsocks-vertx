@@ -18,7 +18,7 @@ package shadowsocks.nio.tcp;
 import org.apache.logging.log4j.Logger;
 
 import java.io.ByteArrayOutputStream;
-
+import java.nio.channels.SocketChannel;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Session {
@@ -40,17 +40,16 @@ public class Session {
             mSessionNumber.decrementAndGet();
     }
 
-    //For server is client IP, for client is local IP(from LAN/localhost)
-    private String mLocal;
-    //Target IP
-    private String mRemote;
+    //For server is client, for client is local(from LAN/localhost)
+    private SocketChannel mLocal;
+    //For server is target, for client is server
+    private SocketChannel mRemote;
 
     //Stream up
     private int mL2RSize;
     //Stream down 
     private int mR2LSize;
 
-    //Current Session number as ID
     private int mSessionID;
 
     private long mTimeout = 30 * 1000;
@@ -85,11 +84,15 @@ public class Session {
         return System.currentTimeMillis() - mLastActiveTime > mTimeout;
     }
 
-    public void set(String addr, boolean local) {
-        if (local)
-            mLocal = addr;
+    public void set(SocketChannel sc, boolean isLocal) {
+        if (isLocal)
+            mLocal = sc;
         else
-            mRemote = addr;
+            mRemote = sc;
+    }
+
+    public SocketChannel get(boolean isLocal) {
+        return isLocal?mLocal:mRemote;
     }
 
     public void record(int size, int direct) {
@@ -102,8 +105,7 @@ public class Session {
     }
 
     public void dump(Logger log, Exception e) {
-        log.error("Session ID: " + mSessionID + ". Target address: " + mRemote + ", client address: " + mLocal
-                + ". Stream down size: " + mR2LSize + ", stream up size: " + mL2RSize + ".", e);
+        log.error("Remote: " + mRemote + ", local: " + mLocal + ". Stream down size: " + mR2LSize + ", stream up size: " + mL2RSize + ".", e);
     }
     public int getID(){
         return mSessionID;
@@ -112,7 +114,8 @@ public class Session {
         Session.dec();
     }
     public Session(){
-        mSessionID = Session.inc();
+        Session.inc();
+        mSessionID = this.hashCode();
         updateActiveTime();
         mStreamUpBufferedData = new ByteArrayOutputStream();
         mStreamDownBufferedData = new ByteArrayOutputStream();

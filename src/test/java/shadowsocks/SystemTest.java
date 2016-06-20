@@ -25,7 +25,7 @@ import static org.junit.Assert.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import shadowsocks.util.Config;
+import shadowsocks.util.GlobalConfig;
 import shadowsocks.Shadowsocks;
 
 import java.io.File;
@@ -48,12 +48,12 @@ public class SystemTest{
     @Before
     public void setUp(){
         log.info("Set up");
-        Config.get().setPassowrd("testkey");
-        Config.get().setMethod("aes-128-cfb");
-        Config.get().setServer("127.0.0.1");
-        Config.get().setPort(1024);
-        Config.get().setLocalPort(2048);
-        Config.get().setOTAEnabled(true);
+        GlobalConfig.get().setPassowrd("testkey");
+        GlobalConfig.get().setMethod("aes-128-cfb");
+        GlobalConfig.get().setServer("127.0.0.1");
+        GlobalConfig.get().setPort(1024);
+        GlobalConfig.get().setLocalPort(2048);
+        GlobalConfig.get().setOTAEnabled(true);
     }
     @After
     public void tearDown(){
@@ -81,7 +81,7 @@ public class SystemTest{
 
     private void testSimpleHttp(boolean ota) {
 
-        Config.get().setOTAEnabled(ota);
+        GlobalConfig.get().setOTAEnabled(ota);
 
         Shadowsocks server = new Shadowsocks(true);
         Shadowsocks local = new Shadowsocks(false);

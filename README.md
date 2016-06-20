@@ -10,7 +10,7 @@ It will remove complex funtions.
 This need JDK 8.
 
 #Current state:
-Simple server + client. Version 0.6.3a
+Simple server + client. Version 0.7
 
 Support these args:
 

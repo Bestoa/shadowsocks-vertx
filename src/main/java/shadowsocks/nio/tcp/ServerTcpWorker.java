@@ -178,7 +178,7 @@ public class ServerTcpWorker extends TcpWorker {
     }
 
     @Override
-    protected boolean send(SocketChannel source, SocketChannel target, int direct) throws IOException,CryptoException,AuthException
+    protected boolean relay(SocketChannel source, SocketChannel target, int direct) throws IOException,CryptoException,AuthException
     {
         int size;
         ByteBuffer bb = BufferHelper.create();
@@ -216,14 +216,16 @@ public class ServerTcpWorker extends TcpWorker {
                 mChunkCount++;
             }
         }
-        ByteArrayOutputStream bufferedData = (direct == Session.LOCAL2REMOTE) ?  mSession.getStreamUpBufferedData() : mSession.getStreamDownBufferedData();
-        BufferHelper.send(target, result, bufferedData);
+        BufferHelper.send(target, result);
         return false;
     }
     @Override
     protected void handleStage(int stage) throws IOException, CryptoException, AuthException
     {
         switch (stage) {
+            case INIT:
+                init();
+                break;
             case PARSE_HEADER:
                 parseHeader();
                 break;
@@ -233,8 +235,7 @@ public class ServerTcpWorker extends TcpWorker {
                 //dummy for default.
         }
     }
-    @Override
-    protected void init() throws Exception{
+    private void init() throws IOException{
 
         mExpectAuthResult = new byte[HmacSHA1.AUTH_LEN];
         // 2 bytes for data len: data len + auth result.

@@ -56,28 +56,8 @@ public class Session {
 
     private long mLastActiveTime;
 
-    //To store send failed data.
-    private ByteArrayOutputStream mStreamUpBufferedData;
-    private ByteArrayOutputStream mStreamDownBufferedData;
-
     public void updateActiveTime(){
         mLastActiveTime = System.currentTimeMillis();
-    }
-
-    public boolean hasStreamUpBufferedData(){
-        return mStreamUpBufferedData.size() != 0;
-    }
-
-    public boolean hasStreamDownBufferedData(){
-        return mStreamDownBufferedData.size() != 0;
-    }
-
-    public ByteArrayOutputStream getStreamUpBufferedData(){
-        return mStreamUpBufferedData;
-    }
-
-    public ByteArrayOutputStream getStreamDownBufferedData(){
-        return mStreamDownBufferedData;
     }
 
     public boolean isTimeout() {
@@ -117,7 +97,5 @@ public class Session {
         Session.inc();
         mSessionID = this.hashCode();
         updateActiveTime();
-        mStreamUpBufferedData = new ByteArrayOutputStream();
-        mStreamDownBufferedData = new ByteArrayOutputStream();
     }
 }

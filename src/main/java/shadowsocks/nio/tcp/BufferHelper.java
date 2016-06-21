@@ -18,7 +18,10 @@ package shadowsocks.nio.tcp;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.Selector;
+import java.nio.channels.SelectionKey;
 import java.io.IOException;
+import java.io.EOFException;
 import java.io.ByteArrayOutputStream;
 
 public class BufferHelper {
@@ -49,17 +52,43 @@ public class BufferHelper {
         return ByteBuffer.allocate(size);
     }
 
-    public static void send(SocketChannel remote, byte [] newData, ByteArrayOutputStream bufferedData) throws IOException
+    public static void send(SocketChannel remote, byte [] newData) throws IOException
     {
-        if (newData != null) {
-            bufferedData.write(newData);
-        }
-        byte [] data = bufferedData.toByteArray();
-        bufferedData.reset();
-        ByteBuffer out = ByteBuffer.wrap(data);
-        remote.write(out);
-        if (out.hasRemaining()) {
-            bufferedData.write(out.slice().array());
+        SelectionKey key = null;
+        Selector writeSelector = null;
+        int attempts = 0;
+        int writeTimeout = 15 * 1000;
+        ByteBuffer bb = ByteBuffer.wrap(newData);
+        try {
+            while (bb.hasRemaining()) {
+                int len = remote.write(bb);
+                attempts++;
+                if (len < 0){
+                    throw new EOFException();
+                }
+                if (len == 0) {
+                    if (writeSelector == null){
+                        writeSelector = Selector.open();
+                    }
+                    key = remote.register(writeSelector, key.OP_WRITE);
+                    if (writeSelector.select(writeTimeout) == 0) {
+                        if (attempts > 2)
+                            throw new IOException("Client disconnected");
+                    } else {
+                        attempts--;
+                    }
+                } else {
+                    attempts = 0;
+                }
+            }
+        } finally {
+            if (key != null) {
+                key.cancel();
+                key = null;
+            }
+            if (writeSelector != null) {
+                writeSelector.close();
+            }
         }
     }
 }

@@ -173,11 +173,11 @@ public class LocalTcpWorker extends TcpWorker {
         //Send head to remote
         byte [] headerData = mStreamUpData.toByteArray();
         byte [] result = mCryptor.encrypt(headerData, headerData.length);
-        BufferHelper.send(remote, result, mSession.getStreamUpBufferedData());
+        BufferHelper.send(remote, result);
     }
 
     @Override
-    protected boolean send(SocketChannel source, SocketChannel target, int direct) throws IOException,CryptoException,AuthException
+    protected boolean relay(SocketChannel source, SocketChannel target, int direct) throws IOException,CryptoException,AuthException
     {
         int size;
         ByteBuffer bb = BufferHelper.create();
@@ -214,8 +214,7 @@ public class LocalTcpWorker extends TcpWorker {
         }else{
             result = mCryptor.decrypt(bb.array(), size);
         }
-        ByteArrayOutputStream bufferedData = (direct == Session.LOCAL2REMOTE) ?  mSession.getStreamUpBufferedData() : mSession.getStreamDownBufferedData();
-        BufferHelper.send(target, result, bufferedData);
+        BufferHelper.send(target, result);
         return false;
     }
 
@@ -223,6 +222,9 @@ public class LocalTcpWorker extends TcpWorker {
     protected void handleStage(int stage) throws IOException, CryptoException, AuthException
     {
         switch (stage) {
+            case INIT:
+                init();
+                break;
             case PARSE_HEADER:
                 parseHeader();
                 break;
@@ -240,8 +242,7 @@ public class LocalTcpWorker extends TcpWorker {
         }
     }
 
-    @Override
-    protected void init() throws Exception{
+    private void init() throws IOException{
 
         mOneTimeAuth = mConfig.oneTimeAuth;
 

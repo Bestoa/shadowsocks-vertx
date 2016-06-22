@@ -52,6 +52,8 @@ public class BufferHelper {
         return ByteBuffer.allocate(size);
     }
 
+    // This logic comes from Grizzly.
+    // Block current thread, avoid 100% cpu loading.
     public static void send(SocketChannel remote, byte [] newData) throws IOException
     {
         SelectionKey key = null;

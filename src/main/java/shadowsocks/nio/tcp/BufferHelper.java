@@ -59,6 +59,7 @@ public class BufferHelper {
         SelectionKey key = null;
         Selector writeSelector = null;
         int attempts = 0;
+        // 15s for each write timeout.
         int writeTimeout = 15 * 1000;
         ByteBuffer bb = ByteBuffer.wrap(newData);
         try {

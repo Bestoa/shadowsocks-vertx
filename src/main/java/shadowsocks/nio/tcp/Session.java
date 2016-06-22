@@ -55,12 +55,18 @@ public class Session {
 
     private int mSessionID;
 
-    private long mTimeout = 30 * 1000;
+    // Default timeout is 300s.
+    private long mTimeout = 300 * 1000;
 
     private long mLastActiveTime;
 
     public void updateActiveTime(){
         mLastActiveTime = System.currentTimeMillis();
+    }
+
+    public void setTimeout(int t)
+    {
+        mTimeout = t*1000;
     }
 
     public boolean isTimeout() {

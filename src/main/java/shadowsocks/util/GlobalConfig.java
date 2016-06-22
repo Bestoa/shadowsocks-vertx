@@ -41,12 +41,24 @@ public class GlobalConfig{
     private int mLocalPort;
     private boolean mOneTimeAuth;
     private boolean mIsServerMode;
+    /* UNIT second */
+    private int mTimeout;
 
     final private static String DEFAULT_METHOD = "aes-256-cfb";
     final private static String DEFAULT_PASSWORD = "123456";
     final private static String DEFAULT_SERVER = "127.0.0.1";
     final private static int DEFAULT_PORT = 8388;
     final private static int DEFAULT_LOCAL_PORT = 9999;
+    final private static int DEFAULT_TIMEOUT = 300;
+
+    public void setTimeout(int t)
+    {
+        mTimeout = t;
+    }
+    public int getTimeout()
+    {
+        return mTimeout;
+    }
 
     public void setPassowrd(String p)
     {
@@ -115,7 +127,6 @@ public class GlobalConfig{
         return mConfigFile;
     }
 
-
     public synchronized static GlobalConfig get()
     {
         if (mConfig == null)
@@ -135,6 +146,7 @@ public class GlobalConfig{
         mOneTimeAuth = false;
         mIsServerMode = false;
         mConfigFile = null;
+        mTimeout = DEFAULT_TIMEOUT;
     }
 
     public void printConfig(){
@@ -150,6 +162,7 @@ public class GlobalConfig{
             log.info("Server port [" + getPort() + "]");
             log.info("Local port [" + getLocalPort() + "]");
         }
+        log.info("Timeout [" + getTimeout() + "]");
     }
 
     public static String readConfigFile(String name){
@@ -215,11 +228,18 @@ public class GlobalConfig{
         }catch(JSONException e){
             //No this config, ignore;
         }
+        try{
+            int timeout = jsonobj.getInt("timeout");
+            log.debug("CFG:timeout: " + timeout);
+            GlobalConfig.get().setTimeout(timeout);
+        }catch(JSONException e){
+            //No this config, ignore;
+        }
     }
     public static void getConfigFromArgv(String argv[])
     {
 
-        Getopt g = new Getopt("shadowsocks", argv, "SLm:k:p:as:l:c:");
+        Getopt g = new Getopt("shadowsocks", argv, "SLm:k:p:as:l:c:t:");
         int c;
         String arg;
         while ((c = g.getopt()) != -1)
@@ -270,6 +290,12 @@ public class GlobalConfig{
                     log.debug("CMD:Config file: " + arg);
                     GlobalConfig.get().setConfigFile(arg);
                     break;
+                case 't':
+                    arg = g.getOptarg();
+                    int timeout = Integer.parseInt(arg);
+                    log.debug("CMD:timeout: " + timeout);
+                    GlobalConfig.get().setTimeout(timeout);
+                    break;
                 case '?':
                 default:
                     help();
@@ -284,7 +310,9 @@ public class GlobalConfig{
                 GlobalConfig.get().getServer(),
                 GlobalConfig.get().getPort(),
                 GlobalConfig.get().getLocalPort(),
-                GlobalConfig.get().isOTAEnabled());
+                GlobalConfig.get().isOTAEnabled(),
+                GlobalConfig.get().getTimeout()
+                );
     }
 
     private static void help()

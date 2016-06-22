@@ -246,7 +246,7 @@ public class LocalTcpWorker extends TcpWorker {
 
         mOneTimeAuth = mConfig.oneTimeAuth;
 
-        mConfig.remoteAddress = new InetSocketAddress(InetAddress.getByName(mConfig.server), mConfig.port);
+        mConfig.remoteAddress = new InetSocketAddress(InetAddress.getByName(mConfig.server), mConfig.serverPort);
     }
 
     public LocalTcpWorker(SocketChannel sc, LocalConfig lc){

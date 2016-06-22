@@ -154,6 +154,7 @@ public abstract class TcpWorker implements Runnable {
             mSession = new Session();
             mSession.set(local, true);
             mSession.set(remote, false);
+            mSession.setTimeout(mConfig.timeout);
             // for decrypt/encrypt
             mCryptor = CryptoFactory.create(mConfig.method, mConfig.password);
             // for one time auth

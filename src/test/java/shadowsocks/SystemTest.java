@@ -94,12 +94,12 @@ public class SystemTest{
             URL url = new URL("http://example.com");
             conn = (HttpURLConnection)url.openConnection(proxy);
             conn.setRequestMethod("GET");
-            DataInputStream in1 = new DataInputStream(conn.getInputStream());
-            byte [] result = new byte[8192];
-            in1.read(result);
-            DataInputStream in2 = new DataInputStream(this.getClass().getClassLoader().getResourceAsStream("result-example-com"));
+            DataInputStream in1 = new DataInputStream(this.getClass().getClassLoader().getResourceAsStream("result-example-com"));
             byte [] expect = new byte[8192];
-            in2.read(expect);
+            int dataLen = in1.read(expect);
+            DataInputStream in2 = new DataInputStream(conn.getInputStream());
+            byte [] result = new byte[8192];
+            in2.readFully(result, 0, dataLen);
             boolean compareResult = Arrays.equals(result, expect);
             if (!compareResult) {
                 log.debug("====================");

@@ -140,6 +140,10 @@ public abstract class TcpWorker implements Runnable {
         }catch(InterruptedException e){
             //ignore
         }catch(IOException | CryptoException | AuthException e){
+            if (e.getMessage().equals("INVALID CONNECTION")) {
+                log.debug("Invalid connection");
+                return;
+            }
             mSession.dump(e);
         }
 

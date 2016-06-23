@@ -23,6 +23,7 @@ Support these args:
     7. -S server mode
     8. -L Local mode(client, default)
     9. -c config file
+    10. -t timeout(unit is second)
 
 Crypto method:
 
@@ -33,7 +34,7 @@ Crypto method:
 
 One time auth feature done.
 
-Support JSON config file.(local\_address/timeout/fast\_open/workers is not support)
+Support JSON config file.(local\_address/fast\_open/workers is not support)
 
 You could refer to demo config etc/demo.json.
 

@@ -15,6 +15,7 @@
  */
 package shadowsocks.nio.tcp;
 
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.ByteArrayOutputStream;
@@ -22,6 +23,8 @@ import java.nio.channels.SocketChannel;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Session {
+
+    private static Logger log = LogManager.getLogger(Session.class.getName());
 
     final static public int ADDR_TYPE_IPV4 = 0x01;
     final static public int ADDR_TYPE_HOST = 0x03;
@@ -52,12 +55,18 @@ public class Session {
 
     private int mSessionID;
 
-    private long mTimeout = 30 * 1000;
+    // Default timeout is 300s.
+    private long mTimeout = 300 * 1000;
 
     private long mLastActiveTime;
 
     public void updateActiveTime(){
         mLastActiveTime = System.currentTimeMillis();
+    }
+
+    public void setTimeout(int t)
+    {
+        mTimeout = t*1000;
     }
 
     public boolean isTimeout() {
@@ -84,7 +93,7 @@ public class Session {
             mR2LSize += size;
     }
 
-    public void dump(Logger log, Exception e) {
+    public void dump(Exception e) {
         log.error("Remote: " + mRemote + ", local: " + mLocal + ". Stream down size: " + mR2LSize + ", stream up size: " + mL2RSize + ".", e);
     }
     public int getID(){

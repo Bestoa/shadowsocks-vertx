@@ -52,11 +52,14 @@ public class BufferHelper {
         return ByteBuffer.allocate(size);
     }
 
+    // This logic comes from Grizzly.
+    // Block current thread, avoid 100% cpu loading.
     public static void send(SocketChannel remote, byte [] newData) throws IOException
     {
         SelectionKey key = null;
         Selector writeSelector = null;
         int attempts = 0;
+        // 15s for each write timeout.
         int writeTimeout = 15 * 1000;
         ByteBuffer bb = ByteBuffer.wrap(newData);
         try {

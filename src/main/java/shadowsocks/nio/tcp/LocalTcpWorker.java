@@ -66,6 +66,13 @@ public class LocalTcpWorker extends TcpWorker {
         BufferHelper.prepare(bb, 257);
         local.read(bb);
 
+        //Check socks version.
+        //TODO: check method list.
+        bb.flip();
+        if (bb.get() != 5) {
+            throw new IOException("INVALID CONNECTION");
+        }
+
         //reply 0x05(Socks version) 0x00 (no password)
         byte [] msg = {0x05, 0x00};
         replyToProxyProgram(msg);
@@ -246,7 +253,7 @@ public class LocalTcpWorker extends TcpWorker {
 
         mOneTimeAuth = mConfig.oneTimeAuth;
 
-        mConfig.remoteAddress = new InetSocketAddress(InetAddress.getByName(mConfig.server), mConfig.port);
+        mConfig.remoteAddress = new InetSocketAddress(InetAddress.getByName(mConfig.server), mConfig.serverPort);
     }
 
     public LocalTcpWorker(SocketChannel sc, LocalConfig lc){

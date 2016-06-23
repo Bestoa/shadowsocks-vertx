@@ -80,7 +80,7 @@ public abstract class TcpWorker implements Runnable {
     protected int mChunkCount = 0;
 
 
-    protected void mainLoop(Selector selector, SocketChannel local, SocketChannel remote) throws IOException,InterruptedException,CryptoException,AuthException
+    private void mainLoop(Selector selector, SocketChannel local, SocketChannel remote) throws IOException,InterruptedException,CryptoException,AuthException
     {
         local.configureBlocking(false);
         remote.configureBlocking(false);
@@ -118,19 +118,18 @@ public abstract class TcpWorker implements Runnable {
         }
     }
 
-    protected void TcpRelay(SocketChannel local)
+    protected void TcpRelay()
     {
         int CONNECT_TIMEOUT = 5000;
+        SocketChannel remote = mSession.get(false);
+        SocketChannel local = mSession.get(true);
 
-        try(SocketChannel remote = SocketChannel.open();
-                Selector selector = Selector.open();)
+        try(Selector selector = Selector.open())
         {
-            mSession.set(local, true);
-            mSession.set(remote, false);
             //Init subclass special field.
             handleStage(INIT);
             handleStage(PARSE_HEADER);
-            log.info(mSession.getID() + ": connecting " + mConfig.target + " from " + local.socket().getLocalSocketAddress());
+            log.info(mSession.getID() + ": connecting " + mConfig.target + " from " + local.getRemoteAddress());
             remote.socket().setTcpNoDelay(true);
             remote.socket().connect(mConfig.remoteAddress, CONNECT_TIMEOUT);
             handleStage(BEFORE_TCP_RELAY);
@@ -141,7 +140,11 @@ public abstract class TcpWorker implements Runnable {
         }catch(InterruptedException e){
             //ignore
         }catch(IOException | CryptoException | AuthException e){
-            mSession.dump(log, e);
+            if (e.getMessage().equals("INVALID CONNECTION")) {
+                log.debug("Invalid connection");
+                return;
+            }
+            mSession.dump(e);
         }
 
     }
@@ -149,17 +152,21 @@ public abstract class TcpWorker implements Runnable {
 
     @Override
     public void run(){
-        //make sure this channel could be closed
-        try(SocketChannel local = mLocal){
+        //make sure the 2 channels could be closed
+        try(SocketChannel local = mLocal; SocketChannel remote = SocketChannel.open())
+        {
             mSession = new Session();
+            mSession.set(local, true);
+            mSession.set(remote, false);
+            mSession.setTimeout(mConfig.timeout);
             // for decrypt/encrypt
             mCryptor = CryptoFactory.create(mConfig.method, mConfig.password);
             // for one time auth
             mAuthor = new HmacSHA1();
             mStreamUpData = new ByteArrayOutputStream();
-            TcpRelay(local);
+            TcpRelay();
         }catch(Exception e){
-            mSession.dump(log, e);
+            log.error(e);
         }finally{
             mSession.destory();
         }

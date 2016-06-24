@@ -64,12 +64,12 @@ public class LocalTcpWorker extends TcpWorker {
         ByteBuffer bb = BufferHelper.create(512);
         //skip method list (max 1+1+255)
         BufferHelper.prepare(bb, 257);
-        local.read(bb);
+        int headerSize = local.read(bb);
 
         //Check socks version.
         //TODO: check method list.
         bb.flip();
-        if (bb.get() != 5) {
+        if (headerSize < 3 || bb.get() != 5) {
             throw new IOException("INVALID CONNECTION");
         }
 
@@ -78,7 +78,7 @@ public class LocalTcpWorker extends TcpWorker {
         replyToProxyProgram(msg);
 
         BufferHelper.prepare(bb);
-        int headerSize = local.read(bb);
+        headerSize = local.read(bb);
         bb.flip();
 
         // 4 bytes: VER MODE RSV ADDRTYPE

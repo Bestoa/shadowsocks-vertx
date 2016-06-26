@@ -1,6 +1,7 @@
 version '0.7'
 
 apply plugin: 'java'
+apply plugin: 'jacoco'
 apply plugin: 'application'
 
 sourceCompatibility = 1.8
@@ -16,6 +17,13 @@ dependencies {
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.5'
     compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.5'
     testCompile 'junit:junit:4.12'
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled = true
+        html.enabled = true
+    }
 }
 
 mainClassName = 'shadowsocks.Main'
@@ -35,3 +43,5 @@ task ('fatJar', type: Jar, dependsOn: classes){
     from 'build/resources/main'
     exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA'
 }
+
+check.dependsOn jacocoTestReport

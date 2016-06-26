@@ -2,6 +2,7 @@ shadowsocks-java
 ================
 
 [![Build Status](https://travis-ci.org/Bestoa/shadowsocks-java.svg?branch=master)](https://travis-ci.org/Bestoa/shadowsocks-java)
+[![codecov](https://codecov.io/gh/Bestoa/shadowsocks-java/branch/master/graph/badge.svg)](https://codecov.io/gh/Bestoa/shadowsocks-java)
 
 Rewrite simple Shadowsocks with Java.
 

@@ -5,7 +5,7 @@ codecov:
 coverage:
   precision: 2
   round: down
-  range: "0...100"
+  range: "0...80"
 
   notify:
     slack:

@@ -54,6 +54,7 @@ public class SystemTest{
         GlobalConfig.get().setPort(1024);
         GlobalConfig.get().setLocalPort(2048);
         GlobalConfig.get().setOTAEnabled(true);
+        GlobalConfig.get().setTimeout(100);
     }
     @After
     public void tearDown(){
@@ -120,7 +121,20 @@ public class SystemTest{
     }
     @Test
     public void testHttp() {
-        testSimpleHttp(true);
+        String [] methodList = {
+            "aes-128-cfb",
+            "aes-128-ofb",
+            "aes-192-cfb",
+            "aes-192-ofb",
+            "aes-256-cfb",
+            "aes-256-ofb",
+            "chacha20"
+        };
+        for (String method: methodList) {
+            GlobalConfig.get().setMethod(method);
+            log.debug("Test method: " + method);
+            testSimpleHttp(true);
+        }
     }
 
     @Test

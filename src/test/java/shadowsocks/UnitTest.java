@@ -25,6 +25,10 @@ import static org.junit.Assert.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.DataInputStream;
+
 import shadowsocks.util.GlobalConfig;
 import shadowsocks.Shadowsocks;
 
@@ -54,5 +58,39 @@ public class UnitTest {
         assertEquals(GlobalConfig.get().isOTAEnabled(), true);
         //The last value go into effect.
         assertEquals(GlobalConfig.get().isServerMode(), false);
+    }
+
+    @Test
+    public void testSetConfigFromFile() {
+        try {
+            //Read demo conf.
+            DataInputStream in = new DataInputStream(this.getClass().getClassLoader().getResourceAsStream("demo-conf"));
+            byte [] context = new byte[8192];
+            int len = in.read(context);
+            //Create tmp config.
+            File temp = File.createTempFile("demo-tmp", ".conf");
+            temp.deleteOnExit();
+            String fileName = temp.getAbsolutePath();
+            FileOutputStream out = new FileOutputStream(fileName);
+            out.write(context, 0, len);
+            out.close();
+            //Start shadowsocks with config
+            String [] argv = {
+                "-c", fileName,
+                "-S",
+            };
+            Main.main(argv);
+        } catch(Exception e) {
+            log.error("Failed with exception.", e);
+            fail();
+        }
+        assertEquals(GlobalConfig.get().getPassword(), "fakekey");
+        assertEquals(GlobalConfig.get().getMethod(), "aes-128-cfb");
+        assertEquals(GlobalConfig.get().getServer(), "fakeserver");
+        assertEquals(GlobalConfig.get().getPort(), 1111);
+        assertEquals(GlobalConfig.get().getLocalPort(), 2222);
+        assertEquals(GlobalConfig.get().getTimeout(), 360);
+        assertEquals(GlobalConfig.get().isOTAEnabled(), true);
+        assertEquals(GlobalConfig.get().isServerMode(), true);
     }
 }

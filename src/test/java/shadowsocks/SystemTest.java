@@ -80,6 +80,17 @@ public class SystemTest{
 
     }
 
+    @Test
+    public void testStartFailed() {
+        Shadowsocks local1 = new Shadowsocks(false);
+        Shadowsocks local2 = new Shadowsocks(false);
+        assertTrue(local1.boot());
+        //Port had been bind
+        assertFalse(local2.boot());
+        assertTrue(local1.shutdown());
+        assertFalse(local2.shutdown());
+    }
+
     private void testSimpleHttp(boolean ota) {
 
         GlobalConfig.get().setOTAEnabled(ota);
@@ -140,5 +151,19 @@ public class SystemTest{
     @Test
     public void testHttpWithoutOTA() {
         testSimpleHttp(false);
+    }
+
+    @Test
+    public void testInvalidLocalConnection() {
+        Shadowsocks local = new Shadowsocks(false);
+        assertTrue(local.boot());
+        try(Socket s = new Socket("127.0.0.1", 2048)) {
+            Thread.sleep(500);
+        }catch (Exception e){
+            log.error("Catch exception.", e);
+            fail();
+        }finally{
+            assertTrue(local.shutdown());
+        }
     }
 }

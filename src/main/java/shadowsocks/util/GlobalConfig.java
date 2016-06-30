@@ -27,22 +27,28 @@ import java.io.IOException;
 import org.json.JSONObject;
 import org.json.JSONException;
 
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
+
 public class GlobalConfig{
 
     public static Logger log = LogManager.getLogger(GlobalConfig.class.getName());
 
     private static GlobalConfig mConfig;
 
-    private String mPassword;
-    private String mMethod;
-    private String mServer;
-    private String mConfigFile;
-    private int mPort;
-    private int mLocalPort;
-    private boolean mOneTimeAuth;
-    private boolean mIsServerMode;
-    /* UNIT second */
-    private int mTimeout;
+    private ReentrantLock mLock = new ReentrantLock();
+
+    private AtomicReference<String> mPassword;
+    private AtomicReference<String> mMethod;
+    private AtomicReference<String> mServer;
+    private AtomicReference<String> mConfigFile;
+    private AtomicInteger mPort;
+    private AtomicInteger mLocalPort;
+    private AtomicInteger mTimeout; /* UNIT second */
+    private AtomicBoolean mOneTimeAuth;
+    private AtomicBoolean mIsServerMode;
 
     final private static String DEFAULT_METHOD = "aes-256-cfb";
     final private static String DEFAULT_PASSWORD = "123456";
@@ -51,80 +57,85 @@ public class GlobalConfig{
     final private static int DEFAULT_LOCAL_PORT = 9999;
     final private static int DEFAULT_TIMEOUT = 300;
 
-    public void setTimeout(int t)
-    {
-        mTimeout = t;
+    //Lock
+    public void getLock() {
+        mLock.lock();
     }
-    public int getTimeout()
-    {
-        return mTimeout;
-    }
-
-    public void setPassowrd(String p)
-    {
-        mPassword = new String(p);
-    }
-    public String getPassword()
-    {
-        return mPassword;
+    public void releaseLock() {
+        mLock.unlock();
     }
 
-    public void setMethod(String m)
-    {
-        mMethod = new String(m);
+    //Timeout
+    public void setTimeout(int t) {
+        mTimeout.set(t);
     }
-    public String getMethod()
-    {
-        return mMethod;
-    }
-
-    public void setServer(String s)
-    {
-        mServer = new String(s);
-    }
-    public String getServer()
-    {
-        return mServer;
+    public int getTimeout() {
+        return mTimeout.get();
     }
 
-    public void setPort(int p)
-    {
-        mPort = p;
+    //Password(Key)
+    public void setPassowrd(String p) {
+        mPassword.set(p);
     }
-    public int getPort()
-    {
-        return mPort;
-    }
-
-    public void setLocalPort(int p)
-    {
-        mLocalPort = p;
-    }
-    public int getLocalPort()
-    {
-        return mLocalPort;
+    public String getPassword() {
+        return mPassword.get();
     }
 
+    //Method
+    public void setMethod(String m) {
+        mMethod.set(m);
+    }
+    public String getMethod() {
+        return mMethod.get();
+    }
+
+    //Server
+    public void setServer(String s) {
+        mServer.set(s);
+    }
+    public String getServer() {
+        return mServer.get();
+    }
+
+    //Server port
+    public void setPort(int p) {
+        mPort.set(p);
+    }
+    public int getPort() {
+        return mPort.get();
+    }
+
+    //Local port
+    public void setLocalPort(int p) {
+        mLocalPort.set(p);
+    }
+    public int getLocalPort() {
+        return mLocalPort.get();
+    }
+
+    //One time auth
+    public void setOTAEnabled(boolean enable){
+        mOneTimeAuth.set(enable);
+    }
     public boolean isOTAEnabled()
     {
-        return mOneTimeAuth;
-    }
-    public void setOTAEnabled(boolean enable){
-        mOneTimeAuth = enable;
+        return mOneTimeAuth.get();
     }
 
+    //Running in server/local mode
+    private void setServerMode(boolean isServer){
+        mIsServerMode.set(isServer);
+    }
     public boolean isServerMode(){
-        return mIsServerMode;
-    }
-    public void setServerMode(boolean isServer){
-        mIsServerMode = isServer;
+        return mIsServerMode.get();
     }
 
+    //Config
     public void setConfigFile(String name){
-        mConfigFile = new String(name);
+        mConfigFile.set(name);
     }
     public String getConfigFile(){
-        return mConfigFile;
+        return mConfigFile.get();
     }
 
     public synchronized static GlobalConfig get()
@@ -138,15 +149,15 @@ public class GlobalConfig{
 
     public GlobalConfig()
     {
-        mMethod = DEFAULT_METHOD;
-        mPassword = DEFAULT_PASSWORD;
-        mServer = DEFAULT_SERVER;
-        mPort = DEFAULT_PORT;
-        mLocalPort = DEFAULT_LOCAL_PORT;
-        mOneTimeAuth = false;
-        mIsServerMode = false;
-        mConfigFile = null;
-        mTimeout = DEFAULT_TIMEOUT;
+        mMethod = new AtomicReference(DEFAULT_METHOD);
+        mPassword = new AtomicReference(DEFAULT_PASSWORD);
+        mServer = new AtomicReference(DEFAULT_SERVER);
+        mPort = new AtomicInteger(DEFAULT_PORT);
+        mLocalPort = new AtomicInteger(DEFAULT_LOCAL_PORT);
+        mOneTimeAuth = new AtomicBoolean(false);
+        mIsServerMode = new AtomicBoolean(false);
+        mConfigFile = new AtomicReference();
+        mTimeout = new AtomicInteger(DEFAULT_TIMEOUT);
     }
 
     public void printConfig(){
@@ -305,7 +316,9 @@ public class GlobalConfig{
     }
 
     public static LocalConfig createLocalConfig() {
-        return new LocalConfig(GlobalConfig.get().getPassword(),
+        LocalConfig lc = null;
+        GlobalConfig.get().getLock();
+        lc = new LocalConfig(GlobalConfig.get().getPassword(),
                 GlobalConfig.get().getMethod(),
                 GlobalConfig.get().getServer(),
                 GlobalConfig.get().getPort(),
@@ -313,6 +326,8 @@ public class GlobalConfig{
                 GlobalConfig.get().isOTAEnabled(),
                 GlobalConfig.get().getTimeout()
                 );
+        GlobalConfig.get().releaseLock();
+        return lc;
     }
 
     private static void help()

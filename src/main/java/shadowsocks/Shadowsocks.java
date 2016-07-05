@@ -23,6 +23,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Callable;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.logging.log4j.LogManager;
@@ -100,29 +101,31 @@ public class Shadowsocks{
 
         final Object finish = new Object();
 
-        mFuture = mExecutorService.submit(()->{
-            try(ServerSocketChannel server = ServerSocketChannel.open()) {
-                server.socket().bind(new InetSocketAddress(mPort));
-                server.socket().setReuseAddress(true);
-                log.info("Starting " + mName + " at " + server.socket().getLocalSocketAddress());
-                //Tell main thread, bind finish, enter mainloop.
-                synchronized(finish){
-                    finish.notify();
-                }
-                while (true) {
-                    SocketChannel local = server.accept();
-                    if (getState() == STOP) {
-                        break;
+        mFuture = mExecutorService.submit(new Callable<Boolean>() {
+            public Boolean call() throws Exception {
+                try(ServerSocketChannel server = ServerSocketChannel.open()) {
+                    server.socket().bind(new InetSocketAddress(mPort));
+                    server.socket().setReuseAddress(true);
+                    log.info("Starting " + mName + " at " + server.socket().getLocalSocketAddress());
+                    //Tell main thread, bind finish, enter mainloop.
+                    synchronized(finish){
+                        finish.notify();
                     }
-                    local.socket().setTcpNoDelay(true);
-                    mExecutorService.execute(createWorker(local, mIsServer));
+                    while (true) {
+                        SocketChannel local = server.accept();
+                        if (getState() == STOP) {
+                            break;
+                        }
+                        local.socket().setTcpNoDelay(true);
+                        mExecutorService.execute(createWorker(local, mIsServer));
+                    }
+                    log.info("Stop " + mName + " done.");
+                    return Boolean.TRUE;
+                }catch(IOException e){
+                    log.error(mName + " running error.", e);
+                    setState(STOP);
+                    return Boolean.FALSE;
                 }
-                log.info("Stop " + mName + " done.");
-                return Boolean.TRUE;
-            }catch(IOException e){
-                log.error(mName + " running error.", e);
-                setState(STOP);
-                return Boolean.FALSE;
             }
         });
         boolean result = true;

@@ -58,24 +58,24 @@ public class ServerTcpWorker extends TcpWorker {
      */
     private void parseHeader() throws IOException, CryptoException, AuthException
     {
-        SocketChannel local = mSession.get(true);
+        SocketChannel local = mSession.getSocketChannel(true);
 
         ByteBuffer bb = BufferHelper.create(512);
 
-        mStreamUpData.reset();
+        mStreamUpBuffer.reset();
         // Read IV + address type length.
-        int len = mCryptor.getIVLength() + 1;
+        int len = mCrypto.getIVLength() + 1;
         BufferHelper.prepare(bb, len);
         local.read(bb);
 
-        byte [] result = mCryptor.decrypt(bb.array(), len);
+        byte [] result = mCrypto.decrypt(bb.array(), len);
         int addrtype = (int)(result[0] & 0xff);
 
         if ((addrtype & Session.OTA_FLAG) == Session.OTA_FLAG) {
             mOneTimeAuth = true;
             addrtype &= 0x0f;
         }
-        mStreamUpData.write(result[0]);
+        mStreamUpBuffer.write(result[0]);
 
         if (!mOneTimeAuth && mConfig.oneTimeAuth) {
             throw new AuthException("OTA is not enabled!");
@@ -87,22 +87,22 @@ public class ServerTcpWorker extends TcpWorker {
             //get IPV4 address
             BufferHelper.prepare(bb, 4);
             local.read(bb);
-            result = mCryptor.decrypt(bb.array(), 4);
+            result = mCrypto.decrypt(bb.array(), 4);
             addr = InetAddress.getByAddress(result);
-            mStreamUpData.write(result, 0, 4);
+            mStreamUpBuffer.write(result, 0, 4);
         }else if (addrtype == Session.ADDR_TYPE_HOST) {
             //get address len
             BufferHelper.prepare(bb, 1);
             local.read(bb);
-            result = mCryptor.decrypt(bb.array(), 1);
+            result = mCrypto.decrypt(bb.array(), 1);
             len = result[0];
-            mStreamUpData.write(result[0]);
+            mStreamUpBuffer.write(result[0]);
             //get address
             BufferHelper.prepare(bb, len);
             local.read(bb);
-            result = mCryptor.decrypt(bb.array(), len);
+            result = mCrypto.decrypt(bb.array(), len);
             addr = InetAddress.getByName(new String(result, 0, len));
-            mStreamUpData.write(result, 0, len);
+            mStreamUpBuffer.write(result, 0, len);
         } else {
             //do not support other addrtype now.
             throw new IOException("Unsupport addr type: " + addrtype + "!");
@@ -111,11 +111,11 @@ public class ServerTcpWorker extends TcpWorker {
         //get port
         BufferHelper.prepare(bb, 2);
         local.read(bb);
-        result = mCryptor.decrypt(bb.array(), 2);
+        result = mCrypto.decrypt(bb.array(), 2);
         BufferHelper.prepare(bb, 2);
         bb.put(result[0]);
         bb.put(result[1]);
-        mStreamUpData.write(result, 0, 2);
+        mStreamUpBuffer.write(result, 0, 2);
         // if port > 32767 the short will < 0
         int port = (int)(bb.getShort(0)&0xFFFF);
 
@@ -123,9 +123,9 @@ public class ServerTcpWorker extends TcpWorker {
         if (mOneTimeAuth){
             BufferHelper.prepare(bb, HmacSHA1.AUTH_LEN);
             local.read(bb);
-            result = mCryptor.decrypt(bb.array(), HmacSHA1.AUTH_LEN);
-            byte [] authKey = SSAuth.prepareKey(mCryptor.getIV(false), mCryptor.getKey());
-            byte [] authData = mStreamUpData.toByteArray();
+            result = mCrypto.decrypt(bb.array(), HmacSHA1.AUTH_LEN);
+            byte [] authKey = SSAuth.prepareKey(mCrypto.getIV(false), mCrypto.getKey());
+            byte [] authData = mStreamUpBuffer.toByteArray();
             if (!mAuthor.doAuth(authKey, authData, result)){
                 throw new AuthException("Auth head failed");
             }
@@ -154,7 +154,7 @@ public class ServerTcpWorker extends TcpWorker {
 
         // Data len(2) + HMAC-SHA1
         int authHeadLen = HmacSHA1.AUTH_LEN + 2;
-        byte [] result = mCryptor.decrypt(mAuthHeader.array(), authHeadLen);
+        byte [] result = mCrypto.decrypt(mAuthHeader.array(), authHeadLen);
         // Prepare for next chunck
         BufferHelper.prepare(mAuthHeader);
 
@@ -172,7 +172,7 @@ public class ServerTcpWorker extends TcpWorker {
         // store the pre-calculated auth result
         System.arraycopy(result, 2, mExpectAuthResult, 0, HmacSHA1.AUTH_LEN);
 
-        mStreamUpData.reset();
+        mStreamUpBuffer.reset();
 
         return false;
     }
@@ -199,17 +199,17 @@ public class ServerTcpWorker extends TcpWorker {
 
         byte [] result;
         if (direct == Session.LOCAL2REMOTE) {
-            result = mCryptor.decrypt(bb.array(), size);
+            result = mCrypto.decrypt(bb.array(), size);
         }else{
-            result = mCryptor.encrypt(bb.array(), size);
+            result = mCrypto.encrypt(bb.array(), size);
         }
         if (mOneTimeAuth && direct == Session.LOCAL2REMOTE)
         {
-            mStreamUpData.write(result, 0, size);
+            mStreamUpBuffer.write(result, 0, size);
             mChunkLeft -= size;
             if (mChunkLeft == 0) {
-                byte [] authKey = SSAuth.prepareKey(mCryptor.getIV(false), mChunkCount);
-                byte [] authData = mStreamUpData.toByteArray();
+                byte [] authKey = SSAuth.prepareKey(mCrypto.getIV(false), mChunkCount);
+                byte [] authData = mStreamUpBuffer.toByteArray();
                 if (!mAuthor.doAuth(authKey, authData, mExpectAuthResult)){
                     throw new AuthException("Auth chunk " + mChunkCount + " failed!");
                 }

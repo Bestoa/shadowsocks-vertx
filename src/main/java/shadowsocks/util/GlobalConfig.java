@@ -149,14 +149,14 @@ public class GlobalConfig{
 
     public GlobalConfig()
     {
-        mMethod = new AtomicReference(DEFAULT_METHOD);
-        mPassword = new AtomicReference(DEFAULT_PASSWORD);
-        mServer = new AtomicReference(DEFAULT_SERVER);
+        mMethod = new AtomicReference<String>(DEFAULT_METHOD);
+        mPassword = new AtomicReference<String>(DEFAULT_PASSWORD);
+        mServer = new AtomicReference<String>(DEFAULT_SERVER);
         mPort = new AtomicInteger(DEFAULT_PORT);
         mLocalPort = new AtomicInteger(DEFAULT_LOCAL_PORT);
         mOneTimeAuth = new AtomicBoolean(false);
         mIsServerMode = new AtomicBoolean(false);
-        mConfigFile = new AtomicReference();
+        mConfigFile = new AtomicReference<String>();
         mTimeout = new AtomicInteger(DEFAULT_TIMEOUT);
     }
 
@@ -206,7 +206,7 @@ public class GlobalConfig{
         }
         try{
             int port = jsonobj.getInt("server_port");
-            log.debug("CFG:Port: " + port);
+            log.debug("CFG:Server port: " + port);
             GlobalConfig.get().setPort(port);
         }catch(JSONException e){
             //No this config, ignore;
@@ -241,16 +241,23 @@ public class GlobalConfig{
         }
         try{
             int timeout = jsonobj.getInt("timeout");
-            log.debug("CFG:timeout: " + timeout);
+            log.debug("CFG:Timeout: " + timeout);
             GlobalConfig.get().setTimeout(timeout);
         }catch(JSONException e){
             //No this config, ignore;
         }
+        try{
+            boolean isServer = jsonobj.getBoolean("server_mode");
+            log.debug("CFG:Running on server mode: " + isServer);
+            GlobalConfig.get().setServerMode(isServer);
+        }catch(JSONException e){
+            //No this config, ignore;
+        }
     }
-    public static void getConfigFromArgv(String argv[])
+    public static boolean getConfigFromArgv(String argv[])
     {
 
-        Getopt g = new Getopt("shadowsocks", argv, "SLm:k:p:as:l:c:t:");
+        Getopt g = new Getopt("shadowsocks", argv, "SLm:k:p:as:l:c:t:h");
         int c;
         String arg;
         while ((c = g.getopt()) != -1)
@@ -270,7 +277,7 @@ public class GlobalConfig{
                 case 'p':
                     arg = g.getOptarg();
                     int port = Integer.parseInt(arg);
-                    log.debug("CMD:Port: " + port);
+                    log.debug("CMD:Server port: " + port);
                     GlobalConfig.get().setPort(port);
                     break;
                 case 'a':
@@ -307,12 +314,14 @@ public class GlobalConfig{
                     log.debug("CMD:timeout: " + timeout);
                     GlobalConfig.get().setTimeout(timeout);
                     break;
+                case 'h':
                 case '?':
                 default:
                     help();
-                    break;
+                    return false;
             }
         }
+        return true;
     }
 
     public static LocalConfig createLocalConfig() {
@@ -332,6 +341,17 @@ public class GlobalConfig{
 
     private static void help()
     {
-        //TODO
+        System.out.println("Usage:\n" +
+                "   -m crypto method\n" +
+                "   -k password\n" +
+                "   -p bind port(server)/remote port(client)\n" +
+                "   -a OTA enforcing mode\n" +
+                "   -l local port\n" +
+                "   -s server\n" +
+                "   -S server mode\n" +
+                "   -L Local mode(client, default)\n" +
+                "   -c config file\n" +
+                "   -t timeout(unit is second)\n" +
+                "   -h show help.\n");
     }
 }

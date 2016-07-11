@@ -69,12 +69,12 @@ public abstract class TcpWorker implements Runnable {
 
     private SocketChannel mLocal;
     protected Session mSession;
-    protected SSCrypto mCryptor;
+    protected SSCrypto mCrypto;
     protected LocalConfig mConfig;
 
     // For OTA
     // Store the data to do one time auth
-    protected ByteArrayOutputStream mStreamUpData;
+    protected ByteArrayOutputStream mStreamUpBuffer;
     protected boolean mOneTimeAuth = false;
     protected SSAuth mAuthor;
     protected int mChunkCount = 0;
@@ -121,8 +121,8 @@ public abstract class TcpWorker implements Runnable {
     protected void TcpRelay()
     {
         int CONNECT_TIMEOUT = 5000;
-        SocketChannel remote = mSession.get(false);
-        SocketChannel local = mSession.get(true);
+        SocketChannel remote = mSession.getSocketChannel(false);
+        SocketChannel local = mSession.getSocketChannel(true);
 
         try(Selector selector = Selector.open())
         {
@@ -155,14 +155,14 @@ public abstract class TcpWorker implements Runnable {
         try(SocketChannel local = mLocal; SocketChannel remote = SocketChannel.open())
         {
             mSession = new Session();
-            mSession.set(local, true);
-            mSession.set(remote, false);
+            mSession.setSocketChannel(local, true);
+            mSession.setSocketChannel(remote, false);
             mSession.setTimeout(mConfig.timeout);
             // for decrypt/encrypt
-            mCryptor = CryptoFactory.create(mConfig.method, mConfig.password);
+            mCrypto = CryptoFactory.create(mConfig.method, mConfig.password);
             // for one time auth
             mAuthor = new HmacSHA1();
-            mStreamUpData = new ByteArrayOutputStream();
+            mStreamUpBuffer = new ByteArrayOutputStream();
             TcpRelay();
         }catch(Exception e){
             log.error(e);

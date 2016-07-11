@@ -1,4 +1,4 @@
-version '0.7'
+version '0.7.1'
 
 apply plugin: 'java'
 apply plugin: 'jacoco'
@@ -19,11 +19,9 @@ dependencies {
     testCompile 'junit:junit:4.12'
 }
 
-jacocoTestReport {
-    reports {
-        xml.enabled = true
-        html.enabled = true
-    }
+compileJava {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
 }
 
 mainClassName = 'shadowsocks.Main'
@@ -44,4 +42,10 @@ task ('fatJar', type: Jar, dependsOn: classes){
     exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA'
 }
 
+jacocoTestReport {
+    reports {
+        xml.enabled = true
+        html.enabled = true
+    }
+}
 check.dependsOn jacocoTestReport

@@ -72,12 +72,12 @@ public class Shadowsocks{
         }
     }
 
-    public Shadowsocks(boolean server){
+    public Shadowsocks(boolean isServer){
         setState(STOP);
         mExecutorService = Executors.newCachedThreadPool();
-        mIsServer = server;
-        mName = (server?"server":"local") + "[" + this.hashCode() + "]";
-        mPort = server?GlobalConfig.get().getPort():GlobalConfig.get().getLocalPort();
+        mIsServer = isServer;
+        mName = (isServer ? "server" : "local") + "[" + this.hashCode() + "]";
+        mPort = isServer ? GlobalConfig.get().getPort() : GlobalConfig.get().getLocalPort();
     }
 
     private TcpWorker createWorker(SocketChannel sc, boolean server){

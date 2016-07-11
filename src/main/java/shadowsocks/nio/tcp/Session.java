@@ -73,14 +73,14 @@ public class Session {
         return System.currentTimeMillis() - mLastActiveTime > mTimeout;
     }
 
-    public void set(SocketChannel sc, boolean isLocal) {
+    public void setSocketChannel(SocketChannel sc, boolean isLocal) {
         if (isLocal)
             mLocal = sc;
         else
             mRemote = sc;
     }
 
-    public SocketChannel get(boolean isLocal) {
+    public SocketChannel getSocketChannel(boolean isLocal) {
         return isLocal?mLocal:mRemote;
     }
 

@@ -59,7 +59,7 @@ public class LocalTcpWorker extends TcpWorker {
      */
     private void parseHeader() throws IOException
     {
-        SocketChannel local = mSession.get(true);
+        SocketChannel local = mSession.getSocketChannel(true);
 
         ByteBuffer bb = BufferHelper.create(512);
         //skip method list (max 1+1+255)
@@ -97,13 +97,13 @@ public class LocalTcpWorker extends TcpWorker {
             throw new IOException("Mode = " + header[1] + ", should be 1");
         }
 
-        mStreamUpData.reset();
+        mStreamUpBuffer.reset();
         int addrtype = (int)(header[3] & 0xff);
         //add OTA flag
         if (mOneTimeAuth) {
             header[3] |= Session.OTA_FLAG;
         }
-        mStreamUpData.write(header[3]);
+        mStreamUpBuffer.write(header[3]);
 
         //get addr
         StringBuffer addr = new StringBuffer();
@@ -116,14 +116,14 @@ public class LocalTcpWorker extends TcpWorker {
             headerSize -= 4;
             bb.get(ipv4);
             addr.append(InetAddress.getByAddress(ipv4).toString());
-            mStreamUpData.write(ipv4);
+            mStreamUpBuffer.write(ipv4);
         }else if (addrtype == Session.ADDR_TYPE_HOST) {
             //get address len
             if (headerSize < 2) {
                 throw new IOException("Host address is too short.");
             }
             int len = (bb.get() & 0xff);
-            mStreamUpData.write(len);
+            mStreamUpBuffer.write(len);
             headerSize -= 1;
             //get address
             if (headerSize < len) {
@@ -132,7 +132,7 @@ public class LocalTcpWorker extends TcpWorker {
             byte [] host = new byte[len];
             bb.get(host);
             addr.append(new String(host));
-            mStreamUpData.write(host);
+            mStreamUpBuffer.write(host);
             headerSize -= len;
         } else {
             //do not support other addrtype now.
@@ -154,32 +154,32 @@ public class LocalTcpWorker extends TcpWorker {
         addr.append(port);
         mConfig.target = addr.toString();
 
-        mStreamUpData.write(bb.get());
-        mStreamUpData.write(bb.get());
+        mStreamUpBuffer.write(bb.get());
+        mStreamUpBuffer.write(bb.get());
 
     }
 
     private void replyToProxyProgram(byte [] msg) throws IOException
     {
-        SocketChannel local = mSession.get(true);
+        SocketChannel local = mSession.getSocketChannel(true);
         local.write(ByteBuffer.wrap(msg));
 
     }
 
     private void sendHeaderToRemote() throws IOException, AuthException, CryptoException
     {
-        SocketChannel remote = mSession.get(false);
+        SocketChannel remote = mSession.getSocketChannel(false);
         // Create auth head
         if (mOneTimeAuth){
-            byte [] authKey = SSAuth.prepareKey(mCryptor.getIV(true), mCryptor.getKey());
-            byte [] authData = mStreamUpData.toByteArray();
+            byte [] authKey = SSAuth.prepareKey(mCrypto.getIV(true), mCrypto.getKey());
+            byte [] authData = mStreamUpBuffer.toByteArray();
             byte [] authResult = mAuthor.doAuth(authKey, authData);
-            mStreamUpData.write(authResult);
+            mStreamUpBuffer.write(authResult);
         }
 
         //Send head to remote
-        byte [] headerData = mStreamUpData.toByteArray();
-        byte [] result = mCryptor.encrypt(headerData, headerData.length);
+        byte [] headerData = mStreamUpBuffer.toByteArray();
+        byte [] result = mCrypto.encrypt(headerData, headerData.length);
         BufferHelper.send(remote, result);
     }
 
@@ -201,25 +201,25 @@ public class LocalTcpWorker extends TcpWorker {
 
         byte [] result;
         if (direct == Session.LOCAL2REMOTE) {
-            mStreamUpData.reset();
+            mStreamUpBuffer.reset();
             if (mOneTimeAuth) {
                 ByteBuffer len = ByteBuffer.allocate(2);
                 len.putShort((short)size);
                 //chunk length 2 bytes
-                mStreamUpData.write(len.array());
+                mStreamUpBuffer.write(len.array());
                 //auth result 10 bytes
-                byte [] authKey = SSAuth.prepareKey(mCryptor.getIV(true), mChunkCount);
+                byte [] authKey = SSAuth.prepareKey(mCrypto.getIV(true), mChunkCount);
                 byte [] authData = new byte[size];
                 System.arraycopy(bb.array(), 0, authData, 0, size);
                 byte [] authResult = mAuthor.doAuth(authKey, authData);
-                mStreamUpData.write(authResult);
+                mStreamUpBuffer.write(authResult);
                 mChunkCount++;
             }
-            mStreamUpData.write(bb.array(), 0, size);
-            byte [] data = mStreamUpData.toByteArray();
-            result = mCryptor.encrypt(data, data.length);
+            mStreamUpBuffer.write(bb.array(), 0, size);
+            byte [] data = mStreamUpBuffer.toByteArray();
+            result = mCrypto.encrypt(data, data.length);
         }else{
-            result = mCryptor.decrypt(bb.array(), size);
+            result = mCrypto.decrypt(bb.array(), size);
         }
         BufferHelper.send(target, result);
         return false;

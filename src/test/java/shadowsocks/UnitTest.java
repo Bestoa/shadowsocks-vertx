@@ -77,7 +77,6 @@ public class UnitTest {
             //Start shadowsocks with config
             String [] argv = {
                 "-c", fileName,
-                "-S",
             };
             Main.main(argv);
         } catch(Exception e) {
@@ -92,5 +91,13 @@ public class UnitTest {
         assertEquals(GlobalConfig.get().getTimeout(), 360);
         assertEquals(GlobalConfig.get().isOTAEnabled(), true);
         assertEquals(GlobalConfig.get().isServerMode(), true);
+    }
+
+    @Test
+    public void testHelp() {
+        String [] argv = {
+            "-h",
+        };
+        Main.main(argv);
     }
 }

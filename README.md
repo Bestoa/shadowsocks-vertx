@@ -36,18 +36,24 @@ Crypto method:
 
 One time auth feature done.
 
-Support JSON config file.(local\_address/fast\_open/workers is not support)
+Support JSON config file.
+    1. local\_address/fast\_open/workers is not support.
+    2. server\_mode is the additional item to set the running mode, server or client.
 
 You could refer to demo config etc/demo.json.
 
 How to run:
 ===========
 ### (1) Before you start
-You must have 'gradle' installed first.
+You must have 'gradle' installed first, or use gradle wrapper ./gradlew to download and config gradle.
 
 ### (2) generate distributable zip
 ```
 $ gradle distZip
+```
+or
+```
+$ ./gradlew distZip
 ```
 
 Then you will get shadowsocks-xx.zip in build/distributions.
@@ -65,6 +71,11 @@ $ bin/shadowsocks -L ...
 ```
 $ gradle fatJar
 ```
+or
+```
+$ ./gradlew fatJar
+```
+
 
 Then you will get shadowsocks-fat-xx.jar in build/libs.
 

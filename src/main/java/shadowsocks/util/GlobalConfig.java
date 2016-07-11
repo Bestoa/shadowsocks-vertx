@@ -206,7 +206,7 @@ public class GlobalConfig{
         }
         try{
             int port = jsonobj.getInt("server_port");
-            log.debug("CFG:Port: " + port);
+            log.debug("CFG:Server port: " + port);
             GlobalConfig.get().setPort(port);
         }catch(JSONException e){
             //No this config, ignore;
@@ -241,8 +241,15 @@ public class GlobalConfig{
         }
         try{
             int timeout = jsonobj.getInt("timeout");
-            log.debug("CFG:timeout: " + timeout);
+            log.debug("CFG:Timeout: " + timeout);
             GlobalConfig.get().setTimeout(timeout);
+        }catch(JSONException e){
+            //No this config, ignore;
+        }
+        try{
+            boolean isServer = jsonobj.getBoolean("server_mode");
+            log.debug("CFG:Running on server mode: " + isServer);
+            GlobalConfig.get().setServerMode(isServer);
         }catch(JSONException e){
             //No this config, ignore;
         }
@@ -270,7 +277,7 @@ public class GlobalConfig{
                 case 'p':
                     arg = g.getOptarg();
                     int port = Integer.parseInt(arg);
-                    log.debug("CMD:Port: " + port);
+                    log.debug("CMD:Server port: " + port);
                     GlobalConfig.get().setPort(port);
                     break;
                 case 'a':

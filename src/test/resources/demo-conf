@@ -1,5 +1,6 @@
 {
     "server":"fakeserver",
+    "server_mode":true,
     "server_port":1111,
     "local_port":2222,
     "password":"fakekey",

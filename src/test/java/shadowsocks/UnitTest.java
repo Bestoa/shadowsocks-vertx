@@ -77,7 +77,6 @@ public class UnitTest {
             //Start shadowsocks with config
             String [] argv = {
                 "-c", fileName,
-                "-S",
             };
             Main.main(argv);
         } catch(Exception e) {

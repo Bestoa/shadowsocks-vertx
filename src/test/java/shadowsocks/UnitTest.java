@@ -92,4 +92,12 @@ public class UnitTest {
         assertEquals(GlobalConfig.get().isOTAEnabled(), true);
         assertEquals(GlobalConfig.get().isServerMode(), true);
     }
+
+    @Test
+    public void testHelp() {
+        String [] argv = {
+            "-h",
+        };
+        Main.main(argv);
+    }
 }

@@ -26,6 +26,7 @@ Support these args:
     8. -L Local mode(client, default)
     9. -c config file
     10. -t timeout(unit is second)
+    11. -h show help.
 
 Crypto method:
 

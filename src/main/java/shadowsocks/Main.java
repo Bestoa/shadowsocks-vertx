@@ -31,7 +31,9 @@ public class Main{
     public static void main(String argv[])
     {
         log.info("Shadowsocks " + VERSION);
-        GlobalConfig.getConfigFromArgv(argv);
+        if (!GlobalConfig.getConfigFromArgv(argv)) {
+            return;
+        }
         GlobalConfig.getConfigFromFile();
         //make sure this method could work.
         try{

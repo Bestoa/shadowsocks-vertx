@@ -9,10 +9,10 @@ Rewrite simple Shadowsocks with Java.
 
 It will remove complex funtions.
 
-This need JDK 8.
+Compatible with Java 7.
 
 #Current state:
-Simple server + client. Version 0.7
+Simple server + client. Version 0.7.1
 
 Support these args:
 
@@ -29,10 +29,10 @@ Support these args:
 
 Crypto method:
 
-    1. AES-128-CFB
-    2. AES-192-CFB
-    3. AES-256-CFB
-    4. Chacha20
+    1. aes-128-cfb/ofb
+    2. aes-192-cfb/ofb
+    3. aes-256-cfb/ofb
+    4. chacha20
 
 One time auth feature done.
 

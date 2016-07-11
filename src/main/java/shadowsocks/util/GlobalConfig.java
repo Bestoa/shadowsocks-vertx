@@ -149,14 +149,14 @@ public class GlobalConfig{
 
     public GlobalConfig()
     {
-        mMethod = new AtomicReference(DEFAULT_METHOD);
-        mPassword = new AtomicReference(DEFAULT_PASSWORD);
-        mServer = new AtomicReference(DEFAULT_SERVER);
+        mMethod = new AtomicReference<String>(DEFAULT_METHOD);
+        mPassword = new AtomicReference<String>(DEFAULT_PASSWORD);
+        mServer = new AtomicReference<String>(DEFAULT_SERVER);
         mPort = new AtomicInteger(DEFAULT_PORT);
         mLocalPort = new AtomicInteger(DEFAULT_LOCAL_PORT);
         mOneTimeAuth = new AtomicBoolean(false);
         mIsServerMode = new AtomicBoolean(false);
-        mConfigFile = new AtomicReference();
+        mConfigFile = new AtomicReference<String>();
         mTimeout = new AtomicInteger(DEFAULT_TIMEOUT);
     }
 

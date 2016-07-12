@@ -26,13 +26,8 @@ public class Session {
 
     private static Logger log = LogManager.getLogger(Session.class.getName());
 
-    final static public int ADDR_TYPE_IPV4 = 0x01;
-    final static public int ADDR_TYPE_HOST = 0x03;
-
     final static public int LOCAL2REMOTE = 1;
     final static public int REMOTE2LOCAL = 2;
-
-    final static public int OTA_FLAG = 0x10;
 
     private static AtomicInteger mSessionNumber = new AtomicInteger(0);
 

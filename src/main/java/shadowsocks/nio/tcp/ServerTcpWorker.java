@@ -39,7 +39,6 @@ import shadowsocks.auth.AuthException;
 
 public class ServerTcpWorker extends TcpWorker {
 
-
     // Store the expect auth result from client
     private byte [] mExpectAuthResult;
     // Auth header for each chunck;
@@ -71,7 +70,7 @@ public class ServerTcpWorker extends TcpWorker {
         byte [] result = mCrypto.decrypt(bb.array(), len);
         int addrtype = (int)(result[0] & 0xff);
 
-        if ((addrtype & Session.OTA_FLAG) == Session.OTA_FLAG) {
+        if ((addrtype & OTA_FLAG) == OTA_FLAG) {
             mOneTimeAuth = true;
             addrtype &= 0x0f;
         }
@@ -83,14 +82,14 @@ public class ServerTcpWorker extends TcpWorker {
 
         //get address
         InetAddress addr;
-        if (addrtype == Session.ADDR_TYPE_IPV4) {
+        if (addrtype == ADDR_TYPE_IPV4) {
             //get IPV4 address
             BufferHelper.prepare(bb, 4);
             local.read(bb);
             result = mCrypto.decrypt(bb.array(), 4);
             addr = InetAddress.getByAddress(result);
             mStreamUpBuffer.write(result, 0, 4);
-        }else if (addrtype == Session.ADDR_TYPE_HOST) {
+        }else if (addrtype == ADDR_TYPE_HOST) {
             //get address len
             BufferHelper.prepare(bb, 1);
             local.read(bb);
@@ -219,6 +218,7 @@ public class ServerTcpWorker extends TcpWorker {
         BufferHelper.send(target, result);
         return false;
     }
+
     @Override
     protected void handleStage(int stage) throws IOException, CryptoException, AuthException
     {
@@ -235,14 +235,10 @@ public class ServerTcpWorker extends TcpWorker {
                 //dummy for default.
         }
     }
-    private void init() throws IOException{
 
+    private void init() throws IOException{
         mExpectAuthResult = new byte[HmacSHA1.AUTH_LEN];
         // 2 bytes for data len: data len + auth result.
         mAuthHeader = BufferHelper.create(HmacSHA1.AUTH_LEN + 2);
-    }
-
-    public ServerTcpWorker(SocketChannel sc, LocalConfig lc){
-        super(sc, lc);
     }
 }

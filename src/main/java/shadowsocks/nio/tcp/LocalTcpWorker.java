@@ -101,13 +101,13 @@ public class LocalTcpWorker extends TcpWorker {
         int addrtype = (int)(header[3] & 0xff);
         //add OTA flag
         if (mOneTimeAuth) {
-            header[3] |= Session.OTA_FLAG;
+            header[3] |= OTA_FLAG;
         }
         mStreamUpBuffer.write(header[3]);
 
         //get addr
         StringBuffer addr = new StringBuffer();
-        if (addrtype == Session.ADDR_TYPE_IPV4) {
+        if (addrtype == ADDR_TYPE_IPV4) {
             //get IPV4 address
             byte [] ipv4 = new byte[4];
             if (headerSize < 4) {
@@ -117,7 +117,7 @@ public class LocalTcpWorker extends TcpWorker {
             bb.get(ipv4);
             addr.append(InetAddress.getByAddress(ipv4).toString());
             mStreamUpBuffer.write(ipv4);
-        }else if (addrtype == Session.ADDR_TYPE_HOST) {
+        }else if (addrtype == ADDR_TYPE_HOST) {
             //get address len
             if (headerSize < 2) {
                 throw new IOException("Host address is too short.");
@@ -250,13 +250,7 @@ public class LocalTcpWorker extends TcpWorker {
     }
 
     private void init() throws IOException{
-
         mOneTimeAuth = mConfig.oneTimeAuth;
-
         mConfig.remoteAddress = new InetSocketAddress(InetAddress.getByName(mConfig.server), mConfig.serverPort);
-    }
-
-    public LocalTcpWorker(SocketChannel sc, LocalConfig lc){
-        super(sc, lc);
     }
 }

@@ -29,6 +29,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import shadowsocks.util.LocalConfig;
+import shadowsocks.util.GlobalConfig;
 
 import shadowsocks.crypto.SSCrypto;
 import shadowsocks.crypto.CryptoFactory;
@@ -67,7 +68,12 @@ public abstract class TcpWorker implements Runnable {
     // Common work
     protected static Logger log = LogManager.getLogger(TcpWorker.class.getName());
 
-    private SocketChannel mLocal;
+    final static public int ADDR_TYPE_IPV4 = 0x01;
+    final static public int ADDR_TYPE_HOST = 0x03;
+
+    final static public int OTA_FLAG = 0x10;
+
+    private SocketChannel mLocalSocketChannel;
     protected Session mSession;
     protected SSCrypto mCrypto;
     protected LocalConfig mConfig;
@@ -91,7 +97,7 @@ public abstract class TcpWorker implements Runnable {
         boolean finish = false;
 
         while(true){
-            int n = selector.select(1000);
+            int n = selector.select(mConfig.timeout);
             if (n == 0){
                 if (mSession.isTimeout()) {
                     log.debug(mSession.getID() + ": close timeout worker");
@@ -152,7 +158,7 @@ public abstract class TcpWorker implements Runnable {
     @Override
     public void run(){
         //make sure the 2 channels could be closed
-        try(SocketChannel local = mLocal; SocketChannel remote = SocketChannel.open())
+        try(SocketChannel local = mLocalSocketChannel; SocketChannel remote = SocketChannel.open())
         {
             mSession = new Session();
             mSession.setSocketChannel(local, true);
@@ -171,8 +177,15 @@ public abstract class TcpWorker implements Runnable {
         }
     }
 
-    public TcpWorker(SocketChannel sc, LocalConfig lc){
-        mLocal = sc;
-        mConfig = lc;
+    /* This method will be called before thread running. */
+    public void init(SocketChannel socket, LocalConfig config) {
+        mLocalSocketChannel = socket;
+        mConfig = config;
+    }
+
+    public static TcpWorker create(SocketChannel socket, boolean isServer) {
+        TcpWorker tcpWorker = isServer ? new ServerTcpWorker() : new LocalTcpWorker();
+        tcpWorker.init(socket, GlobalConfig.createLocalConfig());
+        return tcpWorker;
     }
 }

@@ -80,14 +80,6 @@ public class Shadowsocks{
         mPort = isServer ? GlobalConfig.get().getPort() : GlobalConfig.get().getLocalPort();
     }
 
-    private TcpWorker createWorker(SocketChannel sc, boolean server){
-        LocalConfig config = GlobalConfig.createLocalConfig();
-        if (server)
-            return new ServerTcpWorker(sc, config);
-        else
-            return new LocalTcpWorker(sc, config);
-    }
-
     public boolean boot()
     {
         mLock.lock();
@@ -117,7 +109,7 @@ public class Shadowsocks{
                             break;
                         }
                         local.socket().setTcpNoDelay(true);
-                        mExecutorService.execute(createWorker(local, mIsServer));
+                        mExecutorService.execute(TcpWorker.create(local, mIsServer));
                     }
                     log.info("Stop " + mName + " done.");
                     return Boolean.TRUE;

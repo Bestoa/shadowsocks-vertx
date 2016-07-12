@@ -7,7 +7,7 @@ shadowsocks-java
 
 Rewrite simple Shadowsocks with Java.
 
-It will remove complex funtions.
+It will remove complex funtions such as mutli-ports.
 
 Compatible with Java 7.
 
@@ -38,9 +38,12 @@ Crypto method:
 One time auth feature done.
 
 Support JSON config file.
+Note:
 
-    1. local\_address/fast\_open/workers is not support.
-    2. server\_mode is the additional item to set the running mode, server or client.
+    1. Not support: local_address, client will bind 0.0.0.0 not 127.0.0.1
+    2. Not support: fast_open. Java don't have such feature.
+    3. Not support: workers. This version is based on multi-thread, don't need this.
+    4. Additional: server_mode, set the running mode, server or client.
 
 You could refer to demo config etc/demo.json.
 

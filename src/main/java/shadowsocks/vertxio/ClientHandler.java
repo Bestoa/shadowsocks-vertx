@@ -35,6 +35,9 @@ import shadowsocks.util.LocalConfig;
 import shadowsocks.crypto.SSCrypto;
 import shadowsocks.crypto.CryptoFactory;
 import shadowsocks.crypto.CryptoException;
+import shadowsocks.auth.SSAuth;
+import shadowsocks.auth.HmacSHA1;
+import shadowsocks.auth.AuthException;
 
 public class ClientHandler implements Handler<Buffer> {
 
@@ -43,13 +46,17 @@ public class ClientHandler implements Handler<Buffer> {
     private final static int ADDR_TYPE_IPV4 = 1;
     private final static int ADDR_TYPE_HOST = 3;
 
+    private final static int OTA_FLAG = 0x10;
+
     private Vertx mVertx;
     private NetSocket mLocalSocket;
     private NetSocket mRemoteSocket;
     private LocalConfig mConfig;
     private int mCurrentStage;
     private Buffer mBuffer;
-    protected SSCrypto mCrypto;
+    private int mChunkCount;
+    private SSCrypto mCrypto;
+    private SSAuth mAuthor;
     private int mAddrType;
 
     private class Stage {
@@ -75,7 +82,7 @@ public class ClientHandler implements Handler<Buffer> {
             destory();
         });
         socket.exceptionHandler(e -> {
-            log.error("Got Exception.", e);
+            log.error("Catch Exception.", e);
             destory();
         });
     }
@@ -86,12 +93,14 @@ public class ClientHandler implements Handler<Buffer> {
         mConfig = config;
         mCurrentStage = Stage.HELLO;
         mBuffer = Buffer.buffer();
+        mChunkCount = 0;
         setFinishHandler(mLocalSocket);
         try{
             mCrypto = CryptoFactory.create(mConfig.method, mConfig.password);
         }catch(Exception e){
             //Will never happen, we check this before.
         }
+        mAuthor = new HmacSHA1();
     }
 
     private Buffer compactBuffer(int start, int end) {
@@ -172,7 +181,11 @@ public class ClientHandler implements Handler<Buffer> {
         String addr = null;
         // Construct the remote header.
         Buffer remoteHeader = Buffer.buffer();
-        remoteHeader.appendByte((byte)mAddrType);
+        if (mConfig.oneTimeAuth) {
+            remoteHeader.appendByte((byte)(mAddrType | OTA_FLAG));
+        }else{
+            remoteHeader.appendByte((byte)(mAddrType));
+        }
 
         if (mAddrType == ADDR_TYPE_IPV4) {
             // ipv4(4) + port(2)
@@ -225,7 +238,7 @@ public class ClientHandler implements Handler<Buffer> {
                     byte [] decryptData = mCrypto.decrypt(data, data.length);
                     mLocalSocket.write(Buffer.buffer(decryptData));
                 }catch(CryptoException e){
-                    log.error("Got exception", e);
+                    log.error("Catch exception", e);
                     destory();
                 }
             });
@@ -234,26 +247,56 @@ public class ClientHandler implements Handler<Buffer> {
             mLocalSocket.write(Buffer.buffer(msg));
             // send remote header.
             try{
+                if (mConfig.oneTimeAuth) {
+                    byte [] authKey = SSAuth.prepareKey(mCrypto.getIV(true), mCrypto.getKey());
+                    byte [] authData = remoteHeader.getBytes();
+                    byte [] authResult = mAuthor.doAuth(authKey, authData);
+                    remoteHeader.appendBytes(authResult);
+                }
                 byte [] header = remoteHeader.getBytes();
                 byte [] encryptHeader = mCrypto.encrypt(header, header.length);
                 mRemoteSocket.write(Buffer.buffer(encryptHeader));
-            }catch(CryptoException e){
-                log.error("Got exception", e);
+            }catch(CryptoException | AuthException e){
+                log.error("Catch exception", e);
                 destory();
             }
         });
     }
 
-    private boolean handleStageData() {
+    private void sendToLocal(Buffer buffer) {
+
+        Buffer chunckBuffer = Buffer.buffer();
         try{
-            byte [] data = mBuffer.getBytes();
+            if (mConfig.oneTimeAuth) {
+                //chunk length 2 bytes
+                chunckBuffer.appendShort((short)buffer.length());
+                //auth result 10 bytes
+                byte [] authKey = SSAuth.prepareKey(mCrypto.getIV(true), mChunkCount++);
+                byte [] authData = buffer.getBytes();
+                byte [] authResult = mAuthor.doAuth(authKey, authData);
+                chunckBuffer.appendBytes(authResult);
+            }
+            chunckBuffer.appendBuffer(buffer);
+            byte [] data = chunckBuffer.getBytes();
             byte [] encryptData = mCrypto.encrypt(data, data.length);
             mRemoteSocket.write(Buffer.buffer(encryptData));
-        }catch(CryptoException e){
-            log.error("Got exception", e);
+        }catch(CryptoException | AuthException e){
+            log.error("Catch exception", e);
             destory();
         }
-        mBuffer = Buffer.buffer();
+    }
+
+    private boolean handleStageData() {
+
+        int shortMax = 65536;
+
+        while (mBuffer.length() > 0) {
+            int bufferLength = mBuffer.length();
+            int end = bufferLength > shortMax ? shortMax : bufferLength;
+            sendToLocal(mBuffer.slice(0, end));
+            compactBuffer(end, bufferLength);
+        }
+
         return false;
     }
 

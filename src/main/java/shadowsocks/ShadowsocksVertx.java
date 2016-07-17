@@ -26,6 +26,7 @@ import shadowsocks.util.GlobalConfig;
 import shadowsocks.util.LocalConfig;
 
 import shadowsocks.vertxio.ClientHandler;
+import shadowsocks.vertxio.ServerHandler;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -46,8 +47,9 @@ public class ShadowsocksVertx {
         LocalConfig config = GlobalConfig.createLocalConfig();
         int port = mIsServer ? config.serverPort : config.localPort;
         mVertx.createNetServer().connectHandler(sock -> {
-            sock.handler(new ClientHandler(mVertx, sock, config));
-        }).listen(port, "0.0.0.0", res->{
+            Handler<Buffer> dataHandler = mIsServer ? new ServerHandler(mVertx, sock, config) : new ClientHandler(mVertx, sock, config);
+            sock.handler(dataHandler);
+        }).listen(port, "0.0.0.0", res -> {
             if (res.succeeded()) {
                 log.info("Listening at " + port);
             }else{

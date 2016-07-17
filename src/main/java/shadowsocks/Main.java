@@ -43,6 +43,7 @@ public class Main{
             return;
         }
         GlobalConfig.get().printConfig();
-        new ShadowsocksVertx(false).start();
+        new ShadowsocksVertx(GlobalConfig.get().isServerMode()).start();
+        //new Shadowsocks(GlobalConfig.get().isServerMode()).boot();
     }
 }

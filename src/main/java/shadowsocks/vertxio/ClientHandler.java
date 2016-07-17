@@ -263,7 +263,7 @@ public class ClientHandler implements Handler<Buffer> {
         });
     }
 
-    private void sendToLocal(Buffer buffer) {
+    private void sendToRemote(Buffer buffer) {
 
         Buffer chunckBuffer = Buffer.buffer();
         try{
@@ -293,7 +293,7 @@ public class ClientHandler implements Handler<Buffer> {
         while (mBuffer.length() > 0) {
             int bufferLength = mBuffer.length();
             int end = bufferLength > shortMax ? shortMax : bufferLength;
-            sendToLocal(mBuffer.slice(0, end));
+            sendToRemote(mBuffer.slice(0, end));
             compactBuffer(end, bufferLength);
         }
 

@@ -1,7 +1,7 @@
 shadowsocks-vertx
 ================
 
-[![Build Status](https://travis-ci.org/Bestoa/shadowsocks-java.svg?branch=master)](https://travis-ci.org/Bestoa/shadowsocks-java)
+[![Build Status](https://travis-ci.org/Bestoa/shadowsocks-vertx.svg?branch=master)](https://travis-ci.org/Bestoa/shadowsocks-vertx)
 [![codecov](https://codecov.io/gh/Bestoa/shadowsocks-java/branch/master/graph/badge.svg)](https://codecov.io/gh/Bestoa/shadowsocks-java)
 [![License](http://img.shields.io/:license-apache-blue.svg?style=flat-square)](http://www.apache.org/licenses/LICENSE-2.0.html)
 

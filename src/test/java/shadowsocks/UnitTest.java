@@ -30,7 +30,7 @@ import java.io.FileOutputStream;
 import java.io.DataInputStream;
 
 import shadowsocks.util.GlobalConfig;
-import shadowsocks.Shadowsocks;
+import shadowsocks.ShadowsocksVertx;
 
 public class UnitTest {
     public static Logger log = LogManager.getLogger(UnitTest.class.getName());

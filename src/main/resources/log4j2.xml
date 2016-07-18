@@ -4,9 +4,14 @@
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout pattern="%d{DATE} %highlight{%-5level} %msg%n"/>
         </Console>
+        <RollingFile name="RollingFile" fileName="logs/ss.log" filePattern="logs/ss-%d{MM-dd-yyyy}.log.gz" ignoreExceptions="false">
+            <PatternLayout pattern="%d{DATE} %level %msg%n"/>
+            <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+        </RollingFile>
     </Appenders>
     <Loggers>
         <Root level="trace">
+            <AppenderRef level="error" ref="RollingFile"/>
             <AppenderRef ref="Console"/>
         </Root>
     </Loggers>

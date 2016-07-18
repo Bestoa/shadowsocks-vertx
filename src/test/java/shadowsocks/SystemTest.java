@@ -26,7 +26,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import shadowsocks.util.GlobalConfig;
-import shadowsocks.Shadowsocks;
+import shadowsocks.ShadowsocksVertx;
 
 import java.io.File;
 import java.io.IOException;
@@ -60,50 +60,28 @@ public class SystemTest{
     public void tearDown(){
         log.info("Tear down");
     }
-    @Test
-    public void testStartStop() {
-
-        Shadowsocks server = new Shadowsocks(true);
-        Shadowsocks local = new Shadowsocks(false);
-        //Can't shutdown before boot.
-        assertFalse(server.shutdown());
-        //Boot and shutdown
-        assertTrue(server.boot());
-        assertTrue(local.boot());
-        assertTrue(server.shutdown());
-        assertTrue(local.shutdown());
-        //Boot again
-        assertTrue(server.boot());
-        //Two instances is not allowed.
-        assertFalse(server.boot());
-        assertTrue(server.shutdown());
-
-    }
-
-    @Test
-    public void testStartFailed() {
-        Shadowsocks local1 = new Shadowsocks(false);
-        Shadowsocks local2 = new Shadowsocks(false);
-        assertTrue(local1.boot());
-        //Port had been bind
-        assertFalse(local2.boot());
-        assertTrue(local1.shutdown());
-        assertFalse(local2.shutdown());
-    }
 
     private void testSimpleHttp(boolean ota) {
 
         GlobalConfig.get().setOTAEnabled(ota);
 
-        Shadowsocks server = new Shadowsocks(true);
-        Shadowsocks local = new Shadowsocks(false);
+        ShadowsocksVertx server = new ShadowsocksVertx(true);
+        ShadowsocksVertx client = new ShadowsocksVertx(false);
 
-        assertTrue(server.boot());
-        assertTrue(local.boot());
+        server.start();
+        client.start();
+
+        //Wait 1s for server/client start.
+        try{
+            Thread.sleep(1000);
+        }catch(Exception e){
+            //ignore
+        }
+
         Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", 2048));
         HttpURLConnection conn = null;
         try{
-            URL url = new URL("http://example.com");
+            URL url = new URL("https://example.com");
             conn = (HttpURLConnection)url.openConnection(proxy);
             conn.setRequestMethod("GET");
             DataInputStream in1 = new DataInputStream(this.getClass().getClassLoader().getResourceAsStream("result-example-com"));
@@ -126,8 +104,14 @@ public class SystemTest{
             if (conn != null) {
                 conn.disconnect();
             }
-            assertTrue(server.shutdown());
-            assertTrue(local.shutdown());
+            server.stop();
+            client.stop();
+            //Wait 1s for server/client stop.
+            try{
+                Thread.sleep(1000);
+            }catch(Exception e){
+                //ignore
+            }
         }
     }
     @Test
@@ -151,19 +135,5 @@ public class SystemTest{
     @Test
     public void testHttpWithoutOTA() {
         testSimpleHttp(false);
-    }
-
-    @Test
-    public void testInvalidLocalConnection() {
-        Shadowsocks local = new Shadowsocks(false);
-        assertTrue(local.boot());
-        try(Socket s = new Socket("127.0.0.1", 2048)) {
-            Thread.sleep(500);
-        }catch (Exception e){
-            log.error("Catch exception.", e);
-            fail();
-        }finally{
-            assertTrue(local.shutdown());
-        }
     }
 }

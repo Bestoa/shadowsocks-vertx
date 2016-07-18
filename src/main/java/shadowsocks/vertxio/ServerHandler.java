@@ -114,11 +114,23 @@ public class ServerHandler implements Handler<Buffer> {
 
         int bufferLength = mBuffer.length();
         String addr = null;
+        int authLen = 0;
+        int current = 0;
+
         int addrType = mBuffer.getByte(0);
+
+        if (mConfig.oneTimeAuth) {
+            authLen = HmacSHA1.AUTH_LEN;
+            if ((addrType & OTA_FLAG) != OTA_FLAG) {
+                log.error("OTA is not enabled.");
+                return true;
+            }
+            addrType &= 0x0f;
+        }
 
         if (addrType == ADDR_TYPE_IPV4) {
             // addrType(1) + ipv4(4) + port(2)
-            if (bufferLength < 7)
+            if (bufferLength < 7 + authLen)
                 return false;
             try{
                 addr = InetAddress.getByAddress(mBuffer.getBytes(1, 5)).toString();
@@ -126,20 +138,36 @@ public class ServerHandler implements Handler<Buffer> {
                 log.error("UnknownHostException.", e);
                 return true;
             }
-            compactBuffer(5, bufferLength);
+            current = 5;
         }else if (addrType == ADDR_TYPE_HOST) {
             short hostLength = mBuffer.getUnsignedByte(1);
             // addrType(1) + len(1) + host + port(2)
-            if (bufferLength < hostLength + 4)
+            if (bufferLength < hostLength + 4 + authLen)
                 return false;
             addr = mBuffer.getString(2, hostLength + 2);
-            compactBuffer(hostLength + 2, bufferLength);
+            current = hostLength + 2;
         }else {
             log.warn("Unsupport addr type " + addrType);
             return true;
         }
-        int port = mBuffer.getUnsignedShort(0);
-        compactBuffer(2, mBuffer.length());
+        int port = mBuffer.getUnsignedShort(current);
+        current = current + 2;
+        if (mConfig.oneTimeAuth) {
+            byte [] expectResult = mBuffer.getBytes(current, current + authLen);
+            byte [] authKey = SSAuth.prepareKey(mCrypto.getIV(false), mCrypto.getKey());
+            byte [] authData = mBuffer.getBytes(0, current);
+            try{
+                if (!mAuthor.doAuth(authKey, authData, expectResult)) {
+                    log.error("Auth header failed.");
+                    return true;
+                }
+            }catch(AuthException e) {
+                log.error("Auth header exception.", e);
+                return true;
+            }
+            current = current + authLen;
+        }
+        compactBuffer(current, bufferLength);
         log.info("Connecting to " + addr + ":" + port);
         connectToRemote(addr, port);
         nextStage();
@@ -183,8 +211,42 @@ public class ServerHandler implements Handler<Buffer> {
             //remote is not ready, just hold the buffer.
             return false;
         }
-        sendToRemote(mBuffer);
-        cleanBuffer();
+        if (mConfig.oneTimeAuth) {
+            // chunk len (2) + auth len
+            int chunkHeaderLen = 2 + HmacSHA1.AUTH_LEN;
+            int bufferLength = mBuffer.length();
+            if (bufferLength < chunkHeaderLen){
+                return false;
+            }
+            int chunkLen = mBuffer.getUnsignedShort(0);
+            if (bufferLength < chunkLen + chunkHeaderLen) {
+                return false;
+            }
+            //handle this case, chunk len = 0
+            if (chunkLen > 0) {
+                byte [] expectResult = mBuffer.getBytes(2, chunkHeaderLen);
+                byte [] authKey = SSAuth.prepareKey(mCrypto.getIV(false), mChunkCount);
+                byte [] authData = mBuffer.getBytes(chunkHeaderLen, chunkHeaderLen + chunkLen);
+                try{
+                    if (!mAuthor.doAuth(authKey, authData, expectResult)){
+                        log.error("Auth chunk " + mChunkCount + " failed.");
+                        return true;
+                    }
+                }catch(AuthException e){
+                    log.error("Auth chunk " + mChunkCount + " exception.", e);
+                    return true;
+                }
+                sendToRemote(mBuffer.slice(chunkHeaderLen, chunkHeaderLen + chunkLen));
+            }
+            mChunkCount++;
+            compactBuffer(chunkHeaderLen + chunkLen, bufferLength);
+            if (mBuffer.length() > 0) {
+                return handleStageData();
+            }
+        }else{
+            sendToRemote(mBuffer);
+            cleanBuffer();
+        }
         return false;
     }
 

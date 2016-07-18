@@ -265,19 +265,19 @@ public class ClientHandler implements Handler<Buffer> {
 
     private void sendToRemote(Buffer buffer) {
 
-        Buffer chunckBuffer = Buffer.buffer();
+        Buffer chunkBuffer = Buffer.buffer();
         try{
             if (mConfig.oneTimeAuth) {
                 //chunk length 2 bytes
-                chunckBuffer.appendShort((short)buffer.length());
+                chunkBuffer.appendShort((short)buffer.length());
                 //auth result 10 bytes
                 byte [] authKey = SSAuth.prepareKey(mCrypto.getIV(true), mChunkCount++);
                 byte [] authData = buffer.getBytes();
                 byte [] authResult = mAuthor.doAuth(authKey, authData);
-                chunckBuffer.appendBytes(authResult);
+                chunkBuffer.appendBytes(authResult);
             }
-            chunckBuffer.appendBuffer(buffer);
-            byte [] data = chunckBuffer.getBytes();
+            chunkBuffer.appendBuffer(buffer);
+            byte [] data = chunkBuffer.getBytes();
             byte [] encryptData = mCrypto.encrypt(data, data.length);
             mRemoteSocket.write(Buffer.buffer(encryptData));
         }catch(CryptoException | AuthException e){

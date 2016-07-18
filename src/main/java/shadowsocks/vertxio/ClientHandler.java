@@ -57,7 +57,6 @@ public class ClientHandler implements Handler<Buffer> {
     private int mChunkCount;
     private SSCrypto mCrypto;
     private SSAuth mAuthor;
-    private int mAddrType;
 
     private class Stage {
         final public static int HELLO = 0;
@@ -167,9 +166,9 @@ public class ClientHandler implements Handler<Buffer> {
             log.warn("Mode != 1");
             return true;
         }
-        mAddrType = mBuffer.getByte(3);
         nextStage();
-        compactBuffer(4, bufferLength);
+        //keep the addr type
+        compactBuffer(3, bufferLength);
         if (mBuffer.length() > 0) {
             return handleStageAddress();
         }
@@ -181,34 +180,35 @@ public class ClientHandler implements Handler<Buffer> {
         String addr = null;
         // Construct the remote header.
         Buffer remoteHeader = Buffer.buffer();
+        int addrType = mBuffer.getByte(0);
         if (mConfig.oneTimeAuth) {
-            remoteHeader.appendByte((byte)(mAddrType | OTA_FLAG));
+            remoteHeader.appendByte((byte)(addrType | OTA_FLAG));
         }else{
-            remoteHeader.appendByte((byte)(mAddrType));
+            remoteHeader.appendByte((byte)(addrType));
         }
 
-        if (mAddrType == ADDR_TYPE_IPV4) {
-            // ipv4(4) + port(2)
-            if (bufferLength < 6)
+        if (addrType == ADDR_TYPE_IPV4) {
+            // addr type (1) + ipv4(4) + port(2)
+            if (bufferLength < 7)
                 return false;
             try{
-                addr = InetAddress.getByAddress(mBuffer.getBytes(0, 4)).toString();
+                addr = InetAddress.getByAddress(mBuffer.getBytes(1, 5)).toString();
             }catch(UnknownHostException e){
                 log.error("UnknownHostException.", e);
                 return true;
             }
-            remoteHeader.appendBytes(mBuffer.getBytes(0,4));
-            compactBuffer(4, bufferLength);
-        }else if (mAddrType == ADDR_TYPE_HOST) {
-            short hostLength = mBuffer.getUnsignedByte(0);
-            // len(1) + host + port(2)
-            if (bufferLength < hostLength + 3)
+            remoteHeader.appendBytes(mBuffer.getBytes(1,5));
+            compactBuffer(5, bufferLength);
+        }else if (addrType == ADDR_TYPE_HOST) {
+            short hostLength = mBuffer.getUnsignedByte(1);
+            // addr type(1) + len(1) + host + port(2)
+            if (bufferLength < hostLength + 4)
                 return false;
-            addr = mBuffer.getString(1, hostLength + 1);
+            addr = mBuffer.getString(2, hostLength + 2);
             remoteHeader.appendByte((byte)hostLength).appendString(addr);
-            compactBuffer(hostLength + 1, bufferLength);
+            compactBuffer(hostLength + 2, bufferLength);
         }else {
-            log.warn("Unsupport addr type " + mAddrType);
+            log.warn("Unsupport addr type " + addrType);
             return true;
         }
         int port = mBuffer.getUnsignedShort(0);

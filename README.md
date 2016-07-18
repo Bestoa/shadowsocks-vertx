@@ -1,18 +1,18 @@
-shadowsocks-java
+shadowsocks-vertx
 ================
 
 [![Build Status](https://travis-ci.org/Bestoa/shadowsocks-java.svg?branch=master)](https://travis-ci.org/Bestoa/shadowsocks-java)
 [![codecov](https://codecov.io/gh/Bestoa/shadowsocks-java/branch/master/graph/badge.svg)](https://codecov.io/gh/Bestoa/shadowsocks-java)
 [![License](http://img.shields.io/:license-apache-blue.svg?style=flat-square)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
-Rewrite simple Shadowsocks with Java.
+shadowsocks-vertx is a lightweight tunnel proxy which can help you get through firewalls. It is a java port of shadowsocks.
 
-It will remove complex funtions such as mutli-ports.
+The protocol is compatible with the origin shadowsocks (if both have been upgraded to the latest version).
 
-Compatible with Java 7.
+JDK 8 is needed.
 
 #Current state:
-Simple server + client. Version 0.7.1
+Server + Client. Version 0.8
 
 Support these args:
 
@@ -25,7 +25,7 @@ Support these args:
     7. -S server mode
     8. -L Local mode(client, default)
     9. -c config file
-    10. -t timeout(unit is second)
+    10. -t timeout(unit is second, currently unused)
     11. -h show help.
 
 Crypto method:
@@ -42,7 +42,7 @@ Note:
 
     1. Not support: local_address, client will bind 0.0.0.0 not 127.0.0.1
     2. Not support: fast_open. Java don't have such feature.
-    3. Not support: workers. This version is based on multi-thread, don't need this.
+    3. Not support: workers. Vertx will set work thread number automatically.
     4. Additional: server_mode, set the running mode, server or client.
 
 You could refer to demo config etc/demo.json.

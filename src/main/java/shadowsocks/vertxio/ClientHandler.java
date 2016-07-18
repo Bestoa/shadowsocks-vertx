@@ -197,16 +197,16 @@ public class ClientHandler implements Handler<Buffer> {
                 log.error("UnknownHostException.", e);
                 return true;
             }
+            remoteHeader.appendBytes(mBuffer.getBytes(0,4));
             compactBuffer(4, bufferLength);
-            remoteHeader.appendString(addr);
         }else if (mAddrType == ADDR_TYPE_HOST) {
             short hostLength = mBuffer.getUnsignedByte(0);
             // len(1) + host + port(2)
             if (bufferLength < hostLength + 3)
                 return false;
             addr = mBuffer.getString(1, hostLength + 1);
-            compactBuffer(hostLength + 1, bufferLength);
             remoteHeader.appendByte((byte)hostLength).appendString(addr);
+            compactBuffer(hostLength + 1, bufferLength);
         }else {
             log.warn("Unsupport addr type " + mAddrType);
             return true;

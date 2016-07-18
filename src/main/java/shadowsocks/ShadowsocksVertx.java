@@ -37,6 +37,7 @@ public class ShadowsocksVertx {
 
     private Vertx mVertx;
     private boolean mIsServer;
+    private NetServer mNetServer;
 
     public ShadowsocksVertx(boolean isServer) {
         mVertx = Vertx.vertx();
@@ -46,15 +47,28 @@ public class ShadowsocksVertx {
     public void start() {
         LocalConfig config = GlobalConfig.createLocalConfig();
         int port = mIsServer ? config.serverPort : config.localPort;
-        mVertx.createNetServer().connectHandler(sock -> {
+        mNetServer = mVertx.createNetServer().connectHandler(sock -> {
             Handler<Buffer> dataHandler = mIsServer ? new ServerHandler(mVertx, sock, config) : new ClientHandler(mVertx, sock, config);
             sock.handler(dataHandler);
         }).listen(port, "0.0.0.0", res -> {
             if (res.succeeded()) {
                 log.info("Listening at " + port);
             }else{
-                log.info("Start failed!");
+                log.error("Start failed!");
             }
         });
+    }
+
+    public void stop() {
+        if (mNetServer != null) {
+            mNetServer.close(ar -> {
+                if (ar.succeeded()) {
+                    log.info("Stoped.");
+                }else{
+                    log.error("Stop failed.");
+                }
+            });
+            mNetServer = null;
+        }
     }
 }

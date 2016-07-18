@@ -133,7 +133,8 @@ public class ServerHandler implements Handler<Buffer> {
             if (bufferLength < 7 + authLen)
                 return false;
             try{
-                addr = InetAddress.getByAddress(mBuffer.getBytes(1, 5)).toString();
+                //remote the "/"
+                addr = InetAddress.getByAddress(mBuffer.getBytes(1, 5)).toString().substring(1);
             }catch(UnknownHostException e){
                 log.error("UnknownHostException.", e);
                 return true;

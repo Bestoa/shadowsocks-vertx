@@ -26,7 +26,7 @@ public class Main{
 
     public static Logger log = LogManager.getLogger(Main.class.getName());
 
-    public static final String VERSION = "0.7.1";
+    public static final String VERSION = "0.8";
 
     public static void main(String argv[])
     {

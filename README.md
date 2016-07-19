@@ -2,19 +2,28 @@ shadowsocks-vertx
 ================
 
 [![Build Status](https://travis-ci.org/Bestoa/shadowsocks-vertx.svg?branch=master)](https://travis-ci.org/Bestoa/shadowsocks-vertx)
-[![codecov](https://codecov.io/gh/Bestoa/shadowsocks-java/branch/master/graph/badge.svg)](https://codecov.io/gh/Bestoa/shadowsocks-java)
+[![codecov](https://codecov.io/gh/Bestoa/shadowsocks-vertx/branch/master/graph/badge.svg)](https://codecov.io/gh/Bestoa/shadowsocks-vertx)
 [![License](http://img.shields.io/:license-apache-blue.svg?style=flat-square)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
-shadowsocks-vertx is a lightweight tunnel proxy which can help you get through firewalls. It is a java port of shadowsocks.
+#Intro
+
+shadowsocks-vertx is a lightweight tunnel proxy which can help you get through firewalls. It is a java port of shadowsocks. This project is based on vert.x.
 
 The protocol is compatible with the origin shadowsocks (if both have been upgraded to the latest version).
 
 JDK 8 is needed.
 
-#Current state:
-Server + Client. Version 0.8
+Current version 0.8
 
-Support these args:
+It is **unstable**! If you encounter any problems, please open an issue.
+
+About shadowsocks, please refer to https://shadowsocks.org/
+
+About vert.x, please refer to http://vertx.io/
+
+#Features
+
+Supported argument:
 
     1. -m crypto method
     2. -k password
@@ -28,16 +37,16 @@ Support these args:
     10. -t timeout(unit is second, currently unused)
     11. -h show help.
 
-Crypto method:
+Supported encrypt method:
 
     1. aes-128-cfb/ofb
     2. aes-192-cfb/ofb
     3. aes-256-cfb/ofb
     4. chacha20
 
-One time auth feature done.
+Supported one time auth.
 
-Support JSON config file.
+Support JSON config file. Please refer to https://github.com/shadowsocks/shadowsocks/wiki/Configuration-via-Config-File.
 Note:
 
     1. Not support: local_address, client will bind 0.0.0.0 not 127.0.0.1
@@ -61,7 +70,7 @@ or
 $ ./gradlew distZip
 ```
 
-Then you will get shadowsocks-xx.zip in build/distributions.
+Then you will get **shadowsocks-ver.zip** in build/distributions.
 Unzip it, the folder should contain bin and lib.
 
 #### How to run
@@ -82,7 +91,7 @@ $ ./gradlew fatJar
 ```
 
 
-Then you will get shadowsocks-fat-xx.jar in build/libs.
+Then you will get **shadowsocks-fat-ver.jar** in build/libs.
 
 #### How to run
 ```
@@ -91,3 +100,4 @@ $ java -jar shadowsocks-fat-xx.jar -S ...
 //Local
 $ java -jar shadowsocks-fat-xx.jar -L ...
 ```
+

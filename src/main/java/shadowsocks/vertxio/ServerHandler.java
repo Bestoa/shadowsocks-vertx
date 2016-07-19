@@ -191,6 +191,9 @@ public class ServerHandler implements Handler<Buffer> {
                 try {
                     byte [] data = buffer.getBytes();
                     byte [] encryptData = mCrypto.encrypt(data, data.length);
+                    if (mLocalSocket.writeQueueFull()) {
+                        log.warn("-->local write queue full");
+                    }
                     mLocalSocket.write(Buffer.buffer(encryptData));
                 }catch(CryptoException e){
                     log.error("Catch exception", e);
@@ -204,6 +207,9 @@ public class ServerHandler implements Handler<Buffer> {
     }
 
     private void sendToRemote(Buffer buffer) {
+        if (mRemoteSocket.writeQueueFull()) {
+            log.warn("-->remote write queue full");
+        }
         mRemoteSocket.write(buffer);
     }
 

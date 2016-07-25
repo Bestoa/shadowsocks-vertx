@@ -53,7 +53,7 @@ public class ServerHandler implements Handler<Buffer> {
     private NetSocket mRemoteSocket;
     private LocalConfig mConfig;
     private int mCurrentStage;
-    private Buffer mBuffer;
+    private Buffer mBufferQueue;
     private int mChunkCount;
     private SSCrypto mCrypto;
     private SSAuth mAuthor;
@@ -89,7 +89,7 @@ public class ServerHandler implements Handler<Buffer> {
         mLocalSocket = socket;
         mConfig = config;
         mCurrentStage = Stage.ADDRESS;
-        mBuffer = Buffer.buffer();
+        mBufferQueue = Buffer.buffer();
         mChunkCount = 0;
         setFinishHandler(mLocalSocket);
         try{
@@ -100,24 +100,24 @@ public class ServerHandler implements Handler<Buffer> {
         mAuthor = new HmacSHA1();
     }
 
-    private Buffer compactBuffer(int start, int end) {
-        mBuffer = Buffer.buffer().appendBuffer(mBuffer.slice(start, end));
-        return mBuffer;
+    private Buffer compactBuffer(int start) {
+        mBufferQueue = Buffer.buffer().appendBuffer(mBufferQueue.slice(start, mBufferQueue.length()));
+        return mBufferQueue;
     }
 
     private Buffer cleanBuffer() {
-        mBuffer = Buffer.buffer();
-        return mBuffer;
+        mBufferQueue = Buffer.buffer();
+        return mBufferQueue;
     }
 
     private boolean handleStageAddress() {
 
-        int bufferLength = mBuffer.length();
+        int bufferLength = mBufferQueue.length();
         String addr = null;
         int authLen = 0;
         int current = 0;
 
-        int addrType = mBuffer.getByte(0);
+        int addrType = mBufferQueue.getByte(0);
 
         if (mConfig.oneTimeAuth) {
             authLen = HmacSHA1.AUTH_LEN;
@@ -134,29 +134,29 @@ public class ServerHandler implements Handler<Buffer> {
                 return false;
             try{
                 //remote the "/"
-                addr = InetAddress.getByAddress(mBuffer.getBytes(1, 5)).toString().substring(1);
+                addr = InetAddress.getByAddress(mBufferQueue.getBytes(1, 5)).toString().substring(1);
             }catch(UnknownHostException e){
                 log.error("UnknownHostException.", e);
                 return true;
             }
             current = 5;
         }else if (addrType == ADDR_TYPE_HOST) {
-            short hostLength = mBuffer.getUnsignedByte(1);
+            short hostLength = mBufferQueue.getUnsignedByte(1);
             // addrType(1) + len(1) + host + port(2)
             if (bufferLength < hostLength + 4 + authLen)
                 return false;
-            addr = mBuffer.getString(2, hostLength + 2);
+            addr = mBufferQueue.getString(2, hostLength + 2);
             current = hostLength + 2;
         }else {
             log.warn("Unsupport addr type " + addrType);
             return true;
         }
-        int port = mBuffer.getUnsignedShort(current);
+        int port = mBufferQueue.getUnsignedShort(current);
         current = current + 2;
         if (mConfig.oneTimeAuth) {
-            byte [] expectResult = mBuffer.getBytes(current, current + authLen);
+            byte [] expectResult = mBufferQueue.getBytes(current, current + authLen);
             byte [] authKey = SSAuth.prepareKey(mCrypto.getIV(false), mCrypto.getKey());
-            byte [] authData = mBuffer.getBytes(0, current);
+            byte [] authData = mBufferQueue.getBytes(0, current);
             try{
                 if (!mAuthor.doAuth(authKey, authData, expectResult)) {
                     log.error("Auth header failed.");
@@ -168,7 +168,7 @@ public class ServerHandler implements Handler<Buffer> {
             }
             current = current + authLen;
         }
-        compactBuffer(current, bufferLength);
+        compactBuffer(current);
         log.info("Connecting to " + addr + ":" + port);
         connectToRemote(addr, port);
         nextStage();
@@ -200,7 +200,7 @@ public class ServerHandler implements Handler<Buffer> {
                     destory();
                 }
             });
-            if (mBuffer.length() > 0) {
+            if (mBufferQueue.length() > 0) {
                 handleStageData();
             }
         });
@@ -221,19 +221,19 @@ public class ServerHandler implements Handler<Buffer> {
         if (mConfig.oneTimeAuth) {
             // chunk len (2) + auth len
             int chunkHeaderLen = 2 + HmacSHA1.AUTH_LEN;
-            int bufferLength = mBuffer.length();
+            int bufferLength = mBufferQueue.length();
             if (bufferLength < chunkHeaderLen){
                 return false;
             }
-            int chunkLen = mBuffer.getUnsignedShort(0);
+            int chunkLen = mBufferQueue.getUnsignedShort(0);
             if (bufferLength < chunkLen + chunkHeaderLen) {
                 return false;
             }
             //handle this case, chunk len = 0
             if (chunkLen > 0) {
-                byte [] expectResult = mBuffer.getBytes(2, chunkHeaderLen);
+                byte [] expectResult = mBufferQueue.getBytes(2, chunkHeaderLen);
                 byte [] authKey = SSAuth.prepareKey(mCrypto.getIV(false), mChunkCount);
-                byte [] authData = mBuffer.getBytes(chunkHeaderLen, chunkHeaderLen + chunkLen);
+                byte [] authData = mBufferQueue.getBytes(chunkHeaderLen, chunkHeaderLen + chunkLen);
                 try{
                     if (!mAuthor.doAuth(authKey, authData, expectResult)){
                         log.error("Auth chunk " + mChunkCount + " failed.");
@@ -243,15 +243,15 @@ public class ServerHandler implements Handler<Buffer> {
                     log.error("Auth chunk " + mChunkCount + " exception.", e);
                     return true;
                 }
-                sendToRemote(mBuffer.slice(chunkHeaderLen, chunkHeaderLen + chunkLen));
+                sendToRemote(mBufferQueue.slice(chunkHeaderLen, chunkHeaderLen + chunkLen));
             }
             mChunkCount++;
-            compactBuffer(chunkHeaderLen + chunkLen, bufferLength);
-            if (mBuffer.length() > 0) {
+            compactBuffer(chunkHeaderLen + chunkLen);
+            if (mBufferQueue.length() > 0) {
                 return handleStageData();
             }
         }else{
-            sendToRemote(mBuffer);
+            sendToRemote(mBufferQueue);
             cleanBuffer();
         }
         return false;
@@ -273,7 +273,7 @@ public class ServerHandler implements Handler<Buffer> {
         try{
             byte [] data = buffer.getBytes();
             byte [] decryptData = mCrypto.decrypt(data, data.length);
-            mBuffer.appendBytes(decryptData);
+            mBufferQueue.appendBytes(decryptData);
         }catch(CryptoException e){
             log.error("Catch exception", e);
             destory();

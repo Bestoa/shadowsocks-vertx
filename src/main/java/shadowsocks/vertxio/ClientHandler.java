@@ -53,7 +53,7 @@ public class ClientHandler implements Handler<Buffer> {
     private NetSocket mRemoteSocket;
     private LocalConfig mConfig;
     private int mCurrentStage;
-    private Buffer mBuffer;
+    private Buffer mBufferQueue;
     private int mChunkCount;
     private SSCrypto mCrypto;
     private SSAuth mAuthor;
@@ -91,7 +91,7 @@ public class ClientHandler implements Handler<Buffer> {
         mLocalSocket = socket;
         mConfig = config;
         mCurrentStage = Stage.HELLO;
-        mBuffer = Buffer.buffer();
+        mBufferQueue = Buffer.buffer();
         mChunkCount = 0;
         setFinishHandler(mLocalSocket);
         try{
@@ -102,14 +102,14 @@ public class ClientHandler implements Handler<Buffer> {
         mAuthor = new HmacSHA1();
     }
 
-    private Buffer compactBuffer(int start, int end) {
-        mBuffer = Buffer.buffer().appendBuffer(mBuffer.slice(start, end));
-        return mBuffer;
+    private Buffer compactBuffer(int start) {
+        mBufferQueue = Buffer.buffer().appendBuffer(mBufferQueue.slice(start, mBufferQueue.length()));
+        return mBufferQueue;
     }
 
     private Buffer cleanBuffer() {
-        mBuffer = Buffer.buffer();
-        return mBuffer;
+        mBufferQueue = Buffer.buffer();
+        return mBufferQueue;
     }
 
     /*
@@ -133,16 +133,16 @@ public class ClientHandler implements Handler<Buffer> {
      */
 
     private boolean handleStageHello() {
-        int bufferLength = mBuffer.length();
+        int bufferLength = mBufferQueue.length();
         // VERSION + METHOD LEN + METHOD
         if (bufferLength < 3)
             return false;
         //SOCK5
-        if (mBuffer.getByte(0) != 5) {
+        if (mBufferQueue.getByte(0) != 5) {
             log.warn("Protocol error.");
             return true;
         }
-        int methodLen = mBuffer.getByte(1);
+        int methodLen = mBufferQueue.getByte(1);
         if (bufferLength < methodLen + 2)
             return false;
         byte [] msg = {0x05, 0x00};
@@ -154,7 +154,7 @@ public class ClientHandler implements Handler<Buffer> {
     }
 
     private boolean handleStageHeader() {
-        int bufferLength = mBuffer.length();
+        int bufferLength = mBufferQueue.length();
         // VERSION + MODE + RSV + ADDR TYPE
         if (bufferLength < 4)
             return false;
@@ -162,25 +162,25 @@ public class ClientHandler implements Handler<Buffer> {
         // 2 bind
         // 3 udp associate
         // just support mode 1 now
-        if (mBuffer.getByte(1) != 1) {
+        if (mBufferQueue.getByte(1) != 1) {
             log.warn("Mode != 1");
             return true;
         }
         nextStage();
         //keep the addr type
-        compactBuffer(3, bufferLength);
-        if (mBuffer.length() > 0) {
+        compactBuffer(3);
+        if (mBufferQueue.length() > 0) {
             return handleStageAddress();
         }
         return false;
     }
 
     private boolean handleStageAddress() {
-        int bufferLength = mBuffer.length();
+        int bufferLength = mBufferQueue.length();
         String addr = null;
         // Construct the remote header.
         Buffer remoteHeader = Buffer.buffer();
-        int addrType = mBuffer.getByte(0);
+        int addrType = mBufferQueue.getByte(0);
         if (mConfig.oneTimeAuth) {
             remoteHeader.appendByte((byte)(addrType | OTA_FLAG));
         }else{
@@ -192,28 +192,28 @@ public class ClientHandler implements Handler<Buffer> {
             if (bufferLength < 7)
                 return false;
             try{
-                addr = InetAddress.getByAddress(mBuffer.getBytes(1, 5)).toString();
+                addr = InetAddress.getByAddress(mBufferQueue.getBytes(1, 5)).toString();
             }catch(UnknownHostException e){
                 log.error("UnknownHostException.", e);
                 return true;
             }
-            remoteHeader.appendBytes(mBuffer.getBytes(1,5));
-            compactBuffer(5, bufferLength);
+            remoteHeader.appendBytes(mBufferQueue.getBytes(1,5));
+            compactBuffer(5);
         }else if (addrType == ADDR_TYPE_HOST) {
-            short hostLength = mBuffer.getUnsignedByte(1);
+            short hostLength = mBufferQueue.getUnsignedByte(1);
             // addr type(1) + len(1) + host + port(2)
             if (bufferLength < hostLength + 4)
                 return false;
-            addr = mBuffer.getString(2, hostLength + 2);
+            addr = mBufferQueue.getString(2, hostLength + 2);
             remoteHeader.appendByte((byte)hostLength).appendString(addr);
-            compactBuffer(hostLength + 2, bufferLength);
+            compactBuffer(hostLength + 2);
         }else {
             log.warn("Unsupport addr type " + addrType);
             return true;
         }
-        int port = mBuffer.getUnsignedShort(0);
+        int port = mBufferQueue.getUnsignedShort(0);
         remoteHeader.appendShort((short)port);
-        compactBuffer(2, mBuffer.length());
+        compactBuffer(2);
         log.info("Connecting to " + addr + ":" + port);
         connectToRemote(mConfig.server, mConfig.serverPort, remoteHeader);
         nextStage();
@@ -294,13 +294,14 @@ public class ClientHandler implements Handler<Buffer> {
 
     private boolean handleStageData() {
 
-        int shortMax = 65536;
+        // lens is 2 bytes short.
+        int shortMax = 65535;
 
-        while (mBuffer.length() > 0) {
-            int bufferLength = mBuffer.length();
+        while (mBufferQueue.length() > 0) {
+            int bufferLength = mBufferQueue.length();
             int end = bufferLength > shortMax ? shortMax : bufferLength;
-            sendToRemote(mBuffer.slice(0, end));
-            compactBuffer(end, bufferLength);
+            sendToRemote(mBufferQueue.slice(0, end));
+            compactBuffer(end);
         }
 
         return false;
@@ -319,7 +320,7 @@ public class ClientHandler implements Handler<Buffer> {
     @Override
     public void handle(Buffer buffer) {
         boolean finish = false;
-        mBuffer.appendBuffer(buffer);
+        mBufferQueue.appendBuffer(buffer);
         switch (mCurrentStage) {
             case Stage.HELLO:
                 finish = handleStageHello();

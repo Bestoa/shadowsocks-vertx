@@ -294,12 +294,12 @@ public class ClientHandler implements Handler<Buffer> {
 
     private boolean handleStageData() {
 
-        // lens is 2 bytes short.
-        int shortMax = 65535;
+        // Chunk max length = 8192.
+        int chunkMaxLen = 8192;
 
         while (mBufferQueue.length() > 0) {
             int bufferLength = mBufferQueue.length();
-            int end = bufferLength > shortMax ? shortMax : bufferLength;
+            int end = bufferLength > chunkMaxLen ? chunkMaxLen : bufferLength;
             sendToRemote(mBufferQueue.slice(0, end));
             compactBuffer(end);
         }

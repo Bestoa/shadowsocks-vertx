@@ -27,11 +27,11 @@ Supported argument:
 
     1. -m/--method crypto method
     2. -k/--password password
-    3. -p/--server\_port bind port(server)/remote port(client)
+    3. -p/--server_port bind port(server)/remote port(client)
     4. -a/--auth OTA enforcing mode
-    5. -l/--local\_port local port
+    5. -l/--local_port local port
     6. -s/--server server
-    7. -S/--server\_mode server mode(default is client mode)
+    7. -S/--server_mode server mode(default is client mode)
     8. -c/--config config file
     9. -t/--timeout timeout(unit is second, currently unused)
     10. -h/--help show help.
@@ -48,10 +48,10 @@ Supported one time auth.
 Support JSON config file. Please refer to https://github.com/shadowsocks/shadowsocks/wiki/Configuration-via-Config-File.
 Note:
 
-    1. Not support: local\_address, client will bind 0.0.0.0 not 127.0.0.1
-    2. Not support: fast\_open. Java don't have such feature.
+    1. Not support: local_address, client will bind 0.0.0.0 not 127.0.0.1
+    2. Not support: fast_open. Java don't have such feature.
     3. Not support: workers. Vertx will set work thread number automatically.
-    4. Additional: server\_mode, set the running mode, true for server.
+    4. Additional: server_mode, set the running mode, true for server.
 
 You could refer to demo config etc/demo.json.
 

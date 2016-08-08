@@ -24,8 +24,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 
-import org.json.JSONObject;
-import org.json.JSONException;
+import io.vertx.core.json.JsonObject;
 
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -190,68 +189,53 @@ public class GlobalConfig{
         }
     }
 
-    public static void getConfigFromFile(){
+    public static void getConfigFromFile() throws ClassCastException{
         String name = GlobalConfig.get().getConfigFile();
         if (name == null)
             return;
         String data = GlobalConfig.readConfigFile(name);
 
-        JSONObject jsonobj = new JSONObject(data);
-        try{
+        JsonObject jsonobj = new JsonObject(data);
+
+        if (jsonobj.containsKey("server")) {
             String server = jsonobj.getString("server");
             log.debug("CFG:Server address: " + server);
             GlobalConfig.get().setServer(server);
-        }catch(JSONException e){
-            //No this config, ignore;
         }
-        try{
-            int port = jsonobj.getInt("server_port");
+        if (jsonobj.containsKey("server_port")) {
+            int port = jsonobj.getInteger("server_port").intValue();
             log.debug("CFG:Server port: " + port);
             GlobalConfig.get().setPort(port);
-        }catch(JSONException e){
-            //No this config, ignore;
         }
-        try{
-            int lport = jsonobj.getInt("local_port");
+        if (jsonobj.containsKey("local_port")) {
+            int lport = jsonobj.getInteger("local_port").intValue();
             log.debug("CFG:Local port: " + lport);
             GlobalConfig.get().setLocalPort(lport);
-        }catch(JSONException e){
-            //No this config, ignore;
         }
-        try{
+        if (jsonobj.containsKey("password")) {
             String password = jsonobj.getString("password");
             log.debug("CFG:Password: " + password);
             GlobalConfig.get().setPassowrd(password);
-        }catch(JSONException e){
-            //No this config, ignore;
         }
-        try{
+        if (jsonobj.containsKey("method")) {
             String method = jsonobj.getString("method");
             log.debug("CFG:Crypto method: " + method);
             GlobalConfig.get().setMethod(method);
-        }catch(JSONException e){
-            //No this config, ignore;
         }
-        try{
-            boolean auth = jsonobj.getBoolean("auth");
+        if (jsonobj.containsKey("auth")) {
+            boolean auth = jsonobj.getBoolean("auth").booleanValue();
             log.debug("CFG:One time auth: " + auth);
             GlobalConfig.get().setOTAEnabled(auth);
-        }catch(JSONException e){
-            //No this config, ignore;
         }
-        try{
-            int timeout = jsonobj.getInt("timeout");
+        if (jsonobj.containsKey("timeout")) {
+            int timeout = jsonobj.getInteger("timeout").intValue();
             log.debug("CFG:Timeout: " + timeout);
             GlobalConfig.get().setTimeout(timeout);
-        }catch(JSONException e){
-            //No this config, ignore;
         }
-        try{
-            boolean isServer = jsonobj.getBoolean("server_mode");
+        if (jsonobj.containsKey("server_mode")) {
+            boolean isServer = jsonobj.getBoolean("server_mode").booleanValue();
             log.debug("CFG:Running on server mode: " + isServer);
             GlobalConfig.get().setServerMode(isServer);
-        }catch(JSONException e){
-            //No this config, ignore;
         }
     }
     public static boolean getConfigFromArgv(String argv[])

@@ -19,6 +19,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import gnu.getopt.Getopt;
+import gnu.getopt.LongOpt;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -55,6 +56,17 @@ public class GlobalConfig{
     final private static int DEFAULT_PORT = 8388;
     final private static int DEFAULT_LOCAL_PORT = 9999;
     final private static int DEFAULT_TIMEOUT = 300;
+
+    final static String SERVER_MODE = "server_mode";
+    final static String SERVER_ADDR = "server";
+    final static String LOCAL_PORT = "local_port";
+    final static String SERVER_PORT = "server_port";
+    final static String METHOD = "method";
+    final static String PASSWORD = "password";
+    final static String AUTH = "auth";
+    final static String TIMEOUT = "timeout";
+    final static String HELP = "help";
+    final static String CONFIG = "config";
 
     //Lock
     public void getLock() {
@@ -197,43 +209,43 @@ public class GlobalConfig{
 
         JsonObject jsonobj = new JsonObject(data);
 
-        if (jsonobj.containsKey("server")) {
-            String server = jsonobj.getString("server");
+        if (jsonobj.containsKey(SERVER_ADDR)) {
+            String server = jsonobj.getString(SERVER_ADDR);
             log.debug("CFG:Server address: " + server);
             GlobalConfig.get().setServer(server);
         }
-        if (jsonobj.containsKey("server_port")) {
-            int port = jsonobj.getInteger("server_port").intValue();
+        if (jsonobj.containsKey(SERVER_PORT)) {
+            int port = jsonobj.getInteger(SERVER_PORT).intValue();
             log.debug("CFG:Server port: " + port);
             GlobalConfig.get().setPort(port);
         }
-        if (jsonobj.containsKey("local_port")) {
-            int lport = jsonobj.getInteger("local_port").intValue();
+        if (jsonobj.containsKey(LOCAL_PORT)) {
+            int lport = jsonobj.getInteger(LOCAL_PORT).intValue();
             log.debug("CFG:Local port: " + lport);
             GlobalConfig.get().setLocalPort(lport);
         }
-        if (jsonobj.containsKey("password")) {
-            String password = jsonobj.getString("password");
+        if (jsonobj.containsKey(PASSWORD)) {
+            String password = jsonobj.getString(PASSWORD);
             log.debug("CFG:Password: " + password);
             GlobalConfig.get().setPassowrd(password);
         }
-        if (jsonobj.containsKey("method")) {
-            String method = jsonobj.getString("method");
+        if (jsonobj.containsKey(METHOD)) {
+            String method = jsonobj.getString(METHOD);
             log.debug("CFG:Crypto method: " + method);
             GlobalConfig.get().setMethod(method);
         }
-        if (jsonobj.containsKey("auth")) {
-            boolean auth = jsonobj.getBoolean("auth").booleanValue();
+        if (jsonobj.containsKey(AUTH)) {
+            boolean auth = jsonobj.getBoolean(AUTH).booleanValue();
             log.debug("CFG:One time auth: " + auth);
             GlobalConfig.get().setOTAEnabled(auth);
         }
-        if (jsonobj.containsKey("timeout")) {
-            int timeout = jsonobj.getInteger("timeout").intValue();
+        if (jsonobj.containsKey(TIMEOUT)) {
+            int timeout = jsonobj.getInteger(TIMEOUT).intValue();
             log.debug("CFG:Timeout: " + timeout);
             GlobalConfig.get().setTimeout(timeout);
         }
-        if (jsonobj.containsKey("server_mode")) {
-            boolean isServer = jsonobj.getBoolean("server_mode").booleanValue();
+        if (jsonobj.containsKey(SERVER_MODE)) {
+            boolean isServer = jsonobj.getBoolean(SERVER_MODE).booleanValue();
             log.debug("CFG:Running on server mode: " + isServer);
             GlobalConfig.get().setServerMode(isServer);
         }
@@ -241,9 +253,23 @@ public class GlobalConfig{
     public static boolean getConfigFromArgv(String argv[])
     {
 
-        Getopt g = new Getopt("shadowsocks", argv, "SLm:k:p:as:l:c:t:h");
         int c;
         String arg;
+
+        LongOpt [] longopts = new LongOpt[10];
+        longopts[0] = new LongOpt(SERVER_MODE, LongOpt.NO_ARGUMENT, null, 'S');
+        longopts[1] = new LongOpt(METHOD, LongOpt.REQUIRED_ARGUMENT, null, 'm');
+        longopts[2] = new LongOpt(PASSWORD, LongOpt.REQUIRED_ARGUMENT, null, 'k');
+        longopts[3] = new LongOpt(SERVER_PORT, LongOpt.REQUIRED_ARGUMENT, null, 'p');
+        longopts[4] = new LongOpt(AUTH, LongOpt.NO_ARGUMENT, null, 'a');
+        longopts[5] = new LongOpt(SERVER_ADDR, LongOpt.REQUIRED_ARGUMENT, null, 's');
+        longopts[6] = new LongOpt(LOCAL_PORT, LongOpt.REQUIRED_ARGUMENT, null, 'l');
+        longopts[7] = new LongOpt(CONFIG, LongOpt.REQUIRED_ARGUMENT, null, 'c');
+        longopts[8] = new LongOpt(TIMEOUT, LongOpt.REQUIRED_ARGUMENT, null, 't');
+        longopts[9] = new LongOpt(HELP, LongOpt.NO_ARGUMENT, null, 'h');
+
+        Getopt g = new Getopt("shadowsocks", argv, "Sm:k:p:as:l:c:t:h", longopts);
+
         while ((c = g.getopt()) != -1)
         {
             switch(c)
@@ -271,10 +297,6 @@ public class GlobalConfig{
                 case 'S':
                     log.debug("CMD:Server mode.");
                     GlobalConfig.get().setServerMode(true);
-                    break;
-                case 'L':
-                    log.debug("CMD:Local mode.");
-                    GlobalConfig.get().setServerMode(false);
                     break;
                 case 's':
                     arg = g.getOptarg();
@@ -333,7 +355,6 @@ public class GlobalConfig{
                 "   -l local port\n" +
                 "   -s server\n" +
                 "   -S server mode\n" +
-                "   -L Local mode(client, default)\n" +
                 "   -c config file\n" +
                 "   -t timeout(unit is second)\n" +
                 "   -h show help.\n");

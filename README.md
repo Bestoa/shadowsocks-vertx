@@ -25,17 +25,16 @@ About vert.x, please refer to http://vertx.io/
 
 Supported argument:
 
-    1. -m crypto method
-    2. -k password
-    3. -p bind port(server)/remote port(client)
-    4. -a OTA enforcing mode
-    5. -l local port
-    6. -s server
-    7. -S server mode
-    8. -L Local mode(client, default)
-    9. -c config file
-    10. -t timeout(unit is second, currently unused)
-    11. -h show help.
+    1. -m/--method crypto method
+    2. -k/--password password
+    3. -p/--server\_port bind port(server)/remote port(client)
+    4. -a/--auth OTA enforcing mode
+    5. -l/--local\_port local port
+    6. -s/--server server
+    7. -S/--server\_mode server mode(default is client mode)
+    8. -c/--config config file
+    9. -t/--timeout timeout(unit is second, currently unused)
+    10. -h/--help show help.
 
 Supported encrypt method:
 
@@ -49,10 +48,10 @@ Supported one time auth.
 Support JSON config file. Please refer to https://github.com/shadowsocks/shadowsocks/wiki/Configuration-via-Config-File.
 Note:
 
-    1. Not support: local_address, client will bind 0.0.0.0 not 127.0.0.1
-    2. Not support: fast_open. Java don't have such feature.
+    1. Not support: local\_address, client will bind 0.0.0.0 not 127.0.0.1
+    2. Not support: fast\_open. Java don't have such feature.
     3. Not support: workers. Vertx will set work thread number automatically.
-    4. Additional: server_mode, set the running mode, server or client.
+    4. Additional: server\_mode, set the running mode, true for server.
 
 You could refer to demo config etc/demo.json.
 
@@ -77,8 +76,9 @@ Unzip it, the folder should contain bin and lib.
 ```
 //Server
 $ bin/shadowsocks -S ...
+$ bin/shadowsocks --server_mode ...
 //Local
-$ bin/shadowsocks -L ...
+$ bin/shadowsocks ...
 ```
 
 ### (3) generate all-in-one jar
@@ -97,7 +97,8 @@ Then you will get **shadowsocks-fat-ver.jar** in build/libs.
 ```
 //Server
 $ java -jar shadowsocks-fat-xx.jar -S ...
+$ java -jar shadowsocks-fat-xx.jar --server_mode ...
 //Local
-$ java -jar shadowsocks-fat-xx.jar -L ...
+$ java -jar shadowsocks-fat-xx.jar ...
 ```
 

@@ -44,9 +44,9 @@ public class UnitTest {
             "-p", "4321",
             "-l", "1234",
             "-t", "400",
+            "-t", "450",
             "-a",
             "-S",
-            "-L"
         };
         Main.main(argv);
         assertEquals(GlobalConfig.get().getPassword(), "test");
@@ -54,10 +54,33 @@ public class UnitTest {
         assertEquals(GlobalConfig.get().getServer(), "9.8.7.6");
         assertEquals(GlobalConfig.get().getPort(), 4321);
         assertEquals(GlobalConfig.get().getLocalPort(), 1234);
-        assertEquals(GlobalConfig.get().getTimeout(), 400);
-        assertEquals(GlobalConfig.get().isOTAEnabled(), true);
         //The last value go into effect.
-        assertEquals(GlobalConfig.get().isServerMode(), false);
+        assertEquals(GlobalConfig.get().getTimeout(), 450);
+        assertEquals(GlobalConfig.get().isOTAEnabled(), true);
+        assertEquals(GlobalConfig.get().isServerMode(), true);
+    }
+
+    @Test
+    public void testSetConfigFromLongArgv() {
+        String [] argv = {
+            "--password", "test1",
+            "--method", "aes-192-cfb",
+            "--server", "6.7.8.9",
+            "--server_port", "7890",
+            "--local_port", "6789",
+            "--timeout", "200",
+            "--auth",
+            "--server_mode",
+        };
+        Main.main(argv);
+        assertEquals(GlobalConfig.get().getPassword(), "test1");
+        assertEquals(GlobalConfig.get().getMethod(), "aes-192-cfb");
+        assertEquals(GlobalConfig.get().getServer(), "6.7.8.9");
+        assertEquals(GlobalConfig.get().getPort(), 7890);
+        assertEquals(GlobalConfig.get().getLocalPort(), 6789);
+        assertEquals(GlobalConfig.get().getTimeout(), 200);
+        assertEquals(GlobalConfig.get().isOTAEnabled(), true);
+        assertEquals(GlobalConfig.get().isServerMode(), true);
     }
 
     @Test

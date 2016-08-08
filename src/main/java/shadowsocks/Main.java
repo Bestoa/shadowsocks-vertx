@@ -26,7 +26,7 @@ public class Main{
 
     public static Logger log = LogManager.getLogger(Main.class.getName());
 
-    public static final String VERSION = "0.8";
+    public static final String VERSION = "0.8.1";
 
     public static void main(String argv[])
     {
@@ -34,7 +34,12 @@ public class Main{
         if (!GlobalConfig.getConfigFromArgv(argv)) {
             return;
         }
-        GlobalConfig.getConfigFromFile();
+        try {
+            GlobalConfig.getConfigFromFile();
+        }catch(ClassCastException e) {
+            log.fatal("Get config from json file error.", e);
+            return;
+        }
         //make sure this method could work.
         try{
             CryptoFactory.create(GlobalConfig.get().getMethod(), GlobalConfig.get().getPassword());

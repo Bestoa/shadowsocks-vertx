@@ -54,7 +54,7 @@ public class ShadowsocksVertx {
             if (res.succeeded()) {
                 log.info("Listening at " + port);
             }else{
-                log.error("Start failed!");
+                log.error("Start failed! " + res.cause().getMessage());
             }
         });
     }

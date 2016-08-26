@@ -123,7 +123,8 @@ public class SystemTest{
             "aes-192-ofb",
             "aes-256-cfb",
             "aes-256-ofb",
-            "chacha20"
+            "chacha20",
+            "chacha20-ietf",
         };
         for (String method: methodList) {
             GlobalConfig.get().setMethod(method);

@@ -16,6 +16,7 @@
 package shadowsocks.crypto;
 
 import org.bouncycastle.crypto.StreamCipher;
+import org.bouncycastle.crypto.engines.ChaCha7539Engine;
 import org.bouncycastle.crypto.engines.ChaChaEngine;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.ParametersWithIV;
@@ -30,8 +31,11 @@ import shadowsocks.crypto.CryptoException;
 public class Chacha20Crypto extends BaseCrypto {
 
     private final static String CIPHER_CHACHA20 = "chacha20";
+    private final static String CIPHER_CHACHA20_IETF = "chacha20-ietf";
 
     private final static int IV_LENGTH = 8;
+    private final static int IV_IETF_LENGTH = 12;
+
     private final static int KEY_LENGTH = 32;
 
     public Chacha20Crypto(String name, String password) throws CryptoException {
@@ -40,12 +44,16 @@ public class Chacha20Crypto extends BaseCrypto {
 
     @Override
     public int getIVLength() {
-        return IV_LENGTH;
+        if (mName.equals(CIPHER_CHACHA20_IETF)) {
+            return IV_IETF_LENGTH;
+        } else {
+            return IV_LENGTH;
+        }
     }
 
     @Override
     public int getKeyLength() {
-        if (mName.equals(CIPHER_CHACHA20)) {
+        if (mName.equals(CIPHER_CHACHA20) || mName.equals(CIPHER_CHACHA20_IETF)) {
             return KEY_LENGTH;
         }
         return 0;
@@ -54,7 +62,12 @@ public class Chacha20Crypto extends BaseCrypto {
     @Override
     protected StreamCipher createCipher(byte[] iv, boolean encrypt) throws CryptoException
     {
-        StreamCipher c = new ChaChaEngine();
+        StreamCipher c;
+        if (mName.equals(CIPHER_CHACHA20_IETF)) {
+            c = new ChaCha7539Engine();
+        } else {
+            c = new ChaChaEngine();
+        }
         ParametersWithIV parameterIV = new ParametersWithIV(new KeyParameter(mKey), iv, 0, mIVLength);
         c.init(encrypt, parameterIV);
         return c;

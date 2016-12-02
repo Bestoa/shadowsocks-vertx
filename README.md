@@ -43,15 +43,15 @@ Supported encrypt method:
     3. aes-256-cfb/ofb
     4. chacha20/chacha20-ietf
 
-Supported one time auth.
+Supported one-time auth.
 
 Support JSON config file. Please refer to https://github.com/shadowsocks/shadowsocks/wiki/Configuration-via-Config-File.
 Note:
 
     1. Not support: local_address, client will bind 0.0.0.0 not 127.0.0.1
-    2. Not support: fast_open. Java don't have such feature.
+    2. Not support: fast_open. Java doesn't have such feature.
     3. Not support: workers. Vertx will set work thread number automatically.
-    4. Additional: server_mode, set the running mode, true for server.
+    4. Additional: server_mode, set the running mode, true for the server.
 
 You could refer to demo config etc/demo.json.
 

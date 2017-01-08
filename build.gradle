@@ -11,11 +11,11 @@ repositories {
 }
 
 dependencies {
-    compile 'gnu.getopt:java-getopt:1.0.13'
-    compile 'org.bouncycastle:bcprov-jdk15on:1.55'
-    compile 'io.vertx:vertx-core:3.3.2'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.5'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.5'
+    compile 'gnu.getopt:java-getopt:[1.0.13,)'
+    compile 'org.bouncycastle:bcprov-jdk15on:[1.55,)'
+    compile 'io.vertx:vertx-core:[3.3.2,)'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '[2.5,)'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '[2.5,)'
     testCompile 'junit:junit:4.12'
 }
 

@@ -236,9 +236,7 @@ public class ClientHandler implements Handler<Buffer> {
                 try {
                     byte [] data = buffer.getBytes();
                     byte [] decryptData = mCrypto.decrypt(data, data.length);
-                    if (mLocalSocket.writeQueueFull()) {
-                        log.warn("-->local write queue full");
-                    }
+                    flowControl(mLocalSocket, mServerSocket);
                     mLocalSocket.write(Buffer.buffer(decryptData));
                 }catch(CryptoException e){
                     log.error("Catch exception", e);
@@ -285,10 +283,20 @@ public class ClientHandler implements Handler<Buffer> {
             if (mServerSocket.writeQueueFull()) {
                 log.warn("-->remote write queue full");
             }
+            flowControl(mServerSocket, mLocalSocket);
             mServerSocket.write(Buffer.buffer(encryptData));
         }catch(CryptoException | AuthException e){
             log.error("Catch exception", e);
             destory();
+        }
+    }
+
+    private void flowControl(NetSocket a, NetSocket b) {
+        if (a.writeQueueFull()) {
+            b.pause();
+            a.drainHandler(done -> {
+                b.resume();
+            });
         }
     }
 

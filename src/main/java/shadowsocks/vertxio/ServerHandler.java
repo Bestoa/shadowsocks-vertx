@@ -49,8 +49,8 @@ public class ServerHandler implements Handler<Buffer> {
     private final static int OTA_FLAG = 0x10;
 
     private Vertx mVertx;
-    private NetSocket mLocalSocket;
-    private NetSocket mRemoteSocket;
+    private NetSocket mClientSocket;
+    private NetSocket mTargetSocket;
     private LocalConfig mConfig;
     private int mCurrentStage;
     private Buffer mBufferQueue;
@@ -86,12 +86,12 @@ public class ServerHandler implements Handler<Buffer> {
 
     public ServerHandler(Vertx vertx, NetSocket socket, LocalConfig config) {
         mVertx = vertx;
-        mLocalSocket = socket;
+        mClientSocket = socket;
         mConfig = config;
         mCurrentStage = Stage.ADDRESS;
         mBufferQueue = Buffer.buffer();
         mChunkCount = 0;
-        setFinishHandler(mLocalSocket);
+        setFinishHandler(mClientSocket);
         try{
             mCrypto = CryptoFactory.create(mConfig.method, mConfig.password);
         }catch(Exception e){
@@ -185,16 +185,16 @@ public class ServerHandler implements Handler<Buffer> {
                 destory();
                 return;
             }
-            mRemoteSocket = res.result();
-            setFinishHandler(mRemoteSocket);
-            mRemoteSocket.handler(buffer -> { // remote socket data handler
+            mTargetSocket = res.result();
+            setFinishHandler(mTargetSocket);
+            mTargetSocket.handler(buffer -> { // remote socket data handler
                 try {
                     byte [] data = buffer.getBytes();
                     byte [] encryptData = mCrypto.encrypt(data, data.length);
-                    if (mLocalSocket.writeQueueFull()) {
+                    if (mClientSocket.writeQueueFull()) {
                         log.warn("-->local write queue full");
                     }
-                    mLocalSocket.write(Buffer.buffer(encryptData));
+                    mClientSocket.write(Buffer.buffer(encryptData));
                 }catch(CryptoException e){
                     log.error("Catch exception", e);
                     destory();
@@ -207,14 +207,14 @@ public class ServerHandler implements Handler<Buffer> {
     }
 
     private void sendToRemote(Buffer buffer) {
-        if (mRemoteSocket.writeQueueFull()) {
+        if (mTargetSocket.writeQueueFull()) {
             log.warn("-->remote write queue full");
         }
-        mRemoteSocket.write(buffer);
+        mTargetSocket.write(buffer);
     }
 
     private boolean handleStageData() {
-        if (mRemoteSocket == null) {
+        if (mTargetSocket == null) {
             //remote is not ready, just hold the buffer.
             return false;
         }
@@ -261,10 +261,10 @@ public class ServerHandler implements Handler<Buffer> {
         if (mCurrentStage != Stage.DESTORY) {
             mCurrentStage = Stage.DESTORY;
         }
-        if (mLocalSocket != null)
-            mLocalSocket.close();
-        if (mRemoteSocket != null)
-            mRemoteSocket.close();
+        if (mClientSocket != null)
+            mClientSocket.close();
+        if (mTargetSocket != null)
+            mTargetSocket.close();
     }
 
     @Override

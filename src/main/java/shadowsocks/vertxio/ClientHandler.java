@@ -50,7 +50,7 @@ public class ClientHandler implements Handler<Buffer> {
 
     private Vertx mVertx;
     private NetSocket mLocalSocket;
-    private NetSocket mRemoteSocket;
+    private NetSocket mServerSocket;
     private LocalConfig mConfig;
     private int mCurrentStage;
     private Buffer mBufferQueue;
@@ -230,9 +230,9 @@ public class ClientHandler implements Handler<Buffer> {
                 destory();
                 return;
             }
-            mRemoteSocket = res.result();
-            setFinishHandler(mRemoteSocket);
-            mRemoteSocket.handler(buffer -> { // remote socket data handler
+            mServerSocket = res.result();
+            setFinishHandler(mServerSocket);
+            mServerSocket.handler(buffer -> { // remote socket data handler
                 try {
                     byte [] data = buffer.getBytes();
                     byte [] decryptData = mCrypto.decrypt(data, data.length);
@@ -258,7 +258,7 @@ public class ClientHandler implements Handler<Buffer> {
                 }
                 byte [] header = remoteHeader.getBytes();
                 byte [] encryptHeader = mCrypto.encrypt(header, header.length);
-                mRemoteSocket.write(Buffer.buffer(encryptHeader));
+                mServerSocket.write(Buffer.buffer(encryptHeader));
             }catch(CryptoException | AuthException e){
                 log.error("Catch exception", e);
                 destory();
@@ -282,10 +282,10 @@ public class ClientHandler implements Handler<Buffer> {
             chunkBuffer.appendBuffer(buffer);
             byte [] data = chunkBuffer.getBytes();
             byte [] encryptData = mCrypto.encrypt(data, data.length);
-            if (mRemoteSocket.writeQueueFull()) {
+            if (mServerSocket.writeQueueFull()) {
                 log.warn("-->remote write queue full");
             }
-            mRemoteSocket.write(Buffer.buffer(encryptData));
+            mServerSocket.write(Buffer.buffer(encryptData));
         }catch(CryptoException | AuthException e){
             log.error("Catch exception", e);
             destory();
@@ -313,8 +313,8 @@ public class ClientHandler implements Handler<Buffer> {
         }
         if (mLocalSocket != null)
             mLocalSocket.close();
-        if (mRemoteSocket != null)
-            mRemoteSocket.close();
+        if (mServerSocket != null)
+            mServerSocket.close();
     }
 
     @Override

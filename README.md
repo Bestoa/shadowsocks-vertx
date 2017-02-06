@@ -13,7 +13,7 @@ The protocol is compatible with the origin shadowsocks (if both have been upgrad
 
 JDK 8 is needed.
 
-Current version 0.8
+Current version 0.8.3
 
 It is **unstable**! If you encounter any problems, please open an issue.
 

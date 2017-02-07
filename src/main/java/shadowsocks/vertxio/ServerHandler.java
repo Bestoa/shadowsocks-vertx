@@ -42,6 +42,7 @@ public class ServerHandler implements Handler<Buffer> {
 
     private final static int ADDR_TYPE_IPV4 = 1;
     private final static int ADDR_TYPE_HOST = 3;
+    private final static int ADDR_TYPE_IPV6 = 4; //Not support yet
 
     private Vertx mVertx;
     private NetSocket mClientSocket;
@@ -49,17 +50,16 @@ public class ServerHandler implements Handler<Buffer> {
     private LocalConfig mConfig;
     private int mCurrentStage;
     private Buffer mBufferQueue;
-    private int mChunkCount;
     private SSCrypto mCrypto;
 
     private class Stage {
-        final public static int ADDRESS = 1;
-        final public static int DATA = 2;
+        final public static int HANDSHAKER = 1;
+        final public static int STREAMIMG = 2;
         final public static int DESTORY = 100;
     }
 
     private void nextStage() {
-        if (mCurrentStage != Stage.DATA){
+        if (mCurrentStage != Stage.STREAMIMG){
             mCurrentStage++;
         }
     }
@@ -82,9 +82,8 @@ public class ServerHandler implements Handler<Buffer> {
         mVertx = vertx;
         mClientSocket = socket;
         mConfig = config;
-        mCurrentStage = Stage.ADDRESS;
+        mCurrentStage = Stage.HANDSHAKER;
         mBufferQueue = Buffer.buffer();
-        mChunkCount = 0;
         setFinishHandler(mClientSocket);
         try{
             mCrypto = CryptoFactory.create(mConfig.method, mConfig.password);
@@ -103,18 +102,17 @@ public class ServerHandler implements Handler<Buffer> {
         return mBufferQueue;
     }
 
-    private boolean handleStageAddress() {
+    private boolean handleStageHandshaker() {
 
         int bufferLength = mBufferQueue.length();
         String addr = null;
-        int authLen = 0;
         int current = 0;
 
         int addrType = mBufferQueue.getByte(0);
 
         if (addrType == ADDR_TYPE_IPV4) {
             // addrType(1) + ipv4(4) + port(2)
-            if (bufferLength < 7 + authLen)
+            if (bufferLength < 7)
                 return false;
             try{
                 //remote the "/"
@@ -127,7 +125,7 @@ public class ServerHandler implements Handler<Buffer> {
         }else if (addrType == ADDR_TYPE_HOST) {
             short hostLength = mBufferQueue.getUnsignedByte(1);
             // addrType(1) + len(1) + host + port(2)
-            if (bufferLength < hostLength + 4 + authLen)
+            if (bufferLength < hostLength + 4)
                 return false;
             addr = mBufferQueue.getString(2, hostLength + 2);
             current = hostLength + 2;
@@ -145,28 +143,13 @@ public class ServerHandler implements Handler<Buffer> {
     }
 
     private void sendToClient(Buffer buffer) {
-        Buffer chunkBuffer = Buffer.buffer();
         try{
-            chunkBuffer.appendBuffer(buffer);
-            byte [] data = chunkBuffer.getBytes();
+            byte [] data = buffer.getBytes();
             byte [] encryptData = mCrypto.encrypt(data, data.length);
-            flowControl(mClientSocket, mTargetSocket);
             mClientSocket.write(Buffer.buffer(encryptData));
         }catch(CryptoException e){
             log.error("Catch exception", e);
             destory();
-        }
-    }
-
-    private void sliceAndSendData(Buffer buffer) {
-        // Chunk max length = 0x3fff.
-        int chunkMaxLen = 0x3fff;
-
-        while (buffer.length() > 0) {
-            int bufferLength = buffer.length();
-            int end = bufferLength > chunkMaxLen ? chunkMaxLen : bufferLength;
-            sendToClient(buffer.slice(0, end));
-            buffer = buffer.slice(end, buffer.length());
         }
     }
 
@@ -183,10 +166,20 @@ public class ServerHandler implements Handler<Buffer> {
             mTargetSocket = res.result();
             setFinishHandler(mTargetSocket);
             mTargetSocket.handler(buffer -> { // remote socket data handler
-                sliceAndSendData(buffer);
+                // Chunk max length = 0x3fff.
+                int chunkMaxLen = 0x3fff;
+
+                flowControl(mClientSocket, mTargetSocket);
+
+                while (buffer.length() > 0) {
+                    int bufferLength = buffer.length();
+                    int end = bufferLength > chunkMaxLen ? chunkMaxLen : bufferLength;
+                    sendToClient(buffer.slice(0, end));
+                    buffer = buffer.slice(end, buffer.length());
+                }
             });
             if (mBufferQueue.length() > 0) {
-                handleStageData();
+                handleStageStreaming();
             }
         });
     }
@@ -205,7 +198,7 @@ public class ServerHandler implements Handler<Buffer> {
         mTargetSocket.write(buffer);
     }
 
-    private boolean handleStageData() {
+    private boolean handleStageStreaming() {
         if (mTargetSocket == null) {
             //remote is not ready, just hold the buffer.
             return false;
@@ -218,6 +211,8 @@ public class ServerHandler implements Handler<Buffer> {
     private synchronized void destory() {
         if (mCurrentStage != Stage.DESTORY) {
             mCurrentStage = Stage.DESTORY;
+        } else {
+            return;
         }
         if (mClientSocket != null)
             mClientSocket.close();
@@ -238,11 +233,11 @@ public class ServerHandler implements Handler<Buffer> {
             return;
         }
         switch (mCurrentStage) {
-            case Stage.ADDRESS:
-                finish = handleStageAddress();
+            case Stage.HANDSHAKER:
+                finish = handleStageHandshaker();
                 break;
-            case Stage.DATA:
-                finish = handleStageData();
+            case Stage.STREAMIMG:
+                finish = handleStageStreaming();
                 break;
             default:
         }

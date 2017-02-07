@@ -42,6 +42,7 @@ public class ClientHandler implements Handler<Buffer> {
 
     private final static int ADDR_TYPE_IPV4 = 1;
     private final static int ADDR_TYPE_HOST = 3;
+    private final static int ADDR_TYPE_IPV6 = 4; //Not support yet
 
     private Vertx mVertx;
     private NetSocket mLocalSocket;
@@ -49,19 +50,18 @@ public class ClientHandler implements Handler<Buffer> {
     private LocalConfig mConfig;
     private int mCurrentStage;
     private Buffer mBufferQueue;
-    private int mChunkCount;
     private SSCrypto mCrypto;
 
     private class Stage {
         final public static int HELLO = 0;
         final public static int HEADER = 1;
         final public static int ADDRESS = 2;
-        final public static int DATA = 3;
+        final public static int STREAMING = 3;
         final public static int DESTORY = 100;
     }
 
     private void nextStage() {
-        if (mCurrentStage != Stage.DATA){
+        if (mCurrentStage != Stage.STREAMING){
             mCurrentStage++;
         }
     }
@@ -86,7 +86,6 @@ public class ClientHandler implements Handler<Buffer> {
         mConfig = config;
         mCurrentStage = Stage.HELLO;
         mBufferQueue = Buffer.buffer();
-        mChunkCount = 0;
         setFinishHandler(mLocalSocket);
         try{
             mCrypto = CryptoFactory.create(mConfig.method, mConfig.password);
@@ -248,12 +247,9 @@ public class ClientHandler implements Handler<Buffer> {
 
     private void sendToRemote(Buffer buffer) {
 
-        Buffer chunkBuffer = Buffer.buffer();
         try{
-            chunkBuffer.appendBuffer(buffer);
-            byte [] data = chunkBuffer.getBytes();
+            byte [] data = buffer.getBytes();
             byte [] encryptData = mCrypto.encrypt(data, data.length);
-            flowControl(mServerSocket, mLocalSocket);
             mServerSocket.write(Buffer.buffer(encryptData));
         }catch(CryptoException e){
             log.error("Catch exception", e);
@@ -270,10 +266,12 @@ public class ClientHandler implements Handler<Buffer> {
         }
     }
 
-    private boolean handleStageData() {
+    private boolean handleStageStreaming() {
 
         // Chunk max length = 0x3fff.
         int chunkMaxLen = 0x3fff;
+
+        flowControl(mServerSocket, mLocalSocket);
 
         while (mBufferQueue.length() > 0) {
             int bufferLength = mBufferQueue.length();
@@ -288,6 +286,8 @@ public class ClientHandler implements Handler<Buffer> {
     private synchronized void destory() {
         if (mCurrentStage != Stage.DESTORY) {
             mCurrentStage = Stage.DESTORY;
+        } else {
+            return;
         }
         if (mLocalSocket != null)
             mLocalSocket.close();
@@ -309,8 +309,8 @@ public class ClientHandler implements Handler<Buffer> {
             case Stage.ADDRESS:
                 finish = handleStageAddress();
                 break;
-            case Stage.DATA:
-                finish = handleStageData();
+            case Stage.STREAMING:
+                finish = handleStageStreaming();
                 break;
             default:
         }

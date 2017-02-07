@@ -35,9 +35,6 @@ import shadowsocks.util.LocalConfig;
 import shadowsocks.crypto.SSCrypto;
 import shadowsocks.crypto.CryptoFactory;
 import shadowsocks.crypto.CryptoException;
-import shadowsocks.auth.SSAuth;
-import shadowsocks.auth.HmacSHA1;
-import shadowsocks.auth.AuthException;
 
 public class ClientHandler implements Handler<Buffer> {
 
@@ -45,8 +42,6 @@ public class ClientHandler implements Handler<Buffer> {
 
     private final static int ADDR_TYPE_IPV4 = 1;
     private final static int ADDR_TYPE_HOST = 3;
-
-    private final static int OTA_FLAG = 0x10;
 
     private Vertx mVertx;
     private NetSocket mLocalSocket;
@@ -56,7 +51,6 @@ public class ClientHandler implements Handler<Buffer> {
     private Buffer mBufferQueue;
     private int mChunkCount;
     private SSCrypto mCrypto;
-    private SSAuth mAuthor;
 
     private class Stage {
         final public static int HELLO = 0;
@@ -99,7 +93,6 @@ public class ClientHandler implements Handler<Buffer> {
         }catch(Exception e){
             //Will never happen, we check this before.
         }
-        mAuthor = new HmacSHA1();
     }
 
     private Buffer compactBuffer(int start) {
@@ -127,8 +120,6 @@ public class ClientHandler implements Handler<Buffer> {
      *  addr type 0x1: addr = ipv4 | 4 bytes
      *  addr type 0x3: addr = host address byte array | 1 byte(array length) + byte array
      *  addr type 0x4: addr = ipv6 | 19 bytes
-     *
-     *  OTA will add 10 bytes HMAC-SHA1 in the end of the head.
      *
      */
 
@@ -181,11 +172,8 @@ public class ClientHandler implements Handler<Buffer> {
         // Construct the remote header.
         Buffer remoteHeader = Buffer.buffer();
         int addrType = mBufferQueue.getByte(0);
-        if (mConfig.oneTimeAuth) {
-            remoteHeader.appendByte((byte)(addrType | OTA_FLAG));
-        }else{
-            remoteHeader.appendByte((byte)(addrType));
-        }
+
+        remoteHeader.appendByte((byte)(addrType));
 
         if (addrType == ADDR_TYPE_IPV4) {
             // addr type (1) + ipv4(4) + port(2)
@@ -248,16 +236,10 @@ public class ClientHandler implements Handler<Buffer> {
             mLocalSocket.write(Buffer.buffer(msg));
             // send remote header.
             try{
-                if (mConfig.oneTimeAuth) {
-                    byte [] authKey = SSAuth.prepareKey(mCrypto.getIV(true), mCrypto.getKey());
-                    byte [] authData = remoteHeader.getBytes();
-                    byte [] authResult = mAuthor.doAuth(authKey, authData);
-                    remoteHeader.appendBytes(authResult);
-                }
                 byte [] header = remoteHeader.getBytes();
                 byte [] encryptHeader = mCrypto.encrypt(header, header.length);
                 mServerSocket.write(Buffer.buffer(encryptHeader));
-            }catch(CryptoException | AuthException e){
+            }catch(CryptoException e){
                 log.error("Catch exception", e);
                 destory();
             }
@@ -268,15 +250,6 @@ public class ClientHandler implements Handler<Buffer> {
 
         Buffer chunkBuffer = Buffer.buffer();
         try{
-            if (mConfig.oneTimeAuth) {
-                //chunk length 2 bytes
-                chunkBuffer.appendShort((short)buffer.length());
-                //auth result 10 bytes
-                byte [] authKey = SSAuth.prepareKey(mCrypto.getIV(true), mChunkCount++);
-                byte [] authData = buffer.getBytes();
-                byte [] authResult = mAuthor.doAuth(authKey, authData);
-                chunkBuffer.appendBytes(authResult);
-            }
             chunkBuffer.appendBuffer(buffer);
             byte [] data = chunkBuffer.getBytes();
             byte [] encryptData = mCrypto.encrypt(data, data.length);
@@ -285,7 +258,7 @@ public class ClientHandler implements Handler<Buffer> {
             }
             flowControl(mServerSocket, mLocalSocket);
             mServerSocket.write(Buffer.buffer(encryptData));
-        }catch(CryptoException | AuthException e){
+        }catch(CryptoException e){
             log.error("Catch exception", e);
             destory();
         }
@@ -302,8 +275,8 @@ public class ClientHandler implements Handler<Buffer> {
 
     private boolean handleStageData() {
 
-        // Chunk max length = 8192.
-        int chunkMaxLen = 8192;
+        // Chunk max length = 0x3fff.
+        int chunkMaxLen = 0x3fff;
 
         while (mBufferQueue.length() > 0) {
             int bufferLength = mBufferQueue.length();

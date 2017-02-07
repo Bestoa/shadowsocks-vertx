@@ -45,7 +45,6 @@ public class UnitTest {
             "-l", "1234",
             "-t", "400",
             "-t", "450",
-            "-a",
             "-S",
         };
         Main.main(argv);
@@ -56,7 +55,6 @@ public class UnitTest {
         assertEquals(GlobalConfig.get().getLocalPort(), 1234);
         //The last value go into effect.
         assertEquals(GlobalConfig.get().getTimeout(), 450);
-        assertEquals(GlobalConfig.get().isOTAEnabled(), true);
         assertEquals(GlobalConfig.get().isServerMode(), true);
     }
 
@@ -69,7 +67,6 @@ public class UnitTest {
             "--server_port", "7890",
             "--local_port", "6789",
             "--timeout", "200",
-            "--auth",
             "--server_mode",
         };
         Main.main(argv);
@@ -79,7 +76,6 @@ public class UnitTest {
         assertEquals(GlobalConfig.get().getPort(), 7890);
         assertEquals(GlobalConfig.get().getLocalPort(), 6789);
         assertEquals(GlobalConfig.get().getTimeout(), 200);
-        assertEquals(GlobalConfig.get().isOTAEnabled(), true);
         assertEquals(GlobalConfig.get().isServerMode(), true);
     }
 
@@ -112,7 +108,6 @@ public class UnitTest {
         assertEquals(GlobalConfig.get().getPort(), 1111);
         assertEquals(GlobalConfig.get().getLocalPort(), 2222);
         assertEquals(GlobalConfig.get().getTimeout(), 360);
-        assertEquals(GlobalConfig.get().isOTAEnabled(), true);
         assertEquals(GlobalConfig.get().isServerMode(), true);
     }
 

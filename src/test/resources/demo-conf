@@ -5,7 +5,6 @@
     "local_port":2222,
     "password":"fakekey",
     "method":"aes-128-cfb",
-    "auth":true,
     "timeout":360
 }
 

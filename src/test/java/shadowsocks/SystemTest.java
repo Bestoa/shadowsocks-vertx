@@ -53,7 +53,6 @@ public class SystemTest{
         GlobalConfig.get().setServer("127.0.0.1");
         GlobalConfig.get().setPort(1024);
         GlobalConfig.get().setLocalPort(2048);
-        GlobalConfig.get().setOTAEnabled(true);
         GlobalConfig.get().setTimeout(100);
     }
     @After
@@ -61,9 +60,7 @@ public class SystemTest{
         log.info("Tear down");
     }
 
-    private void testSimpleHttp(boolean ota) {
-
-        GlobalConfig.get().setOTAEnabled(ota);
+    private void testSimpleHttp() {
 
         ShadowsocksVertx server = new ShadowsocksVertx(true);
         ShadowsocksVertx client = new ShadowsocksVertx(false);
@@ -129,12 +126,7 @@ public class SystemTest{
         for (String method: methodList) {
             GlobalConfig.get().setMethod(method);
             log.debug("Test method: " + method);
-            testSimpleHttp(true);
+            testSimpleHttp();
         }
-    }
-
-    @Test
-    public void testHttpWithoutOTA() {
-        testSimpleHttp(false);
     }
 }

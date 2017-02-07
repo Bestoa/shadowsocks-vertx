@@ -144,6 +144,32 @@ public class ServerHandler implements Handler<Buffer> {
         return false;
     }
 
+    private void sendToClient(Buffer buffer) {
+        Buffer chunkBuffer = Buffer.buffer();
+        try{
+            chunkBuffer.appendBuffer(buffer);
+            byte [] data = chunkBuffer.getBytes();
+            byte [] encryptData = mCrypto.encrypt(data, data.length);
+            flowControl(mClientSocket, mTargetSocket);
+            mClientSocket.write(Buffer.buffer(encryptData));
+        }catch(CryptoException e){
+            log.error("Catch exception", e);
+            destory();
+        }
+    }
+
+    private void sliceAndSendData(Buffer buffer) {
+        // Chunk max length = 0x3fff.
+        int chunkMaxLen = 0x3fff;
+
+        while (buffer.length() > 0) {
+            int bufferLength = buffer.length();
+            int end = bufferLength > chunkMaxLen ? chunkMaxLen : bufferLength;
+            sendToClient(buffer.slice(0, end));
+            buffer = buffer.slice(end, buffer.length());
+        }
+    }
+
     private void connectToRemote(String addr, int port) {
         // 5s timeout.
         NetClientOptions options = new NetClientOptions().setConnectTimeout(5000);
@@ -157,15 +183,7 @@ public class ServerHandler implements Handler<Buffer> {
             mTargetSocket = res.result();
             setFinishHandler(mTargetSocket);
             mTargetSocket.handler(buffer -> { // remote socket data handler
-                try {
-                    byte [] data = buffer.getBytes();
-                    byte [] encryptData = mCrypto.encrypt(data, data.length);
-                    flowControl(mClientSocket, mTargetSocket);
-                    mClientSocket.write(Buffer.buffer(encryptData));
-                }catch(CryptoException e){
-                    log.error("Catch exception", e);
-                    destory();
-                }
+                sliceAndSendData(buffer);
             });
             if (mBufferQueue.length() > 0) {
                 handleStageData();

@@ -253,9 +253,6 @@ public class ClientHandler implements Handler<Buffer> {
             chunkBuffer.appendBuffer(buffer);
             byte [] data = chunkBuffer.getBytes();
             byte [] encryptData = mCrypto.encrypt(data, data.length);
-            if (mServerSocket.writeQueueFull()) {
-                log.warn("-->remote write queue full");
-            }
             flowControl(mServerSocket, mLocalSocket);
             mServerSocket.write(Buffer.buffer(encryptData));
         }catch(CryptoException e){

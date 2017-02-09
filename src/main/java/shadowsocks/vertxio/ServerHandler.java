@@ -85,11 +85,7 @@ public class ServerHandler implements Handler<Buffer> {
         mCurrentStage = Stage.HANDSHAKER;
         mBufferQueue = Buffer.buffer();
         setFinishHandler(mClientSocket);
-        try{
-            mCrypto = CryptoFactory.create(mConfig.method, mConfig.password);
-        }catch(Exception e){
-            //Will never happen, we check this before.
-        }
+        mCrypto = CryptoFactory.create(mConfig.method, mConfig.password);
     }
 
     private Buffer compactBuffer(int start) {

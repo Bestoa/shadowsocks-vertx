@@ -29,7 +29,7 @@ import shadowsocks.crypto.Utils;
 public abstract class BaseCrypto implements SSCrypto
 {
 
-    protected abstract StreamCipher createCipher(byte[] iv, boolean encrypt) throws CryptoException;
+    protected abstract StreamCipher createCipher(byte[] iv, boolean encrypt);
     protected abstract void process(byte[] in, ByteArrayOutputStream out, boolean encrypt);
 
     protected final String mName;
@@ -53,9 +53,6 @@ public abstract class BaseCrypto implements SSCrypto
         mName = name.toLowerCase();
         mIVLength = getIVLength();
         mKeyLength = getKeyLength();
-        if (mKeyLength == 0) {
-            throw new CryptoException("Unsupport method: " + mName);
-        }
         mKey = Utils.getKey(password, mKeyLength, mIVLength);
         mData = new ByteArrayOutputStream();
     }

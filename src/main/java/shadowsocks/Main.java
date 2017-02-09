@@ -41,14 +41,11 @@ public class Main{
             return;
         }
         //make sure this method could work.
-        try{
-            CryptoFactory.create(GlobalConfig.get().getMethod(), GlobalConfig.get().getPassword());
-        }catch(Exception e){
-            log.fatal("Error crypto method", e);
+        if (CryptoFactory.create(GlobalConfig.get().getMethod(), GlobalConfig.get().getPassword()) == null) {
+            log.fatal("Unsupport crypto method: " + GlobalConfig.get().getMethod());
             return;
         }
         GlobalConfig.get().printConfig();
         new ShadowsocksVertx(GlobalConfig.get().isServerMode()).start();
-        //new Shadowsocks(GlobalConfig.get().isServerMode()).boot();
     }
 }

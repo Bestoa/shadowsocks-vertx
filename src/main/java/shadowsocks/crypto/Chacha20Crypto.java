@@ -53,14 +53,11 @@ public class Chacha20Crypto extends BaseCrypto {
 
     @Override
     public int getKeyLength() {
-        if (mName.equals(CIPHER_CHACHA20) || mName.equals(CIPHER_CHACHA20_IETF)) {
-            return KEY_LENGTH;
-        }
-        return 0;
+        return KEY_LENGTH;
     }
 
     @Override
-    protected StreamCipher createCipher(byte[] iv, boolean encrypt) throws CryptoException
+    protected StreamCipher createCipher(byte[] iv, boolean encrypt)
     {
         StreamCipher c;
         if (mName.equals(CIPHER_CHACHA20_IETF)) {

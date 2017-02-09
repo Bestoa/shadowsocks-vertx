@@ -115,11 +115,8 @@ public class SystemTest{
     public void testHttp() {
         String [] methodList = {
             "aes-128-cfb",
-            "aes-128-ofb",
             "aes-192-cfb",
-            "aes-192-ofb",
             "aes-256-cfb",
-            "aes-256-ofb",
             "chacha20",
             "chacha20-ietf",
         };

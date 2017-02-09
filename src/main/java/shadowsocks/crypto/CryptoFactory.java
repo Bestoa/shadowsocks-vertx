@@ -22,18 +22,37 @@ import shadowsocks.crypto.SSCrypto;
 
 public class CryptoFactory{
 
-    private static final String AES = "aes";
-    private static final String CHACHA20 = "chacha20";
+    //V1 methods
+    private static final String mSupportV1MethodsList[] =
+    {
+        "aes-128-cfb",
+        "aes-192-cfb",
+        "aes-256-cfb",
+        "chacha20",
+        "chacha20-ietf",
+    };
 
-    public static SSCrypto create(String name, String password) throws CryptoException
+    public static SSCrypto create(String name, String password)
     {
         String cipherName = name.toLowerCase();
-        if (cipherName.startsWith(AES)) {
-            return new AESCrypto(name, password);
-        }else if (cipherName.startsWith(CHACHA20)) {
-            return new Chacha20Crypto(name, password);
-        }else{
-            throw new CryptoException("Unsupport method: " + name);
+        SSCrypto crypto = null;
+        for (int i = 0; i < mSupportV1MethodsList.length; i++) {
+            if (cipherName.equals(mSupportV1MethodsList[i])) {
+                if (cipherName.startsWith("aes")) {
+                    try {
+                        crypto = new AESCrypto(name, password);
+                    }catch (CryptoException e) {
+                        crypto = null;
+                    }
+                }else if (cipherName.startsWith("chacha")) {
+                    try {
+                        crypto = new Chacha20Crypto(name, password);
+                    }catch (CryptoException e) {
+                        crypto = null;
+                    }
+                }
+            }
         }
+        return crypto;
     }
 }

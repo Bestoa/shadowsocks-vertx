@@ -71,37 +71,27 @@ public abstract class BaseCrypto implements SSCrypto
             return mDecryptIV;
     }
 
-    private byte [] encryptLocked(byte[] in) throws CryptoException
+    private byte [] encryptLocked(byte[] in)
     {
         mData.reset();
         if (mEncryptCipher == null) {
             mEncryptIV = getIV(true);
             mEncryptCipher = createCipher(mEncryptIV, true);
-            try {
-                mData.write(mEncryptIV);
-            } catch (IOException e) {
-                throw new CryptoException(e);
-            }
+            mData.write(mEncryptIV, 0, getIVLength());
         }
         process(in, mData, true);
         return mData.toByteArray();
     }
 
     @Override
-    public byte [] encrypt(byte[] in, int length) throws CryptoException
+    public byte [] encrypt(byte[] in)
     {
         synchronized(mLock) {
-            if (length != in.length){
-                byte[] data = new byte[length];
-                System.arraycopy(in, 0, data, 0, length);
-                return encryptLocked(data);
-            }else{
-                return encryptLocked(in);
-            }
+            return encryptLocked(in);
         }
     }
 
-    private byte[] decryptLocked(byte[] in) throws CryptoException
+    private byte[] decryptLocked(byte[] in)
     {
         byte[] data;
         mData.reset();
@@ -119,16 +109,10 @@ public abstract class BaseCrypto implements SSCrypto
     }
 
     @Override
-    public byte [] decrypt(byte[] in, int length) throws CryptoException
+    public byte [] decrypt(byte[] in)
     {
         synchronized(mLock) {
-            if (length != in.length) {
-                byte[] data = new byte[length];
-                System.arraycopy(in, 0, data, 0, length);
-                return decryptLocked(data);
-            }else{
-                return decryptLocked(in);
-            }
+            return decryptLocked(in);
         }
     }
 }

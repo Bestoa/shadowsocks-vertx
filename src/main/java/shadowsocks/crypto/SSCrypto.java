@@ -24,8 +24,8 @@ import shadowsocks.crypto.CryptoException;
  * Interface of crypt
  */
 public interface SSCrypto {
-    byte [] encrypt(byte[] data, int length) throws CryptoException;
-    byte [] decrypt(byte[] data, int length) throws CryptoException;
+    byte [] encrypt(byte[] data);
+    byte [] decrypt(byte[] data);
     int getIVLength();
     int getKeyLength();
     byte [] getIV(boolean encrypt);

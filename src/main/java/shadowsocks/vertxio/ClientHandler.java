@@ -34,7 +34,6 @@ import io.vertx.core.net.NetClientOptions;
 import shadowsocks.util.LocalConfig;
 import shadowsocks.crypto.SSCrypto;
 import shadowsocks.crypto.CryptoFactory;
-import shadowsocks.crypto.CryptoException;
 
 public class ClientHandler implements Handler<Buffer> {
 
@@ -216,41 +215,25 @@ public class ClientHandler implements Handler<Buffer> {
             mServerSocket = res.result();
             setFinishHandler(mServerSocket);
             mServerSocket.handler(buffer -> { // remote socket data handler
-                try {
-                    byte [] data = buffer.getBytes();
-                    byte [] decryptData = mCrypto.decrypt(data, data.length);
-                    flowControl(mLocalSocket, mServerSocket);
-                    mLocalSocket.write(Buffer.buffer(decryptData));
-                }catch(CryptoException e){
-                    log.error("Catch exception", e);
-                    destory();
-                }
+                byte [] data = buffer.getBytes();
+                byte [] decryptData = mCrypto.decrypt(data);
+                flowControl(mLocalSocket, mServerSocket);
+                mLocalSocket.write(Buffer.buffer(decryptData));
             });
             // reply to program.
             byte [] msg = {0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
             mLocalSocket.write(Buffer.buffer(msg));
             // send remote header.
-            try{
-                byte [] header = remoteHeader.getBytes();
-                byte [] encryptHeader = mCrypto.encrypt(header, header.length);
-                mServerSocket.write(Buffer.buffer(encryptHeader));
-            }catch(CryptoException e){
-                log.error("Catch exception", e);
-                destory();
-            }
+            byte [] header = remoteHeader.getBytes();
+            byte [] encryptHeader = mCrypto.encrypt(header);
+            mServerSocket.write(Buffer.buffer(encryptHeader));
         });
     }
 
     private void sendToRemote(Buffer buffer) {
-
-        try{
-            byte [] data = buffer.getBytes();
-            byte [] encryptData = mCrypto.encrypt(data, data.length);
-            mServerSocket.write(Buffer.buffer(encryptData));
-        }catch(CryptoException e){
-            log.error("Catch exception", e);
-            destory();
-        }
+        byte [] data = buffer.getBytes();
+        byte [] encryptData = mCrypto.encrypt(data);
+        mServerSocket.write(Buffer.buffer(encryptData));
     }
 
     private void flowControl(NetSocket a, NetSocket b) {

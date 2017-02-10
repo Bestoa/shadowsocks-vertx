@@ -139,14 +139,9 @@ public class ServerHandler implements Handler<Buffer> {
     }
 
     private void sendToClient(Buffer buffer) {
-        try{
-            byte [] data = buffer.getBytes();
-            byte [] encryptData = mCrypto.encrypt(data, data.length);
-            mClientSocket.write(Buffer.buffer(encryptData));
-        }catch(CryptoException e){
-            log.error("Catch exception", e);
-            destory();
-        }
+        byte [] data = buffer.getBytes();
+        byte [] encryptData = mCrypto.encrypt(data);
+        mClientSocket.write(Buffer.buffer(encryptData));
     }
 
     private void connectToRemote(String addr, int port) {
@@ -219,15 +214,9 @@ public class ServerHandler implements Handler<Buffer> {
     @Override
     public void handle(Buffer buffer) {
         boolean finish = false;
-        try{
-            byte [] data = buffer.getBytes();
-            byte [] decryptData = mCrypto.decrypt(data, data.length);
-            mBufferQueue.appendBytes(decryptData);
-        }catch(CryptoException e){
-            log.error("Catch exception", e);
-            destory();
-            return;
-        }
+        byte [] data = buffer.getBytes();
+        byte [] decryptData = mCrypto.decrypt(data);
+        mBufferQueue.appendBytes(decryptData);
         switch (mCurrentStage) {
             case Stage.HANDSHAKER:
                 finish = handleStageHandshaker();

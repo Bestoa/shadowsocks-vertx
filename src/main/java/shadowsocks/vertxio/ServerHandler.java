@@ -35,6 +35,7 @@ import shadowsocks.util.LocalConfig;
 import shadowsocks.crypto.SSCrypto;
 import shadowsocks.crypto.CryptoFactory;
 import shadowsocks.crypto.CryptoException;
+import shadowsocks.crypto.DecryptState;
 
 public class ServerHandler implements Handler<Buffer> {
 
@@ -49,7 +50,8 @@ public class ServerHandler implements Handler<Buffer> {
     private NetSocket mTargetSocket;
     private LocalConfig mConfig;
     private int mCurrentStage;
-    private Buffer mBufferQueue;
+    private Buffer mPlainTextBufferQ;
+    private Buffer mEncryptTextBufferQ;
     private SSCrypto mCrypto;
 
     private class Stage {
@@ -83,28 +85,34 @@ public class ServerHandler implements Handler<Buffer> {
         mClientSocket = socket;
         mConfig = config;
         mCurrentStage = Stage.HANDSHAKER;
-        mBufferQueue = Buffer.buffer();
+        mPlainTextBufferQ = Buffer.buffer();
+        mEncryptTextBufferQ = Buffer.buffer();
         setFinishHandler(mClientSocket);
         mCrypto = CryptoFactory.create(mConfig.method, mConfig.password);
     }
 
-    private Buffer compactBuffer(int start) {
-        mBufferQueue = Buffer.buffer().appendBuffer(mBufferQueue.slice(start, mBufferQueue.length()));
-        return mBufferQueue;
+    private Buffer compactPlainTextBufferQ(int start) {
+        mPlainTextBufferQ = Buffer.buffer().appendBuffer(mPlainTextBufferQ.slice(start, mPlainTextBufferQ.length()));
+        return mPlainTextBufferQ;
     }
 
-    private Buffer cleanBuffer() {
-        mBufferQueue = Buffer.buffer();
-        return mBufferQueue;
+    private Buffer cleanPlainTextBufferQ() {
+        mPlainTextBufferQ = Buffer.buffer();
+        return mPlainTextBufferQ;
+    }
+
+    private Buffer cleanEncryptTextBufferQ() {
+        mEncryptTextBufferQ = Buffer.buffer();
+        return mEncryptTextBufferQ;
     }
 
     private boolean handleStageHandshaker() {
 
-        int bufferLength = mBufferQueue.length();
+        int bufferLength = mPlainTextBufferQ.length();
         String addr = null;
         int current = 0;
 
-        int addrType = mBufferQueue.getByte(0);
+        int addrType = mPlainTextBufferQ.getByte(0);
 
         if (addrType == ADDR_TYPE_IPV4) {
             // addrType(1) + ipv4(4) + port(2)
@@ -112,26 +120,26 @@ public class ServerHandler implements Handler<Buffer> {
                 return false;
             try{
                 //remote the "/"
-                addr = InetAddress.getByAddress(mBufferQueue.getBytes(1, 5)).toString().substring(1);
+                addr = InetAddress.getByAddress(mPlainTextBufferQ.getBytes(1, 5)).toString().substring(1);
             }catch(UnknownHostException e){
                 log.error("UnknownHostException.", e);
                 return true;
             }
             current = 5;
         }else if (addrType == ADDR_TYPE_HOST) {
-            short hostLength = mBufferQueue.getUnsignedByte(1);
+            short hostLength = mPlainTextBufferQ.getUnsignedByte(1);
             // addrType(1) + len(1) + host + port(2)
             if (bufferLength < hostLength + 4)
                 return false;
-            addr = mBufferQueue.getString(2, hostLength + 2);
+            addr = mPlainTextBufferQ.getString(2, hostLength + 2);
             current = hostLength + 2;
         }else {
             log.warn("Unsupport addr type " + addrType);
             return true;
         }
-        int port = mBufferQueue.getUnsignedShort(current);
+        int port = mPlainTextBufferQ.getUnsignedShort(current);
         current = current + 2;
-        compactBuffer(current);
+        compactPlainTextBufferQ(current);
         log.info("Connecting to " + addr + ":" + port);
         connectToRemote(addr, port);
         nextStage();
@@ -169,7 +177,7 @@ public class ServerHandler implements Handler<Buffer> {
                     buffer = buffer.slice(end, buffer.length());
                 }
             });
-            if (mBufferQueue.length() > 0) {
+            if (mPlainTextBufferQ.length() > 0) {
                 handleStageStreaming();
             }
         });
@@ -194,8 +202,8 @@ public class ServerHandler implements Handler<Buffer> {
             //remote is not ready, just hold the buffer.
             return false;
         }
-        sendToRemote(mBufferQueue);
-        cleanBuffer();
+        sendToRemote(mPlainTextBufferQ);
+        cleanPlainTextBufferQ();
         return false;
     }
 
@@ -214,9 +222,21 @@ public class ServerHandler implements Handler<Buffer> {
     @Override
     public void handle(Buffer buffer) {
         boolean finish = false;
-        byte [] data = buffer.getBytes();
-        byte [] decryptData = mCrypto.decrypt(data);
-        mBufferQueue.appendBytes(decryptData);
+        byte [] data = mEncryptTextBufferQ.appendBuffer(buffer).getBytes();
+        byte [][] decryptResult = mCrypto.decrypt(data);
+        int lastState = mCrypto.getLastDecryptState();
+        if (lastState == DecryptState.FAILED) {
+            destory();
+        } else if (lastState == DecryptState.NEED_MORE) {
+            return;
+        }
+        byte [] decryptData = decryptResult[0];
+        byte [] encryptDataLeft = decryptResult[1];
+        cleanEncryptTextBufferQ();
+        if (encryptDataLeft != null) {
+            mEncryptTextBufferQ.appendBytes(encryptDataLeft);
+        }
+        mPlainTextBufferQ.appendBytes(decryptData);
         switch (mCurrentStage) {
             case Stage.HANDSHAKER:
                 finish = handleStageHandshaker();

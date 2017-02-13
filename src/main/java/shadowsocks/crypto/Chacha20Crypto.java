@@ -28,7 +28,7 @@ import shadowsocks.crypto.CryptoException;
 /**
  * Chacha20 Crypt implementation
  */
-public class Chacha20Crypto extends BaseCrypto {
+public class Chacha20Crypto extends BaseStreamCrypto {
 
     private final static String CIPHER_CHACHA20 = "chacha20";
     private final static String CIPHER_CHACHA20_IETF = "chacha20-ietf";

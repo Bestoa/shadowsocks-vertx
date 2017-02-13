@@ -22,11 +22,12 @@ import java.io.IOException;
 
 import shadowsocks.crypto.CryptoException;
 import shadowsocks.crypto.Utils;
+import shadowsocks.crypto.DecryptState;
 
 /**
  * Crypt base class implementation
  */
-public abstract class BaseCrypto implements SSCrypto
+public abstract class BaseStreamCrypto implements SSCrypto
 {
 
     protected abstract StreamCipher createCipher(byte[] iv, boolean encrypt);
@@ -48,7 +49,7 @@ public abstract class BaseCrypto implements SSCrypto
 
     private byte [] mLock = new byte[0];
 
-    public BaseCrypto(String name, String password) throws CryptoException
+    public BaseStreamCrypto(String name, String password) throws CryptoException
     {
         mName = name.toLowerCase();
         mIVLength = getIVLength();
@@ -109,10 +110,18 @@ public abstract class BaseCrypto implements SSCrypto
     }
 
     @Override
-    public byte [] decrypt(byte[] in)
+    public byte [][] decrypt(byte[] in)
     {
+        byte result[][] = new byte[2][];
+        result[1] = null;
         synchronized(mLock) {
-            return decryptLocked(in);
+            result[0] = decryptLocked(in);
         }
+        return result;
+    }
+
+    public int getLastDecryptState()
+    {
+        return DecryptState.SUCCESS;
     }
 }

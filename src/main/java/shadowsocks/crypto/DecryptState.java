@@ -15,20 +15,8 @@
  */
 package shadowsocks.crypto; 
 
-import java.io.ByteArrayOutputStream;
-import java.util.Map;
-
-import shadowsocks.crypto.CryptoException;
-
-/**
- * Interface of crypt
- */
-public interface SSCrypto {
-    byte [] encrypt(byte[] data);
-    byte [][] decrypt(byte[] data);
-    int getIVLength();
-    int getKeyLength();
-    byte [] getIV(boolean encrypt);
-    byte [] getKey();
-    int getLastDecryptState();
+public class DecryptState {
+    final public static int SUCCESS = 0;
+    final public static int NEED_MORE = 1;
+    final public static int FAILED = 2;
 }

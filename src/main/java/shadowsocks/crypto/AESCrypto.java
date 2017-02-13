@@ -30,7 +30,7 @@ import shadowsocks.crypto.CryptoException;
 /**
  * AES Crypt implementation
  */
-public class AESCrypto extends BaseCrypto {
+public class AESCrypto extends BaseStreamCrypto {
 
     public final static String CIPHER_AES_128_CFB = "aes-128-cfb";
     public final static String CIPHER_AES_192_CFB = "aes-192-cfb";

@@ -34,6 +34,7 @@ import io.vertx.core.net.NetClientOptions;
 import shadowsocks.util.LocalConfig;
 import shadowsocks.crypto.SSCrypto;
 import shadowsocks.crypto.CryptoFactory;
+import shadowsocks.crypto.DecryptState;
 
 public class ClientHandler implements Handler<Buffer> {
 
@@ -48,7 +49,8 @@ public class ClientHandler implements Handler<Buffer> {
     private NetSocket mServerSocket;
     private LocalConfig mConfig;
     private int mCurrentStage;
-    private Buffer mBufferQueue;
+    private Buffer mPlainTextBufferQ;
+    private Buffer mEncryptTextBufferQ;
     private SSCrypto mCrypto;
 
     private class Stage {
@@ -84,21 +86,26 @@ public class ClientHandler implements Handler<Buffer> {
         mLocalSocket = socket;
         mConfig = config;
         mCurrentStage = Stage.HELLO;
-        mBufferQueue = Buffer.buffer();
+        mPlainTextBufferQ = Buffer.buffer();
+        mEncryptTextBufferQ = Buffer.buffer();
         setFinishHandler(mLocalSocket);
         mCrypto = CryptoFactory.create(mConfig.method, mConfig.password);
     }
 
-    private Buffer compactBuffer(int start) {
-        mBufferQueue = Buffer.buffer().appendBuffer(mBufferQueue.slice(start, mBufferQueue.length()));
-        return mBufferQueue;
+    private Buffer compactPlainTextBufferQ(int start) {
+        mPlainTextBufferQ = Buffer.buffer().appendBuffer(mPlainTextBufferQ.slice(start, mPlainTextBufferQ.length()));
+        return mPlainTextBufferQ;
     }
 
-    private Buffer cleanBuffer() {
-        mBufferQueue = Buffer.buffer();
-        return mBufferQueue;
+    private Buffer cleanPlainTextBufferQ() {
+        mPlainTextBufferQ = Buffer.buffer();
+        return mPlainTextBufferQ;
     }
 
+    private Buffer cleanEncryptTextBufferQ() {
+        mEncryptTextBufferQ = Buffer.buffer();
+        return mEncryptTextBufferQ;
+    }
     /*
      *  Sock5 client side work flow.
      *
@@ -118,28 +125,28 @@ public class ClientHandler implements Handler<Buffer> {
      */
 
     private boolean handleStageHello() {
-        int bufferLength = mBufferQueue.length();
+        int bufferLength = mPlainTextBufferQ.length();
         // VERSION + METHOD LEN + METHOD
         if (bufferLength < 3)
             return false;
         //SOCK5
-        if (mBufferQueue.getByte(0) != 5) {
+        if (mPlainTextBufferQ.getByte(0) != 5) {
             log.warn("Protocol error.");
             return true;
         }
-        int methodLen = mBufferQueue.getByte(1);
+        int methodLen = mPlainTextBufferQ.getByte(1);
         if (bufferLength < methodLen + 2)
             return false;
         byte [] msg = {0x05, 0x00};
         mLocalSocket.write(Buffer.buffer(msg));
         //Discard the method list
-        cleanBuffer();
+        cleanPlainTextBufferQ();
         nextStage();
         return false;
     }
 
     private boolean handleStageHeader() {
-        int bufferLength = mBufferQueue.length();
+        int bufferLength = mPlainTextBufferQ.length();
         // VERSION + MODE + RSV + ADDR TYPE
         if (bufferLength < 4)
             return false;
@@ -147,25 +154,25 @@ public class ClientHandler implements Handler<Buffer> {
         // 2 bind
         // 3 udp associate
         // just support mode 1 now
-        if (mBufferQueue.getByte(1) != 1) {
+        if (mPlainTextBufferQ.getByte(1) != 1) {
             log.warn("Mode != 1");
             return true;
         }
         nextStage();
         //keep the addr type
-        compactBuffer(3);
-        if (mBufferQueue.length() > 0) {
+        compactPlainTextBufferQ(3);
+        if (mPlainTextBufferQ.length() > 0) {
             return handleStageAddress();
         }
         return false;
     }
 
     private boolean handleStageAddress() {
-        int bufferLength = mBufferQueue.length();
+        int bufferLength = mPlainTextBufferQ.length();
         String addr = null;
         // Construct the remote header.
         Buffer remoteHeader = Buffer.buffer();
-        int addrType = mBufferQueue.getByte(0);
+        int addrType = mPlainTextBufferQ.getByte(0);
 
         remoteHeader.appendByte((byte)(addrType));
 
@@ -174,28 +181,28 @@ public class ClientHandler implements Handler<Buffer> {
             if (bufferLength < 7)
                 return false;
             try{
-                addr = InetAddress.getByAddress(mBufferQueue.getBytes(1, 5)).toString();
+                addr = InetAddress.getByAddress(mPlainTextBufferQ.getBytes(1, 5)).toString();
             }catch(UnknownHostException e){
                 log.error("UnknownHostException.", e);
                 return true;
             }
-            remoteHeader.appendBytes(mBufferQueue.getBytes(1,5));
-            compactBuffer(5);
+            remoteHeader.appendBytes(mPlainTextBufferQ.getBytes(1,5));
+            compactPlainTextBufferQ(5);
         }else if (addrType == ADDR_TYPE_HOST) {
-            short hostLength = mBufferQueue.getUnsignedByte(1);
+            short hostLength = mPlainTextBufferQ.getUnsignedByte(1);
             // addr type(1) + len(1) + host + port(2)
             if (bufferLength < hostLength + 4)
                 return false;
-            addr = mBufferQueue.getString(2, hostLength + 2);
+            addr = mPlainTextBufferQ.getString(2, hostLength + 2);
             remoteHeader.appendByte((byte)hostLength).appendString(addr);
-            compactBuffer(hostLength + 2);
+            compactPlainTextBufferQ(hostLength + 2);
         }else {
             log.warn("Unsupport addr type " + addrType);
             return true;
         }
-        int port = mBufferQueue.getUnsignedShort(0);
+        int port = mPlainTextBufferQ.getUnsignedShort(0);
         remoteHeader.appendShort((short)port);
-        compactBuffer(2);
+        compactPlainTextBufferQ(2);
         log.info("Connecting to " + addr + ":" + port);
         connectToRemote(mConfig.server, mConfig.serverPort, remoteHeader);
         nextStage();
@@ -215,8 +222,20 @@ public class ClientHandler implements Handler<Buffer> {
             mServerSocket = res.result();
             setFinishHandler(mServerSocket);
             mServerSocket.handler(buffer -> { // remote socket data handler
-                byte [] data = buffer.getBytes();
-                byte [] decryptData = mCrypto.decrypt(data);
+                byte [] data = mEncryptTextBufferQ.appendBuffer(buffer).getBytes();
+                byte [][] decryptResult = mCrypto.decrypt(data);
+                int lastState = mCrypto.getLastDecryptState();
+                if (lastState == DecryptState.FAILED) {
+                    destory();
+                } else if (lastState == DecryptState.NEED_MORE) {
+                    return;
+                }
+                byte [] decryptData = decryptResult[0];
+                byte [] encryptDataLeft = decryptResult[1];
+                cleanEncryptTextBufferQ();
+                if (encryptDataLeft != null) {
+                    mEncryptTextBufferQ.appendBytes(encryptDataLeft);
+                }
                 flowControl(mLocalSocket, mServerSocket);
                 mLocalSocket.write(Buffer.buffer(decryptData));
             });
@@ -252,11 +271,11 @@ public class ClientHandler implements Handler<Buffer> {
 
         flowControl(mServerSocket, mLocalSocket);
 
-        while (mBufferQueue.length() > 0) {
-            int bufferLength = mBufferQueue.length();
+        while (mPlainTextBufferQ.length() > 0) {
+            int bufferLength = mPlainTextBufferQ.length();
             int end = bufferLength > chunkMaxLen ? chunkMaxLen : bufferLength;
-            sendToRemote(mBufferQueue.slice(0, end));
-            compactBuffer(end);
+            sendToRemote(mPlainTextBufferQ.slice(0, end));
+            compactPlainTextBufferQ(end);
         }
 
         return false;
@@ -277,7 +296,7 @@ public class ClientHandler implements Handler<Buffer> {
     @Override
     public void handle(Buffer buffer) {
         boolean finish = false;
-        mBufferQueue.appendBuffer(buffer);
+        mPlainTextBufferQ.appendBuffer(buffer);
         switch (mCurrentStage) {
             case Stage.HELLO:
                 finish = handleStageHello();

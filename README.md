@@ -1,7 +1,7 @@
 shadowsocks-vertx
 ================
 
-**ONLY SUPPORT SS-v1, deprecated now**
+Based on SS_V1, but we have to change the protocol now.
 
 [![Build Status](https://travis-ci.org/Bestoa/shadowsocks-vertx.svg?branch=master)](https://travis-ci.org/Bestoa/shadowsocks-vertx)
 [![codecov](https://codecov.io/gh/Bestoa/shadowsocks-vertx/branch/master/graph/badge.svg)](https://codecov.io/gh/Bestoa/shadowsocks-vertx)

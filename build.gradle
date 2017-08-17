@@ -35,7 +35,7 @@ task ('fatJar', type: Jar, dependsOn: classes){
                    'Main-Class': 'shadowsocks.Main'
     }
     baseName = 'shadowsocks'
-    appendix = 'fat'
+    appendix = 'fat' + '-' + getGitVersion()
     from {configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }} //pack dependent jar
     from 'build/classes/main'
     from 'build/resources/main'
@@ -49,3 +49,11 @@ jacocoTestReport {
     }
 }
 check.dependsOn jacocoTestReport
+
+def releaseTime() {
+    return new Date().format("yyyy-MM-dd", TimeZone.getTimeZone("UTC"))
+}
+
+def getGitVersion() {
+    return 'git rev-parse --short HEAD'.execute().text.trim()
+}

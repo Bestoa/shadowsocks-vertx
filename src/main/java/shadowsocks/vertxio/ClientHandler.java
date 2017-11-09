@@ -76,7 +76,7 @@ public class ClientHandler implements Handler<Buffer> {
             destory();
         });
         socket.exceptionHandler(e -> {
-            log.error("Catch Exception.", e);
+            log.error("Catch Exception:" + e.toString());
             destory();
         });
     }
@@ -183,7 +183,7 @@ public class ClientHandler implements Handler<Buffer> {
             try{
                 addr = InetAddress.getByAddress(mPlainTextBufferQ.getBytes(1, 5)).toString();
             }catch(UnknownHostException e){
-                log.error("UnknownHostException.", e);
+                log.error("UnknownHostException:" + e.toString());
                 return true;
             }
             remoteHeader.appendBytes(mPlainTextBufferQ.getBytes(1,5));

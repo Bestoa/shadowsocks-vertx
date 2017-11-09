@@ -183,7 +183,7 @@ public class GlobalConfig{
                 return null;
             return new String(data);
         }catch(IOException e){
-            log.error("Read config file " + name + " error.", e);
+            log.error("Read config file " + name + " error:" + e.toString());
             return null;
         }
     }

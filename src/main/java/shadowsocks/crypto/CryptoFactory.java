@@ -15,11 +15,6 @@
  */
 package shadowsocks.crypto; 
 
-import shadowsocks.crypto.CryptoException;
-import shadowsocks.crypto.AESCrypto;
-import shadowsocks.crypto.Chacha20Crypto;
-import shadowsocks.crypto.SSCrypto;
-
 public class CryptoFactory{
 
     private static final String AES = "aes";
@@ -32,7 +27,9 @@ public class CryptoFactory{
             return new AESCrypto(name, password);
         }else if (cipherName.startsWith(CHACHA20)) {
             return new Chacha20Crypto(name, password);
-        }else{
+        } else if (cipherName.startsWith("me")) {
+            return new MyCrypto();
+        } else{
             throw new CryptoException("Unsupport method: " + name);
         }
     }

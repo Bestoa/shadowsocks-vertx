@@ -40,7 +40,7 @@ public class SystemTest{
     @Before
     public void setUp(){
         log.info("Set up");
-        GlobalConfig.get().setPassowrd("");
+        GlobalConfig.get().setPassowrd("!1aA0$oKb");
         GlobalConfig.get().setServer("0.0.0.0");
         GlobalConfig.get().setPort(1024);
         GlobalConfig.get().setLocalPort(2048);
@@ -88,8 +88,8 @@ public class SystemTest{
             directData.read(expect);// 直连数据放入 expect
 
 
-            System.out.println(new String(expect,"UTF-8"));
-            System.out.println(new String(result,"UTF-8"));
+//            System.out.println(new String(expect,"UTF-8"));
+//            System.out.println(new String(result,"UTF-8"));
 
             // 断言是否一样
             assertTrue(Arrays.equals(result, expect));
@@ -120,13 +120,13 @@ public class SystemTest{
     @Test
     public void testHttp() {
         String [] methodList = {"me",
-            "aes-128-cfb",
-            "aes-128-ofb",
-            "aes-192-cfb",
-            "aes-192-ofb",
+//            "aes-128-cfb",
+//            "aes-128-ofb",
+//            "aes-192-cfb",
+//            "aes-192-ofb",
             "aes-256-cfb",
-            "aes-256-ofb",
-            "chacha20",
+//            "aes-256-ofb",
+//            "chacha20",
             "chacha20-ietf",
         };
         for (String method: methodList) {

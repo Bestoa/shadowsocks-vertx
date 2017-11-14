@@ -41,11 +41,10 @@ public class SystemTest{
     public void setUp(){
         log.info("Set up");
         GlobalConfig.get().setPassowrd("");
-        GlobalConfig.get().setMethod("me");
-        GlobalConfig.get().setServer("127.0.0.1");
+        GlobalConfig.get().setServer("0.0.0.0");
         GlobalConfig.get().setPort(1024);
         GlobalConfig.get().setLocalPort(2048);
-        GlobalConfig.get().setOTAEnabled(false);
+        GlobalConfig.get().setOTAEnabled(false);// OTA 更容易被监测
         GlobalConfig.get().setTimeout(100);
     }
     @After
@@ -53,9 +52,7 @@ public class SystemTest{
         log.info("Tear down");
     }
 
-    private void testSimpleHttp(boolean ota) {
-
-        GlobalConfig.get().setOTAEnabled(ota);
+    private void testSimpleHttp() {
 
         ShadowsocksVertx server = new ShadowsocksVertx(true);
         ShadowsocksVertx client = new ShadowsocksVertx(false);
@@ -82,17 +79,19 @@ public class SystemTest{
             directConnection = (HttpURLConnection) url.openConnection();
             directConnection.setRequestMethod("GET");
 
-            DataInputStream directData = new DataInputStream(directConnection.getInputStream());
-            byte [] expect = new byte[1000];
-            directData.read(expect);
-
             DataInputStream proxyData = new DataInputStream(proxyConnection.getInputStream());
             byte [] result = new byte[1000];
-            proxyData.read(result);
+            proxyData.read(result);// 代理数据放入 result
+
+            DataInputStream directData = new DataInputStream(directConnection.getInputStream());
+            byte [] expect = new byte[1000];
+            directData.read(expect);// 直连数据放入 expect
+
 
             System.out.println(new String(expect,"UTF-8"));
             System.out.println(new String(result,"UTF-8"));
 
+            // 断言是否一样
             assertTrue(Arrays.equals(result, expect));
         }catch(IOException e){
             log.error("Failed with exception.", e);
@@ -114,9 +113,13 @@ public class SystemTest{
             }
         }
     }
+
+    /**
+     * 不要 OTA
+     */
     @Test
     public void testHttp() {
-        String [] methodList = {
+        String [] methodList = {"me",
             "aes-128-cfb",
             "aes-128-ofb",
             "aes-192-cfb",
@@ -128,13 +131,9 @@ public class SystemTest{
         };
         for (String method: methodList) {
             GlobalConfig.get().setMethod(method);
-            log.debug("Test method: " + method);
-            testSimpleHttp(true);
+            log.debug("Test method ------ " + method);
+            testSimpleHttp();
         }
     }
 
-    @Test
-    public void testHttpWithoutOTA() {
-        testSimpleHttp(false);
-    }
 }

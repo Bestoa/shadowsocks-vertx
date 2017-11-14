@@ -140,7 +140,7 @@ public class MyCrypto implements SSCrypto {
      * 测试加密
      */
     public static void main(String[] args) throws Exception{
-        byte[] testData = new byte[]{11,5,7,-100,66,-19,0};
+        byte[] testData = new byte[]{11,5,7,-100,66,-19,0,11,11,11,11,11,11,11,11,11,11};
         System.out.println(Arrays.toString(testData));
 
         byte[] encrypt = new MyCrypto().encryptLocked(testData);

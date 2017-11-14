@@ -15,31 +15,23 @@
  */
 package shadowsocks;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.BeforeClass;
-import org.junit.AfterClass;
-import static org.junit.Assert.*;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import shadowsocks.util.GlobalConfig;
-import shadowsocks.ShadowsocksVertx;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
 import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.net.Proxy;
-import java.net.Socket;
-import java.net.Proxy.Type;
-import java.net.InetSocketAddress;
-import java.net.URL;
+import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.URL;
 import java.util.Arrays;
+
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class SystemTest{
 
@@ -48,12 +40,12 @@ public class SystemTest{
     @Before
     public void setUp(){
         log.info("Set up");
-        GlobalConfig.get().setPassowrd("testkey");
-        GlobalConfig.get().setMethod("aes-128-cfb");
+        GlobalConfig.get().setPassowrd("");
+        GlobalConfig.get().setMethod("me");
         GlobalConfig.get().setServer("127.0.0.1");
         GlobalConfig.get().setPort(1024);
         GlobalConfig.get().setLocalPort(2048);
-        GlobalConfig.get().setOTAEnabled(true);
+        GlobalConfig.get().setOTAEnabled(false);
         GlobalConfig.get().setTimeout(100);
     }
     @After
@@ -79,30 +71,38 @@ public class SystemTest{
         }
 
         Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", 2048));
-        HttpURLConnection conn = null;
+        HttpURLConnection proxyConnection = null;// 代理连接
+        HttpURLConnection directConnection = null;// 直接连接
         try{
             URL url = new URL("https://example.com");
-            conn = (HttpURLConnection)url.openConnection(proxy);
-            conn.setRequestMethod("GET");
-            DataInputStream in1 = new DataInputStream(this.getClass().getClassLoader().getResourceAsStream("result-example-com"));
-            byte [] expect = new byte[8192];
-            int dataLen = in1.read(expect);
-            DataInputStream in2 = new DataInputStream(conn.getInputStream());
-            byte [] result = new byte[8192];
-            in2.readFully(result, 0, dataLen);
-            boolean compareResult = Arrays.equals(result, expect);
-            if (!compareResult) {
-                log.debug("====================");
-                log.debug(new String(result));
-                log.debug("====================");
-            }
-            assertTrue(compareResult);
+
+            proxyConnection = (HttpURLConnection)url.openConnection(proxy);
+            proxyConnection.setRequestMethod("GET");
+
+            directConnection = (HttpURLConnection) url.openConnection();
+            directConnection.setRequestMethod("GET");
+
+            DataInputStream directData = new DataInputStream(directConnection.getInputStream());
+            byte [] expect = new byte[1000];
+            directData.read(expect);
+
+            DataInputStream proxyData = new DataInputStream(proxyConnection.getInputStream());
+            byte [] result = new byte[1000];
+            proxyData.read(result);
+
+            System.out.println(new String(expect,"UTF-8"));
+            System.out.println(new String(result,"UTF-8"));
+
+            assertTrue(Arrays.equals(result, expect));
         }catch(IOException e){
             log.error("Failed with exception.", e);
             fail();
         }finally{
-            if (conn != null) {
-                conn.disconnect();
+            if (proxyConnection != null) {
+                proxyConnection.disconnect();
+            }
+            if (directConnection != null) {
+                directConnection.disconnect();
             }
             server.stop();
             client.stop();

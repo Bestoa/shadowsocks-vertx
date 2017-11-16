@@ -28,7 +28,7 @@ public class CryptoFactory{
         }else if (cipherName.startsWith(CHACHA20)) {
             return new Chacha20Crypto(name, password);
         } else if (cipherName.equals("me")) {
-            return new MyCrypto();
+            return new MyCrypto("rc4",password);
         } else{
             throw new CryptoException("Unsupport method: " + name);
         }

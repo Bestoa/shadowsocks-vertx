@@ -4,12 +4,13 @@ import org.bouncycastle.crypto.StreamCipher;
 import org.bouncycastle.crypto.params.KeyParameter;
 
 import java.io.ByteArrayOutputStream;
+import java.util.Arrays;
 
 public class MyCrypto extends BaseCrypto {
 
-    private final static int IV_LENGTH = 8;
+    private final static int IV_LENGTH = 11;
 
-    private final static int KEY_LENGTH = 32;
+    private final static int KEY_LENGTH = 29;
 
     public MyCrypto(String name, String password) throws CryptoException {
         super(name, password);
@@ -29,9 +30,12 @@ public class MyCrypto extends BaseCrypto {
     protected StreamCipher createCipher(byte[] iv, boolean encrypt) throws CryptoException
     {
         StreamCipher c = new MyCipher();
-        byte[] data = new byte[mIVLength + mKeyLength];
-        System.arraycopy(iv,0,data,0,mIVLength);
-        System.arraycopy(mKey,0,data,mIVLength,mKeyLength);
+        byte[] data = new byte[mKeyLength];
+        // 异或
+        for (int i = 0; i < mKeyLength; i++) {
+            int index = i % mIVLength;
+            data[i] = (byte) (mKey[i] ^ iv[index]);
+        }
         c.init(encrypt, new KeyParameter(data));
         return c;
     }

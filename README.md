@@ -1,6 +1,10 @@
 shadowsocks-vertx
 ================
 
+禁用ipv6。
+***************************************************
+***************************************************
+
 Based on SS_V1, but we have to change the protocol now.
 
 [![Build Status](https://travis-ci.org/Bestoa/shadowsocks-vertx.svg?branch=master)](https://travis-ci.org/Bestoa/shadowsocks-vertx)

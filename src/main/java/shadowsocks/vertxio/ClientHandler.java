@@ -1,43 +1,20 @@
-/*
- *   Copyright 2016 Author:NU11 bestoapache@gmail.com
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
-
 package shadowsocks.vertxio;
 
-import java.net.InetSocketAddress;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import io.vertx.core.Vertx;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.net.NetSocket;
-import io.vertx.core.net.NetServer;
 import io.vertx.core.net.NetClient;
 import io.vertx.core.net.NetClientOptions;
-
-import shadowsocks.util.LocalConfig;
-import shadowsocks.crypto.SSCrypto;
-import shadowsocks.crypto.CryptoFactory;
+import io.vertx.core.net.NetSocket;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import shadowsocks.crypto.CryptoException;
-import shadowsocks.auth.SSAuth;
-import shadowsocks.auth.HmacSHA1;
-import shadowsocks.auth.AuthException;
+import shadowsocks.crypto.CryptoFactory;
+import shadowsocks.crypto.SSCrypto;
+import shadowsocks.util.LocalConfig;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 public class ClientHandler implements Handler<Buffer> {
 
@@ -45,8 +22,6 @@ public class ClientHandler implements Handler<Buffer> {
 
     private final static int ADDR_TYPE_IPV4 = 1;
     private final static int ADDR_TYPE_HOST = 3;
-
-    private final static int OTA_FLAG = 0x10;
 
     private Vertx mVertx;
     private NetSocket mLocalSocket;
@@ -56,7 +31,6 @@ public class ClientHandler implements Handler<Buffer> {
     private Buffer mBufferQueue;
     private int mChunkCount;
     private SSCrypto mCrypto;
-    private SSAuth mAuthor;
 
     private class Stage {
         final public static int HELLO = 0;
@@ -99,7 +73,6 @@ public class ClientHandler implements Handler<Buffer> {
         }catch(Exception e){
             //Will never happen, we check this before.
         }
-        mAuthor = new HmacSHA1();
     }
 
     private Buffer compactBuffer(int start) {
@@ -127,8 +100,6 @@ public class ClientHandler implements Handler<Buffer> {
      *  addr type 0x1: addr = ipv4 | 4 bytes
      *  addr type 0x3: addr = host address byte array | 1 byte(array length) + byte array
      *  addr type 0x4: addr = ipv6 | 19 bytes
-     *
-     *  OTA will add 10 bytes HMAC-SHA1 in the end of the head.
      *
      */
 
@@ -181,11 +152,8 @@ public class ClientHandler implements Handler<Buffer> {
         // Construct the remote header.
         Buffer remoteHeader = Buffer.buffer();
         int addrType = mBufferQueue.getByte(0);
-        if (mConfig.oneTimeAuth) {
-            remoteHeader.appendByte((byte)(addrType | OTA_FLAG));
-        }else{
-            remoteHeader.appendByte((byte)(addrType));
-        }
+
+        remoteHeader.appendByte((byte)(addrType));
 
         if (addrType == ADDR_TYPE_IPV4) {
             // addr type (1) + ipv4(4) + port(2)
@@ -248,16 +216,11 @@ public class ClientHandler implements Handler<Buffer> {
             mLocalSocket.write(Buffer.buffer(msg));
             // send remote header.
             try{
-                if (mConfig.oneTimeAuth) {
-                    byte [] authKey = SSAuth.prepareKey(mCrypto.getIV(true), mCrypto.getKey());
-                    byte [] authData = remoteHeader.getBytes();
-                    byte [] authResult = mAuthor.doAuth(authKey, authData);
-                    remoteHeader.appendBytes(authResult);
-                }
+
                 byte [] header = remoteHeader.getBytes();
                 byte [] encryptHeader = mCrypto.encrypt(header, header.length);
                 mServerSocket.write(Buffer.buffer(encryptHeader));
-            }catch(CryptoException | AuthException e){
+            }catch(CryptoException e){
                 log.error("Catch exception", e);
                 destory();
             }
@@ -268,15 +231,7 @@ public class ClientHandler implements Handler<Buffer> {
 
         Buffer chunkBuffer = Buffer.buffer();
         try{
-            if (mConfig.oneTimeAuth) {
-                //chunk length 2 bytes
-                chunkBuffer.appendShort((short)buffer.length());
-                //auth result 10 bytes
-                byte [] authKey = SSAuth.prepareKey(mCrypto.getIV(true), mChunkCount++);
-                byte [] authData = buffer.getBytes();
-                byte [] authResult = mAuthor.doAuth(authKey, authData);
-                chunkBuffer.appendBytes(authResult);
-            }
+
             chunkBuffer.appendBuffer(buffer);
             byte [] data = chunkBuffer.getBytes();
             byte [] encryptData = mCrypto.encrypt(data, data.length);
@@ -285,7 +240,7 @@ public class ClientHandler implements Handler<Buffer> {
             }
             flowControl(mServerSocket, mLocalSocket);
             mServerSocket.write(Buffer.buffer(encryptData));
-        }catch(CryptoException | AuthException e){
+        }catch(CryptoException e){
             log.error("Catch exception", e);
             destory();
         }

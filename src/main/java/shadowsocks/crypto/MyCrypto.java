@@ -1,10 +1,10 @@
 package shadowsocks.crypto;
 
 import org.bouncycastle.crypto.StreamCipher;
+import org.bouncycastle.crypto.engines.RC4Engine;
 import org.bouncycastle.crypto.params.KeyParameter;
 
 import java.io.ByteArrayOutputStream;
-import java.util.Arrays;
 
 public class MyCrypto extends BaseCrypto {
 
@@ -29,7 +29,7 @@ public class MyCrypto extends BaseCrypto {
     @Override
     protected StreamCipher createCipher(byte[] iv, boolean encrypt) throws CryptoException
     {
-        StreamCipher c = new MyCipher();
+        StreamCipher c = new RC4Engine();
         byte[] data = new byte[mKeyLength];
         // 异或
         for (int i = 0; i < mKeyLength; i++) {

@@ -29,7 +29,6 @@ public class ClientHandler implements Handler<Buffer> {
     private LocalConfig mConfig;
     private int mCurrentStage;
     private Buffer mBufferQueue;
-    private int mChunkCount;
     private SSCrypto mCrypto;
 
     private class Stage {
@@ -66,7 +65,6 @@ public class ClientHandler implements Handler<Buffer> {
         mConfig = config;
         mCurrentStage = Stage.HELLO;
         mBufferQueue = Buffer.buffer();
-        mChunkCount = 0;
         setFinishHandler(mLocalSocket);
         try{
             mCrypto = CryptoFactory.create(mConfig.method, mConfig.password);

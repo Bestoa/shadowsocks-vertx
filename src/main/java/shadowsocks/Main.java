@@ -9,7 +9,7 @@ import shadowsocks.util.GlobalConfig;
 
 public class Main{
 
-    public static Logger log = LogManager.getLogger(Main.class.getName());
+    private static Logger log = LogManager.getLogger(Main.class.getName());
 
     public static final String VERSION = "0.8.4";
 
@@ -25,10 +25,15 @@ public class Main{
             throw new RuntimeException("argvError ! ");
         }
 
-        // 加载配置文件
-        String configFile = argv[0];
-        GlobalConfig.get().setConfigFile(configFile);
-        GlobalConfig.getConfigFromFile();
+        try {
+            // 加载配置文件
+            String configFile = argv[0];
+            GlobalConfig.get().setConfigFile(configFile);
+            GlobalConfig.getConfigFromFile();
+        } catch (Exception e) {
+            log.fatal("get config from file error",e);
+            return;
+        }
 
         //make sure this method could work.
         try{

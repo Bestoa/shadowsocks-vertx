@@ -14,7 +14,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class GlobalConfig{
 
-    public static Logger log = LogManager.getLogger(GlobalConfig.class.getName());
+    private static Logger log = LogManager.getLogger(GlobalConfig.class.getName());
 
     private static GlobalConfig mConfig;
 
@@ -43,8 +43,6 @@ public class GlobalConfig{
     final static String METHOD = "method";
     final static String PASSWORD = "password";
     final static String TIMEOUT = "timeout";
-    final static String HELP = "help";
-    final static String CONFIG = "config";
 
     //Lock
     public void getLock() {
@@ -182,12 +180,12 @@ public class GlobalConfig{
             GlobalConfig.get().setServer(server);
         }
         if (jsonobj.containsKey(SERVER_PORT)) {
-            int port = jsonobj.getInteger(SERVER_PORT).intValue();
+            int port = jsonobj.getInteger(SERVER_PORT);
             log.debug("CFG:Server port: " + port);
             GlobalConfig.get().setPort(port);
         }
         if (jsonobj.containsKey(LOCAL_PORT)) {
-            int lport = jsonobj.getInteger(LOCAL_PORT).intValue();
+            int lport = jsonobj.getInteger(LOCAL_PORT);
             log.debug("CFG:Local port: " + lport);
             GlobalConfig.get().setLocalPort(lport);
         }
@@ -202,12 +200,12 @@ public class GlobalConfig{
             GlobalConfig.get().setMethod(method);
         }
         if (jsonobj.containsKey(TIMEOUT)) {
-            int timeout = jsonobj.getInteger(TIMEOUT).intValue();
+            int timeout = jsonobj.getInteger(TIMEOUT);
             log.debug("CFG:Timeout: " + timeout);
             GlobalConfig.get().setTimeout(timeout);
         }
         if (jsonobj.containsKey(SERVER_MODE)) {
-            boolean isServer = jsonobj.getBoolean(SERVER_MODE).booleanValue();
+            boolean isServer = jsonobj.getBoolean(SERVER_MODE);
             log.debug("CFG:Running on server mode: " + isServer);
             GlobalConfig.get().setServerMode(isServer);
         }

@@ -29,18 +29,6 @@ About vert.x, please refer to http://vertx.io/
 
 #Features
 
-Supported argument:
-
-    1. -m/--method crypto method
-    2. -k/--password password
-    3. -p/--server_port bind port(server)/remote port(client)
-    4. -a/--auth OTA enforcing mode
-    5. -l/--local_port local port
-    6. -s/--server server
-    7. -S/--server_mode server mode(default is client mode)
-    8. -c/--config config file
-    9. -t/--timeout timeout(unit is second, currently unused)
-    10. -h/--help show help.
 
 Supported encrypt method:
 
@@ -49,7 +37,6 @@ Supported encrypt method:
     3. aes-256-cfb/ofb
     4. chacha20/chacha20-ietf
 
-Supported one-time auth.
 
 Support JSON config file. Please refer to https://github.com/shadowsocks/shadowsocks/wiki/Configuration-via-Config-File.
 Note:
@@ -63,31 +50,8 @@ You could refer to demo config etc/demo.json.
 
 How to run:
 ===========
-### (1) Before you start
-You must have 'gradle' installed first, or use gradle wrapper ./gradlew.
 
-### (2) generate distributable zip
-```
-$ gradle distZip
-```
-or
-```
-$ ./gradlew distZip
-```
-
-Then you will get **shadowsocks-ver.zip** in build/distributions.
-Unzip it, the folder should contain bin and lib.
-
-#### How to run
-```
-//Server
-$ bin/shadowsocks -S ...
-$ bin/shadowsocks --server_mode ...
-//Local
-$ bin/shadowsocks ...
-```
-
-### (3) generate all-in-one jar
+### (1) generate all-in-one jar
 ```
 $ gradle fatJar
 ```
@@ -99,12 +63,12 @@ $ ./gradlew fatJar
 
 Then you will get **shadowsocks-fat-ver.jar** in build/libs.
 
-#### How to run
+#### (2) How to run
 ```
 //Server
-$ java -jar shadowsocks-fat-xx.jar -S ...
-$ java -jar shadowsocks-fat-xx.jar --server_mode ...
+$ java -jar shadowsocks-fat-xx.jar configFile
+$ java -jar shadowsocks-fat-xx.jar configFile
 //Local
-$ java -jar shadowsocks-fat-xx.jar ...
+$ java -jar shadowsocks-fat-xx.jar configFile
 ```
 

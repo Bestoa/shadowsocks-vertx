@@ -51,7 +51,7 @@ You could refer to demo config etc/demo.json.
 How to run:
 ===========
 
-### (1) generate all-in-one jar
+### (1) generate fat jar
 ```
 $ gradle fatJar
 ```
@@ -63,7 +63,7 @@ $ ./gradlew fatJar
 
 Then you will get **shadowsocks-fat-ver.jar** in build/libs.
 
-### (2) How to run
+### (2) run
 ```
 $ java -jar shadowsocks-fat-ver.jar configFile
 ```

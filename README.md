@@ -63,7 +63,7 @@ $ ./gradlew fatJar
 
 Then you will get **shadowsocks-fat-ver.jar** in build/libs.
 
-#### (2) How to run
+### (2) How to run
 ```
 $ java -jar shadowsocks-fat-ver.jar configFile
 ```

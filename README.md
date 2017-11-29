@@ -65,10 +65,6 @@ Then you will get **shadowsocks-fat-ver.jar** in build/libs.
 
 #### (2) How to run
 ```
-//Server
-$ java -jar shadowsocks-fat-xx.jar configFile
-$ java -jar shadowsocks-fat-xx.jar configFile
-//Local
-$ java -jar shadowsocks-fat-xx.jar configFile
+$ java -jar shadowsocks-fat-ver.jar configFile
 ```
 

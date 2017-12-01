@@ -53,7 +53,8 @@ public class ServerHandler implements Handler<Buffer> {
             destory();
         });
         socket.exceptionHandler(e -> {
-            log.error("setFinishHandler Catch Exception." + e.getMessage());
+            log.error("Server setFinishHandler Exception " + e.getMessage()
+                    +" local " + socket.localAddress() + " , remote " + socket.remoteAddress());
             destory();
         });
     }

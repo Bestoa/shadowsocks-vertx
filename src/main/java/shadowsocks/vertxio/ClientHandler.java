@@ -54,7 +54,7 @@ public class ClientHandler implements Handler<Buffer> {
             destory();
         });
         socket.exceptionHandler(e -> {
-            log.error("Catch Exception.", e);
+            log.error("setFinishHandler Catch Exception." + e.getMessage());
             destory();
         });
     }

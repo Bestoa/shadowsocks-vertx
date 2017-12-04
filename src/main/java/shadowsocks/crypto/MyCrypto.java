@@ -5,6 +5,7 @@ import org.bouncycastle.crypto.engines.RC4Engine;
 import org.bouncycastle.crypto.params.KeyParameter;
 
 import java.io.ByteArrayOutputStream;
+import java.security.MessageDigest;
 
 public class MyCrypto extends BaseCrypto {
 
@@ -36,8 +37,23 @@ public class MyCrypto extends BaseCrypto {
             int index = i % mIVLength;
             data[i] = (byte) (mKey[i] ^ iv[index]);
         }
-        c.init(encrypt, new KeyParameter(data));
+
+        byte[] hash = hash(data);
+
+        c.init(encrypt, new KeyParameter(hash));
         return c;
+    }
+
+
+
+    private byte[] hash(byte[] source) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-512");
+            return md.digest(source);
+        } catch (Exception e) {
+            // 抛出去
+            throw new RuntimeException(e);
+        }
     }
 
     @Override

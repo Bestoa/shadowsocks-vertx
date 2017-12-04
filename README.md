@@ -15,7 +15,7 @@ fork 后所做的工作：
 
 shadowsocks-vertx is a lightweight tunnel proxy which can help you get through firewalls. It is a java port of shadowsocks. This project is based on vert.x.
 
-The protocol is compatible with the origin shadowsocks (if both have been upgraded to the latest version).
+The protocol is not compatible with the origin shadowsocks !
 
 JDK 8 is needed.
 

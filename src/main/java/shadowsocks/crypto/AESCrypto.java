@@ -13,6 +13,8 @@ public class AESCrypto extends BaseCrypto {
 
     private final static int IV_LENGTH = 16;
 
+    private final static int KEY_LENGTH = 32;
+
     public AESCrypto(String name, String password) throws CryptoException {
         super(name, password);
     }
@@ -24,7 +26,7 @@ public class AESCrypto extends BaseCrypto {
 
     @Override
     public int getKeyLength() {
-        return 32;
+        return KEY_LENGTH;
     }
 
     protected StreamBlockCipher getCipher(boolean isEncrypted) throws CryptoException

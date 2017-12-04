@@ -11,7 +11,9 @@ import java.io.ByteArrayOutputStream;
 public class Chacha20Crypto extends BaseCrypto {
 
 
-    private final static int IV_LENGTH = 8;
+    private final static int IV_LENGTH = 13;
+
+    private final static int LEN = 8;
 
     private final static int KEY_LENGTH = 32;
 
@@ -33,7 +35,7 @@ public class Chacha20Crypto extends BaseCrypto {
     protected StreamCipher createCipher(byte[] iv, boolean encrypt) throws CryptoException
     {
         StreamCipher c = new ChaChaEngine();
-        ParametersWithIV parameterIV = new ParametersWithIV(new KeyParameter(mKey), iv, 0, mIVLength);
+        ParametersWithIV parameterIV = new ParametersWithIV(new KeyParameter(mKey), iv, 2, LEN);
         c.init(encrypt, parameterIV);
         return c;
     }

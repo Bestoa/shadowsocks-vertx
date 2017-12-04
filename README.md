@@ -32,10 +32,7 @@ About vert.x, please refer to http://vertx.io/
 
 Supported encrypt method:
 
-    1. aes-128-cfb/ofb
-    2. aes-192-cfb/ofb
-    3. aes-256-cfb/ofb
-    4. chacha20/chacha20-ietf
+    aes-256-cfb, chacha20, rc4
 
 
 Support JSON config file. Please refer to https://github.com/shadowsocks/shadowsocks/wiki/Configuration-via-Config-File.

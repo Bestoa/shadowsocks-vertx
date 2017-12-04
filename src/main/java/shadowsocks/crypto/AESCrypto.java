@@ -11,7 +11,9 @@ import java.io.ByteArrayOutputStream;
 
 public class AESCrypto extends BaseCrypto {
 
-    private final static int IV_LENGTH = 16;
+    private final static int IV_LENGTH = 19;
+
+    private final static int LEN = 16;
 
     private final static int KEY_LENGTH = 32;
 
@@ -32,14 +34,14 @@ public class AESCrypto extends BaseCrypto {
     protected StreamBlockCipher getCipher(boolean isEncrypted) throws CryptoException
     {
         AESEngine engine = new AESEngine();
-        return new CFBBlockCipher(engine, getIVLength() * 8);
+        return new CFBBlockCipher(engine, LEN * 8);
     }
 
     @Override
     protected StreamCipher createCipher(byte[] iv, boolean encrypt) throws CryptoException
     {
         StreamBlockCipher c = getCipher(encrypt);
-        ParametersWithIV parameterIV = new ParametersWithIV(new KeyParameter(mKey), iv, 0, mIVLength);
+        ParametersWithIV parameterIV = new ParametersWithIV(new KeyParameter(mKey), iv, 1, LEN);
         c.init(encrypt, parameterIV);
         return c;
     }

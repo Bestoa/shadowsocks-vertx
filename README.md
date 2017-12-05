@@ -1,11 +1,5 @@
 shadowsocks-vertx
 ================
-fork 后所做的工作：   
-1 禁用ipv6   
-2 实现rc4   
-3 删掉OTA  
-4 删掉测试代码  
-
 
 [![Build Status](https://travis-ci.org/Bestoa/shadowsocks-vertx.svg?branch=master)](https://travis-ci.org/Bestoa/shadowsocks-vertx)
 [![codecov](https://codecov.io/gh/Bestoa/shadowsocks-vertx/branch/master/graph/badge.svg)](https://codecov.io/gh/Bestoa/shadowsocks-vertx)

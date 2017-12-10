@@ -36,12 +36,19 @@ public class Chacha20Crypto extends BaseCrypto {
     protected StreamCipher createCipher(byte[] iv, boolean encrypt) throws CryptoException
     {
         StreamCipher c = new ChaChaEngine();
-
-        if (IV_LENGTH != LEN) {// 自定义 IV LEN
-            iv = Utils.md5(iv);
+        byte[] newIv = new byte[8];
+        if (IV_LENGTH < LEN) {// 长度不够填充0
+            System.arraycopy(iv,0,newIv,0,IV_LENGTH);
+            for (int i = IV_LENGTH; i < LEN; i++) {
+                newIv[i] = 0;
+            }
+        } else if(IV_LENGTH == LEN) {
+            newIv = iv;
+        } else {// 长度超出部分舍弃掉
+            System.arraycopy(iv,0,newIv,0,LEN);
         }
 
-        ParametersWithIV parameterIV = new ParametersWithIV(new KeyParameter(mKey), iv, 0, LEN);
+        ParametersWithIV parameterIV = new ParametersWithIV(new KeyParameter(mKey), newIv, 0, LEN);
         c.init(encrypt, parameterIV);
         return c;
     }

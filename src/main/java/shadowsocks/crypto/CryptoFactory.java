@@ -10,7 +10,7 @@ public class CryptoFactory{
         }else if (cipherName.equals("chacha20")) {
             return new Chacha20Crypto(name, password);
         } else if (cipherName.equals("rc4-md5")) {
-            return new MyCrypto("rc4-md5",password);
+            return new RC4MD5Crypto("rc4-md5",password);
         } else{
             throw new CryptoException("Unsupport method: " + name);
         }

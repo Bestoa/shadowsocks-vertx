@@ -6,15 +6,14 @@ import org.bouncycastle.crypto.params.KeyParameter;
 import shadowsocks.util.GlobalConfig;
 
 import java.io.ByteArrayOutputStream;
-import java.security.MessageDigest;
 
-public class MyCrypto extends BaseCrypto {
+public class RC4MD5Crypto extends BaseCrypto {
 
     private final static int IV_LENGTH = GlobalConfig.get().getIvLen();
 
     private final static int KEY_LENGTH = 16;
 
-    public MyCrypto(String name, String password) throws CryptoException {
+    public RC4MD5Crypto(String name, String password) throws CryptoException {
         super(name, password);
     }
 
@@ -36,23 +35,12 @@ public class MyCrypto extends BaseCrypto {
         System.arraycopy(mKey,0,data,0,mKeyLength);
         System.arraycopy(iv,0,data,mKeyLength,mIVLength);
 
-        byte[] hash = hash(data);
+        byte[] hash = Utils.md5(data);
 
         c.init(encrypt, new KeyParameter(hash));
         return c;
     }
 
-
-
-    private byte[] hash(byte[] source) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            return md.digest(source);
-        } catch (Exception e) {
-            // 抛出去
-            throw new RuntimeException(e);
-        }
-    }
 
     @Override
     protected void process(byte[] in, ByteArrayOutputStream out, boolean encrypt){

@@ -21,8 +21,6 @@ About vert.x, please refer to http://vertx.io/
 
 #Features
 
-The **iv.length** is not compatible with the origin shadowsocks !
-
 Supported encrypt method:
 
     aes-256-cfb, chacha20, rc4-md5
@@ -35,6 +33,7 @@ Note:
     2. Not support: fast_open. Java doesn't have such feature.
     3. Not support: workers. Vertx will set work thread number automatically.
     4. Additional: server_mode, set the running mode, true for the server.
+    5. Additional: iv_len, set the iv length
 
 You could refer to demo config etc/demo.json.
 

@@ -103,4 +103,15 @@ public class Utils{
         return bytes;
     }
 
+
+    public static byte[] md5(byte[] source) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            return md.digest(source);
+        } catch (Exception e) {
+            // 抛出去
+            throw new RuntimeException(e);
+        }
+    }
+
 }

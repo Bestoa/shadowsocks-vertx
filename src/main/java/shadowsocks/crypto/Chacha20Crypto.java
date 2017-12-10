@@ -5,13 +5,14 @@ import org.bouncycastle.crypto.StreamCipher;
 import org.bouncycastle.crypto.engines.ChaChaEngine;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.ParametersWithIV;
+import shadowsocks.util.GlobalConfig;
 
 import java.io.ByteArrayOutputStream;
 
 public class Chacha20Crypto extends BaseCrypto {
 
 
-    private final static int IV_LENGTH = 13;
+    private final static int IV_LENGTH = GlobalConfig.get().getIvLen();
 
     private final static int LEN = 8;
 
@@ -35,7 +36,7 @@ public class Chacha20Crypto extends BaseCrypto {
     protected StreamCipher createCipher(byte[] iv, boolean encrypt) throws CryptoException
     {
         StreamCipher c = new ChaChaEngine();
-        ParametersWithIV parameterIV = new ParametersWithIV(new KeyParameter(mKey), iv, 2, LEN);
+        ParametersWithIV parameterIV = new ParametersWithIV(new KeyParameter(mKey), iv, 0, LEN);
         c.init(encrypt, parameterIV);
         return c;
     }

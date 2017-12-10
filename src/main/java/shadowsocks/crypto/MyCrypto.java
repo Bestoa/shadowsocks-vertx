@@ -3,15 +3,16 @@ package shadowsocks.crypto;
 import org.bouncycastle.crypto.StreamCipher;
 import org.bouncycastle.crypto.engines.RC4Engine;
 import org.bouncycastle.crypto.params.KeyParameter;
+import shadowsocks.util.GlobalConfig;
 
 import java.io.ByteArrayOutputStream;
 import java.security.MessageDigest;
 
 public class MyCrypto extends BaseCrypto {
 
-    private final static int IV_LENGTH = 11;
+    private final static int IV_LENGTH = GlobalConfig.get().getIvLen();
 
-    private final static int KEY_LENGTH = 29;
+    private final static int KEY_LENGTH = 16;
 
     public MyCrypto(String name, String password) throws CryptoException {
         super(name, password);
@@ -31,12 +32,9 @@ public class MyCrypto extends BaseCrypto {
     protected StreamCipher createCipher(byte[] iv, boolean encrypt) throws CryptoException
     {
         StreamCipher c = new RC4Engine();
-        byte[] data = new byte[mKeyLength];
-        // 异或
-        for (int i = 0; i < mKeyLength; i++) {
-            int index = i % mIVLength;
-            data[i] = (byte) (mKey[i] ^ iv[index]);
-        }
+        byte[] data = new byte[mKeyLength + mIVLength];
+        System.arraycopy(mKey,0,data,0,mKeyLength);
+        System.arraycopy(iv,0,data,mKeyLength,mIVLength);
 
         byte[] hash = hash(data);
 
@@ -48,7 +46,7 @@ public class MyCrypto extends BaseCrypto {
 
     private byte[] hash(byte[] source) {
         try {
-            MessageDigest md = MessageDigest.getInstance("SHA-512");
+            MessageDigest md = MessageDigest.getInstance("MD5");
             return md.digest(source);
         } catch (Exception e) {
             // 抛出去

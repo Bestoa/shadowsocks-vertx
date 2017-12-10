@@ -25,7 +25,7 @@ The **iv.length** is not compatible with the origin shadowsocks !
 
 Supported encrypt method:
 
-    aes-256-cfb, chacha20, rc4
+    aes-256-cfb, chacha20, rc4-md5
 
 
 Support JSON config file. Please refer to https://github.com/shadowsocks/shadowsocks/wiki/Configuration-via-Config-File.

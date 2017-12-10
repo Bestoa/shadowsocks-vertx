@@ -84,23 +84,6 @@ public class ClientHandler implements Handler<Buffer> {
         return mBufferQueue;
     }
 
-    /*
-     *  Sock5 client side work flow.
-     *
-     *  Receive method list
-     *  Reply 05 00
-     *  Receive address + port
-     *  Reply
-     *        05 00 00 01 + ip 0.0.0.0 + port 0x01 (fake)
-     *
-     *  Send to remote
-     *  addr type: 1 byte| addr | port: 2 bytes with big endian
-     *
-     *  addr type 0x1: addr = ipv4 | 4 bytes
-     *  addr type 0x3: addr = host address byte array | 1 byte(array length) + byte array
-     *  addr type 0x4: addr = ipv6 | 19 bytes
-     *
-     */
 
     private boolean handleStageHello() {
         int bufferLength = mBufferQueue.length();

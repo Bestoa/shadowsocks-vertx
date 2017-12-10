@@ -28,6 +28,7 @@ public class GlobalConfig{
     private AtomicInteger mLocalPort;
     private AtomicInteger mTimeout; /* UNIT second */
     private AtomicBoolean mIsServerMode;
+    private AtomicInteger mIvLen;// IV 长度
 
     final private static String DEFAULT_METHOD = "aes-256-cfb";
     final private static String DEFAULT_PASSWORD = "123456";
@@ -35,6 +36,7 @@ public class GlobalConfig{
     final private static int DEFAULT_PORT = 8388;
     final private static int DEFAULT_LOCAL_PORT = 9999;
     final private static int DEFAULT_TIMEOUT = 300;
+    final private static int DEFAULT_IV_LEN = 16;
 
     final static String SERVER_MODE = "server_mode";
     final static String SERVER_ADDR = "server";
@@ -43,6 +45,7 @@ public class GlobalConfig{
     final static String METHOD = "method";
     final static String PASSWORD = "password";
     final static String TIMEOUT = "timeout";
+    final static String IV_LEN = "iv_len";
 
     //Lock
     public void getLock() {
@@ -116,6 +119,15 @@ public class GlobalConfig{
         return mConfigFile.get();
     }
 
+    // iv len
+    public void setIvLen (int i) {
+        mIvLen.set(i);
+    }
+
+    public int getIvLen(){
+        return mIvLen.get();
+    }
+
     public synchronized static GlobalConfig get()
     {
         if (mConfig == null)
@@ -135,6 +147,7 @@ public class GlobalConfig{
         mIsServerMode = new AtomicBoolean(false);
         mConfigFile = new AtomicReference<>();
         mTimeout = new AtomicInteger(DEFAULT_TIMEOUT);
+        mIvLen = new AtomicInteger(DEFAULT_IV_LEN);
     }
 
     public void printConfig(){
@@ -142,6 +155,7 @@ public class GlobalConfig{
         log.info("Mode [" + (isServerMode()?"Server":"Local") + "]");
         log.info("Crypto method [" + getMethod() + "]");
         log.info("Password [" + getPassword() + "]");
+        log.info("Iv len [" + getIvLen() + "]");
         if (isServerMode()) {
             log.info("Bind port [" + getPort() + "]");
         }else{
@@ -209,6 +223,12 @@ public class GlobalConfig{
             log.debug("CFG:Running on server mode: " + isServer);
             GlobalConfig.get().setServerMode(isServer);
         }
+
+        if (jsonobj.containsKey(IV_LEN)) {
+            Integer ivLen = jsonobj.getInteger(IV_LEN);
+            log.debug("CFG:IV len : " + ivLen);
+            GlobalConfig.get().setIvLen(ivLen);
+        }
     }
 
     public static LocalConfig createLocalConfig() {
@@ -219,7 +239,8 @@ public class GlobalConfig{
                 GlobalConfig.get().getServer(),
                 GlobalConfig.get().getPort(),
                 GlobalConfig.get().getLocalPort(),
-                GlobalConfig.get().getTimeout()
+                GlobalConfig.get().getTimeout(),
+                GlobalConfig.get().getIvLen()
                 );
         GlobalConfig.get().releaseLock();
         return lc;

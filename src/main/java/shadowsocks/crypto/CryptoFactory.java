@@ -9,8 +9,8 @@ public class CryptoFactory{
             return new AESCrypto(name, password);
         }else if (cipherName.equals("chacha20")) {
             return new Chacha20Crypto(name, password);
-        } else if (cipherName.equals("rc4")) {
-            return new MyCrypto("rc4",password);
+        } else if (cipherName.equals("rc4-md5")) {
+            return new MyCrypto("rc4-md5",password);
         } else{
             throw new CryptoException("Unsupport method: " + name);
         }

@@ -6,12 +6,13 @@ import org.bouncycastle.crypto.engines.AESEngine;
 import org.bouncycastle.crypto.modes.CFBBlockCipher;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.ParametersWithIV;
+import shadowsocks.util.GlobalConfig;
 
 import java.io.ByteArrayOutputStream;
 
 public class AESCrypto extends BaseCrypto {
 
-    private final static int IV_LENGTH = 19;
+    private final static int IV_LENGTH = GlobalConfig.get().getIvLen();
 
     private final static int LEN = 16;
 
@@ -31,7 +32,7 @@ public class AESCrypto extends BaseCrypto {
         return KEY_LENGTH;
     }
 
-    protected StreamBlockCipher getCipher(boolean isEncrypted) throws CryptoException
+    protected StreamBlockCipher getCipher() throws CryptoException
     {
         AESEngine engine = new AESEngine();
         return new CFBBlockCipher(engine, LEN * 8);
@@ -40,8 +41,8 @@ public class AESCrypto extends BaseCrypto {
     @Override
     protected StreamCipher createCipher(byte[] iv, boolean encrypt) throws CryptoException
     {
-        StreamBlockCipher c = getCipher(encrypt);
-        ParametersWithIV parameterIV = new ParametersWithIV(new KeyParameter(mKey), iv, 1, LEN);
+        StreamBlockCipher c = getCipher();
+        ParametersWithIV parameterIV = new ParametersWithIV(new KeyParameter(mKey), iv, 0, LEN);
         c.init(encrypt, parameterIV);
         return c;
     }

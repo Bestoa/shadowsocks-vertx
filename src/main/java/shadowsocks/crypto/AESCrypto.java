@@ -43,11 +43,7 @@ public class AESCrypto extends BaseCrypto {
     {
         StreamBlockCipher c = getCipher();
 
-        if (IV_LENGTH != LEN) {// 自定义 IV LEN
-            iv = Utils.md5(iv);
-        }
-
-        ParametersWithIV parameterIV = new ParametersWithIV(new KeyParameter(mKey), iv, 0, LEN);
+        ParametersWithIV parameterIV = new ParametersWithIV(new KeyParameter(mKey), iv, 0, IV_LENGTH);
         c.init(encrypt, parameterIV);
         return c;
     }

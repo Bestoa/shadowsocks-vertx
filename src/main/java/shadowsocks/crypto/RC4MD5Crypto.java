@@ -31,9 +31,9 @@ public class RC4MD5Crypto extends BaseCrypto {
     protected StreamCipher createCipher(byte[] iv, boolean encrypt) throws CryptoException
     {
         StreamCipher c = new RC4Engine();
-        byte[] data = new byte[mKeyLength + mIVLength];
-        System.arraycopy(mKey,0,data,0,mKeyLength);
-        System.arraycopy(iv,0,data,mKeyLength,mIVLength);
+        byte[] data = new byte[KEY_LENGTH + IV_LENGTH];
+        System.arraycopy(mKey,0,data,0,KEY_LENGTH);
+        System.arraycopy(iv,0,data,KEY_LENGTH,IV_LENGTH);
 
         byte[] hash = Utils.md5(data);
 

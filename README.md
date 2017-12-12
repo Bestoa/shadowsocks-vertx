@@ -33,7 +33,7 @@ Note:
     2. Not support: fast_open. Java doesn't have such feature.
     3. Not support: workers. Vertx will set work thread number automatically.
     4. Additional: server_mode, set the running mode, true for the server, false for the client.
-    5. Additional: iv_len, set the iv length. This is my feature!
+    5. Additional: iv_len, set the iv length.
 
 You could refer to demo config etc/demo.json.
 

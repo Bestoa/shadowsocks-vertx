@@ -21,6 +21,8 @@ About vert.x, please refer to http://vertx.io/
 
 #Features
 
+Not support ipv6.
+
 Supported encrypt method:
 
     aes-256-cfb, chacha20, rc4-md5

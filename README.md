@@ -11,8 +11,6 @@ shadowsocks-vertx is a lightweight tunnel proxy which can help you get through f
 
 Java 8 is needed.
 
-Current version 0.8.3.
-
 It is **unstable**! If you encounter any problems, please open an issue.
 
 About shadowsocks, please refer to https://shadowsocks.org/

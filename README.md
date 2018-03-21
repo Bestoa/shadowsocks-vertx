@@ -19,7 +19,7 @@ About vert.x, please refer to http://vertx.io/
 
 #Features
 
-Not support ipv6.
+Not support ipv6. Not support udp.
 
 Supported encrypt method:
 

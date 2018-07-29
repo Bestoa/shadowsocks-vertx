@@ -39,6 +39,8 @@ You could refer to demo config etc/demo.json.
 
 It is recommended to use TCP-BBR !
 
+vi /etc/rc.d/rc.local , add it to auto start !
+
 How to run:
 ===========
 
@@ -57,4 +59,4 @@ $ java -jar shadowsocks-fat-ver.jar configFile
 
 ### (3) web browser
 
-Chrome + SwitchyOmega.
+Chrome + SwitchyOmega .

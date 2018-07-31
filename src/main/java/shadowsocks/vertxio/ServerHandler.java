@@ -13,6 +13,7 @@ import shadowsocks.crypto.CryptoFactory;
 import shadowsocks.crypto.SSCrypto;
 import shadowsocks.util.LocalConfig;
 
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -109,6 +110,13 @@ public class ServerHandler implements Handler<Buffer> {
             if (bufferLength < hostLength + 4)
                 return false;
             addr = mBufferQueue.getString(2, hostLength + 2);
+
+            // 域名转IP
+            addr = getIp(addr);
+            if (addr == null) {// DNS 解析不到 ipv4 地址
+                return true;
+            }
+
             current = hostLength + 2;
         }else {
             log.warn("Unsupport addr type " + addrType);
@@ -126,7 +134,7 @@ public class ServerHandler implements Handler<Buffer> {
 
     private void connectToRemote(String addr, int port) {
         // 5s timeout.
-        NetClientOptions options = new NetClientOptions().setConnectTimeout(5000);
+        NetClientOptions options = new NetClientOptions().setConnectTimeout(5000).setTcpKeepAlive(true);
         NetClient client = mVertx.createNetClient(options);
         client.connect(port, addr, res -> {  // connect handler
             if (!res.succeeded()) {
@@ -212,5 +220,29 @@ public class ServerHandler implements Handler<Buffer> {
         if (finish) {
             destory();
         }
+    }
+
+    /**
+     * 获得 ipv4 地址
+     */
+    private String getIp(String domainName) {
+        InetAddress[] ipArr;
+        try {
+            // 获得域名的所有IP
+            ipArr = InetAddress.getAllByName(domainName);
+        } catch (UnknownHostException e) {
+            log.error("UnknownHostException: " + domainName);
+            return null;
+        }
+
+        for (InetAddress ip:ipArr) {
+            if (ip instanceof Inet4Address) {// 仅支持 IPV4
+                return ip.getHostAddress();
+            }
+        }
+
+        // 没有 IPV4 地址
+        log.error("no ipv4 : " + domainName);
+        return null;
     }
 }

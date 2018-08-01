@@ -35,7 +35,16 @@ Note:
     4. Additional: server_mode, set the running mode, true for the server, false for the client.
     5. Additional: iv_len, set the iv length.
 
-You could refer to demo config etc/config.json.  
+You could refer to demo config etc/config.json. 
+
+
+Edit /etc/sysctl.conf ,then ```sysctl -p``` .  
+Recommended as follows:
+
+    net.ipv4.tcp_keepalive_time = 600  (default 7200)  
+    net.ipv4.tcp_keepalive_intvl = 20  (default 75)  
+    net.ipv4.tcp_keepalive_probes = 4  (default 9)
+ 
 
 It is recommended to use TCP-BBR !
 

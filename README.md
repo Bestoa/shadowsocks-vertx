@@ -35,7 +35,7 @@ Note:
     4. Additional: server_mode, set the running mode, true for the server, false for the client.
     5. Additional: iv_len, set the iv length.
 
-You could refer to demo config etc/demo.json.  
+You could refer to demo config etc/config.json.  
 
 It is recommended to use TCP-BBR !
 
@@ -54,7 +54,7 @@ Then you will get **shadowsocks-fat-ver.jar** in build/libs.
 
 ### (2) run both server and client
 ```
-$ java -jar shadowsocks-fat-ver.jar configFile
+$ java -jar shadowsocks-fat-ver.jar config.json
 ```
 
 ### (3) web browser

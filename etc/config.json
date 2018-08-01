@@ -1,0 +1,10 @@
+{
+  "server":"my_server_ip",// 服务器的IP
+  "server_mode":false,// 服务器为true，客户端为false
+  "server_port":8388,// 服务器监听端口
+  "local_port":1080,// 客户端监听端口
+  "password":"mypassword",// 密码，建议设置复杂密码
+  "timeout":3000,// 访问超时时间，单位毫秒。建议 1000-5000
+  "iv_len":17, // IV长度，建议在 3-128 之间。不要是8的倍数！
+  "method":"rc4-md5" // 加密算法，仅支持三种：aes-256-cfb, chacha20, rc4-md5
+}

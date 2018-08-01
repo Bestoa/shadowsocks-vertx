@@ -26,17 +26,17 @@ public class GlobalConfig{
     private AtomicReference<String> mConfigFile;
     private AtomicInteger mPort;
     private AtomicInteger mLocalPort;
-    private AtomicInteger mTimeout; /* UNIT second */
+    private AtomicInteger mTimeout; /* 单位毫秒 */
     private AtomicBoolean mIsServerMode;
     private AtomicInteger mIvLen;// IV 长度
 
-    final private static String DEFAULT_METHOD = "aes-256-cfb";
-    final private static String DEFAULT_PASSWORD = "123456";
+    final private static String DEFAULT_METHOD = "rc4-md5";// 效率最高
+    final private static String DEFAULT_PASSWORD = "zxcvbnm";
     final private static String DEFAULT_SERVER = "127.0.0.1";
     final private static int DEFAULT_PORT = 8388;
     final private static int DEFAULT_LOCAL_PORT = 9999;
-    final private static int DEFAULT_TIMEOUT = 300;
-    final private static int DEFAULT_IV_LEN = 16;
+    final private static int DEFAULT_TIMEOUT = 2000;
+    final private static int DEFAULT_IV_LEN = 16;// 默认16，兼容原生ss的rc4-md5
 
     final static String SERVER_MODE = "server_mode";
     final static String SERVER_ADDR = "server";

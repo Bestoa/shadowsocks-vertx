@@ -35,7 +35,7 @@ Note:
     4. Additional: server_mode, set the running mode, true for the server, false for the client.
     5. Additional: iv_len, set the iv length.
 
-You could refer to demo config etc/config.json. 
+You could refer to etc/config.json. 
 
 
 Edit /etc/sysctl.conf ,then ```sysctl -p``` .  

@@ -42,8 +42,14 @@ public class AESCrypto extends BaseCrypto {
     protected StreamCipher createCipher(byte[] iv, boolean encrypt) throws CryptoException
     {
         StreamBlockCipher c = getCipher();
+        byte[] newIv;
+        if (IV_LENGTH==LEN) {// 兼容原生
+            newIv = iv;
+        } else {// 做 md5
+            newIv = Utils.md5(iv);
+        }
 
-        ParametersWithIV parameterIV = new ParametersWithIV(new KeyParameter(mKey), iv);
+        ParametersWithIV parameterIV = new ParametersWithIV(new KeyParameter(mKey), newIv);
         c.init(encrypt, parameterIV);
         return c;
     }

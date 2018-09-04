@@ -34,7 +34,7 @@ public class GlobalConfig{
     final private static String DEFAULT_PASSWORD = "zxcvbnm";
     final private static String DEFAULT_SERVER = "127.0.0.1";
     final private static int DEFAULT_PORT = 8388;
-    final private static int DEFAULT_LOCAL_PORT = 9999;
+    final private static int DEFAULT_LOCAL_PORT = 1080;
     final private static int DEFAULT_TIMEOUT = 2000;
     final private static int DEFAULT_IV_LEN = 16;// 默认16，兼容原生ss的rc4-md5
 

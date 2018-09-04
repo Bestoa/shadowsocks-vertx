@@ -91,11 +91,11 @@ public abstract class BaseCrypto implements SSCrypto
         byte[] data;
         mData.reset();
         if (mDecryptCipher == null) {
-            mDecryptCipher = createCipher(in, false);
             mDecryptIV = new byte[mIVLength];
             data = new byte[in.length - mIVLength];
             System.arraycopy(in, 0, mDecryptIV, 0, mIVLength);
             System.arraycopy(in, mIVLength, data, 0, in.length - mIVLength);
+            mDecryptCipher = createCipher(mDecryptIV, false);
         } else {
             data = in;
         }

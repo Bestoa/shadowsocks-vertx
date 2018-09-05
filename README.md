@@ -38,6 +38,16 @@ Note:
 You could refer to etc/config.json. 
 
 
+The original iv_len for algorithms:
+
+    aes-256-cfb    : 16
+    chacha20       : 8
+    rc4-md5        : 16
+
+You can customize iv_len. 
+If the iv_len is equal to the original length of the algorithm, it will be compatible with the official Shadowsocks. 
+**But it is not recommended !**
+
 Edit /etc/sysctl.conf ,then ```sysctl -p``` .  
 Recommended as follows:
 

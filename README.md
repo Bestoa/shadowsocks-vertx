@@ -3,7 +3,8 @@ shadowsocks-vertx
 
 [![License](http://img.shields.io/:license-apache-blue.svg?style=flat-square)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
-#Intro
+Intro
+===========
 
 shadowsocks-vertx is a socks5 proxy which can help you get through firewalls. It is a java port of shadowsocks. This project is based on vert.x.
 
@@ -17,7 +18,8 @@ About shadowsocks, please refer to https://shadowsocks.org/
 
 About vert.x, please refer to http://vertx.io/
 
-#Features
+Features
+===========
 
 Not support ipv6.
 
@@ -37,6 +39,9 @@ The original iv_len for them:
 
 If the iv_len is equal to the original length of the algorithm, it will be compatible with the official shadowsocks.
 But it is not recommended ! **You can customize iv_len !**
+
+Linux Server Settings
+===========
 
 Edit /etc/sysctl.conf ,then ```sysctl -p``` .  
 Recommended as follows:

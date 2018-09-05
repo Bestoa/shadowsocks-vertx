@@ -19,34 +19,24 @@ About vert.x, please refer to http://vertx.io/
 
 #Features
 
-Not support ipv6. Not support udp.
+Not support ipv6.
+
+Not support udp.
+
+Support JSON config file, refer to etc/config.json. 
 
 Supported encrypt method:
 
     aes-256-cfb, chacha20, rc4-md5
 
-
-Support JSON config file. Please refer to https://github.com/shadowsocks/shadowsocks/wiki/Configuration-via-Config-File.
-Note:
-
-    1. Not support: local_address, client will bind 0.0.0.0 not 127.0.0.1
-    2. Not support: fast_open. Java doesn't have such feature.
-    3. Not support: workers. Vertx will set work thread number automatically.
-    4. Additional: server_mode, set the running mode, true for the server, false for the client.
-    5. Additional: iv_len, set the iv length.
-
-You could refer to etc/config.json. 
-
-
-The original iv_len for algorithms:
+The original iv_len for them:
 
     aes-256-cfb    : 16
     chacha20       : 8
     rc4-md5        : 16
 
-You can customize iv_len. 
-If the iv_len is equal to the original length of the algorithm, it will be compatible with the official Shadowsocks. 
-**But it is not recommended !**
+If the iv_len is equal to the original length of the algorithm, it will be compatible with the official shadowsocks.
+But it is not recommended ! **You can customize iv_len !**
 
 Edit /etc/sysctl.conf ,then ```sysctl -p``` .  
 Recommended as follows:

@@ -6,13 +6,7 @@ shadowsocks-vertx
 Intro
 ===========
 
-shadowsocks-vertx is a socks5 proxy which can help you get through firewalls. It is a java port of shadowsocks. This project is based on vert.x.
-
-Java 8 is needed.  
-
-Gradle is needed.  
-
-It is **unstable**! If you encounter any problems, please open an issue.
+Shadowsocks-vertx is a socks5 proxy which can help you get through firewalls. It is a java port of shadowsocks. This project is based on vert.x.
 
 About shadowsocks, please refer to https://shadowsocks.org/
 
@@ -40,7 +34,7 @@ The original iv_len for them:
 If the iv_len is equal to the original length of the algorithm, it will be compatible with the official shadowsocks.
 But it is not recommended ! **You can customize iv_len !**
 
-Linux Server Settings
+Linux settings
 ===========
 
 Edit /etc/sysctl.conf ,then ```sysctl -p``` .  
@@ -53,12 +47,14 @@ Recommended as follows:
 
 It is recommended to use TCP-BBR !
 
-vi /etc/rc.d/rc.local , add it to auto start !
+vi /etc/rc.d/rc.local to auto start it !
 
 How to run:
 ===========
 
-### (1) generate fat jar
+### (1) install java8 and gradle
+
+### (2) generate fat jar
 ```
 $ gradle clean build fatJar
 ```
@@ -66,11 +62,11 @@ $ gradle clean build fatJar
 
 Then you will get **shadowsocks-fat-ver.jar** in build/libs.
 
-### (2) run both server and client
+### (3) run both server and client
 ```
 $ java -jar shadowsocks-fat-ver.jar config.json
 ```
 
-### (3) web browser
+### (4) web browser
 
 Chrome + SwitchyOmega .

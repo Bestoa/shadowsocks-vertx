@@ -34,8 +34,34 @@ The original iv_len for them:
 If the iv_len is equal to the original length of the algorithm, it will be compatible with the official shadowsocks.
 But it is not recommended ! **You can customize iv_len !**
 
+
+How to run
+===========
+
+### 1 Install java8 and gradle
+
+### 2 Generate fat jar
+```
+$ gradle clean build fatJar
+```
+
+Then you will get **shadowsocks-fat-ver.jar** in build/libs.
+
+### 3 Run both server and client
+```
+$ java -jar shadowsocks-fat-ver.jar config.json
+```
+
+### 4 Web browser
+
+Chrome + SwitchyOmega .
+
+
+
 Linux settings
 ===========
+
+### 1 Tcp_keepalive
 
 Edit /etc/sysctl.conf ,then ```sysctl -p``` .  
 Recommended as follows:
@@ -45,28 +71,8 @@ Recommended as follows:
     net.ipv4.tcp_keepalive_probes = 4  (default 9)
  
 
+### 2 Google BBR
 It is recommended to use TCP-BBR !
 
+### 3 Auto run
 vi /etc/rc.d/rc.local to auto start it !
-
-How to run:
-===========
-
-### (1) install java8 and gradle
-
-### (2) generate fat jar
-```
-$ gradle clean build fatJar
-```
-
-
-Then you will get **shadowsocks-fat-ver.jar** in build/libs.
-
-### (3) run both server and client
-```
-$ java -jar shadowsocks-fat-ver.jar config.json
-```
-
-### (4) web browser
-
-Chrome + SwitchyOmega .

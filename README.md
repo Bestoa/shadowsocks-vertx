@@ -74,5 +74,5 @@ Recommended as follows:
 ### 2 Google BBR
 It is recommended to use TCP-BBR !
 
-### 3 Auto run
+### 3 Auto start
 vi /etc/rc.d/rc.local to auto start it !

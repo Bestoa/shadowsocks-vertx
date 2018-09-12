@@ -25,11 +25,6 @@ Supported encrypt method:
 
     aes-256-cfb, chacha20, rc4-md5
 
-The original iv length for them:
-
-    aes-256-cfb    : 16
-    chacha20       : 8
-    rc4-md5        : 16
 
 **You can customize iv_len !**
 

@@ -10,7 +10,7 @@ Shadowsocks-vertx is a socks5 proxy which can help you get through firewalls. It
 
 About shadowsocks, please refer to https://shadowsocks.org/
 
-About vert.x, please refer to http://vertx.io/
+About vert.x, please refer to https://vertx.io/
 
 Features
 ===========
@@ -25,20 +25,22 @@ Supported encrypt method:
 
     aes-256-cfb, chacha20, rc4-md5
 
-The original iv_len for them:
+The original iv length for them:
 
     aes-256-cfb    : 16
     chacha20       : 8
     rc4-md5        : 16
 
-If the iv_len is equal to the original length of the algorithm, it will be compatible with the official shadowsocks.
-But it is not recommended ! **You can customize iv_len !**
+If the iv_len in config.json is equal to the original iv length of the algorithm, it will be compatible with the official shadowsocks.
+But it is not recommended ! 
+
+**You can customize iv_len !**
 
 
 How to run
 ===========
 
-### 1 Install java8 and gradle
+### 1 Install jdk8 and gradle
 
 ### 2 Generate fat jar
 ```

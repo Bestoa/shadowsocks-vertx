@@ -31,9 +31,6 @@ The original iv length for them:
     chacha20       : 8
     rc4-md5        : 16
 
-If the iv_len in config.json is equal to the original iv length of the algorithm, it will be compatible with the official shadowsocks.
-But it is not recommended ! 
-
 **You can customize iv_len !**
 
 

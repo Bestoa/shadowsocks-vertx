@@ -11,11 +11,9 @@ public class Main{
 
     private static Logger log = LogManager.getLogger(Main.class.getName());
 
-    public static final String VERSION = "0.8.4";
-
     public static void main(String argv[])
     {
-        log.info("Shadowsocks " + VERSION);
+        log.info("Shadowsocks start ...");
 
         if (argv.length != 1) {
             throw new RuntimeException("argvError ! ");

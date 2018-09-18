@@ -112,12 +112,6 @@ public class ServerHandler implements Handler<Buffer> {
                 return false;
             addr = mBufferQueue.getString(2, hostLength + 2);
 
-            // 域名转IP
-            addr = getIp(addr);
-            if (addr == null) {// DNS 解析不到 ip
-                return true;
-            }
-
             current = hostLength + 2;
         }else {
             log.warn("Unsupport addr type " + addrType);

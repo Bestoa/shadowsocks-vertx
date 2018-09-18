@@ -217,39 +217,5 @@ public class ServerHandler implements Handler<Buffer> {
         }
     }
 
-    /**
-     * 获得 ipv4 或 ipv6 地址
-     * ipv4 优先！
-     */
-    private String getIp(String domainName) {
-        InetAddress[] ipArr;
-        try {
-            // 获得域名的所有IP
-            ipArr = InetAddress.getAllByName(domainName);
-        } catch (UnknownHostException e) {
-            log.error("UnknownHostException: " + domainName);
-            return null;
-        }
 
-        for (InetAddress ip:ipArr) {
-            if (ip instanceof Inet4Address) {// ipv4
-                return ip.getHostAddress();
-            }
-        }
-
-        // 没有 ipv4 地址
-        log.warn("no ipv4 : " + domainName);
-
-
-        for (InetAddress ip:ipArr) {
-            if (ip instanceof Inet6Address) {// ipv6
-                return ip.getHostAddress();
-            }
-        }
-
-        // 没有 ipv6 地址
-        log.warn("no ipv6 : " + domainName);
-
-        return null;
-    }
 }

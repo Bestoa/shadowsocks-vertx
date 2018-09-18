@@ -31,7 +31,7 @@ public class ShadowsocksVertx {
         mNetServer = mVertx.createNetServer(new NetServerOptions().setTcpKeepAlive(true)).connectHandler(sock -> {
             Handler<Buffer> dataHandler = mIsServer ? new ServerHandler(mVertx, sock, config) : new ClientHandler(mVertx, sock, config);
             sock.handler(dataHandler);
-        }).listen(port, "0.0.0.0", res -> {
+        }).listen(port, "::", res -> {
             if (res.succeeded()) {
                 log.info("Listening at " + port);
             }else{

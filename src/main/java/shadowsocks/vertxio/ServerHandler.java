@@ -14,6 +14,7 @@ import shadowsocks.crypto.SSCrypto;
 import shadowsocks.util.LocalConfig;
 
 import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -113,7 +114,7 @@ public class ServerHandler implements Handler<Buffer> {
 
             // 域名转IP
             addr = getIp(addr);
-            if (addr == null) {// DNS 解析不到 ipv4 地址
+            if (addr == null) {// DNS 解析不到 ip
                 return true;
             }
 
@@ -223,7 +224,8 @@ public class ServerHandler implements Handler<Buffer> {
     }
 
     /**
-     * 获得 ipv4 地址
+     * 获得 ipv4 或 ipv6 地址
+     * ipv4 优先！
      */
     private String getIp(String domainName) {
         InetAddress[] ipArr;
@@ -236,13 +238,24 @@ public class ServerHandler implements Handler<Buffer> {
         }
 
         for (InetAddress ip:ipArr) {
-            if (ip instanceof Inet4Address) {// 仅支持 IPV4
+            if (ip instanceof Inet4Address) {// ipv4
                 return ip.getHostAddress();
             }
         }
 
-        // 没有 IPV4 地址
-        log.error("no ipv4 : " + domainName);
+        // 没有 ipv4 地址
+        log.warn("no ipv4 : " + domainName);
+
+
+        for (InetAddress ip:ipArr) {
+            if (ip instanceof Inet6Address) {// ipv6
+                return ip.getHostAddress();
+            }
+        }
+
+        // 没有 ipv6 地址
+        log.warn("no ipv6 : " + domainName);
+
         return null;
     }
 }

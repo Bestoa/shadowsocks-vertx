@@ -15,10 +15,6 @@ public class Main{
 
     public static void main(String argv[])
     {
-        // IPV4 优先
-        System.setProperty("java.net.preferIPv4Stack", "true");
-        System.setProperty("java.net.preferIPv6Addresses", "false");
-
         log.info("Shadowsocks " + VERSION);
 
         if (argv.length != 1) {

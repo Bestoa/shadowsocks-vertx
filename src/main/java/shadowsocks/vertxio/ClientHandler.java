@@ -143,7 +143,7 @@ public class ClientHandler implements Handler<Buffer> {
             if (bufferLength < 7)
                 return false;
             try{
-                addr = InetAddress.getByAddress(mBufferQueue.getBytes(1, 5)).toString();
+                addr = InetAddress.getByAddress(mBufferQueue.getBytes(1, 5)).getHostAddress();
             }catch(UnknownHostException e){
                 log.error("UnknownHostException.", e);
                 return true;
@@ -155,7 +155,7 @@ public class ClientHandler implements Handler<Buffer> {
             if (bufferLength < 19)
                 return false;
             try{
-                addr = InetAddress.getByAddress(mBufferQueue.getBytes(1, 17)).toString();
+                addr = InetAddress.getByAddress(mBufferQueue.getBytes(1, 17)).getHostAddress();
             }catch(UnknownHostException e){
                 log.error("UnknownHostException.", e);
                 return true;

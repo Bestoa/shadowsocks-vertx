@@ -24,6 +24,7 @@ public class ServerHandler implements Handler<Buffer> {
 
     private final static int ADDR_TYPE_IPV4 = 1;
     private final static int ADDR_TYPE_HOST = 3;
+    private final static int ADDR_TYPE_IPV6 = 4;
 
 
     private Vertx mVertx;
@@ -105,7 +106,22 @@ public class ServerHandler implements Handler<Buffer> {
                 return true;
             }
             current = 5;
-        }else if (addrType == ADDR_TYPE_HOST) {
+        } else if (addrType == ADDR_TYPE_IPV6){
+            // addrType(1) + ipv6(16) + port(2)
+            if (bufferLength < 19)
+                return false;
+            try{
+                //remote the "/"
+                addr = InetAddress.getByAddress(mBufferQueue.getBytes(1, 17)).toString().substring(1);
+            }catch(UnknownHostException e){
+                log.error("UnknownHostException.", e);
+                return true;
+            }
+            current = 17;
+        }
+
+
+        else if (addrType == ADDR_TYPE_HOST) {
             short hostLength = mBufferQueue.getUnsignedByte(1);
             // addrType(1) + len(1) + host + port(2)
             if (bufferLength < hostLength + 4)

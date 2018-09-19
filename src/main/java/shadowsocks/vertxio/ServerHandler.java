@@ -118,10 +118,7 @@ public class ServerHandler implements Handler<Buffer> {
                 return true;
             }
             current = 17;
-        }
-
-
-        else if (addrType == ADDR_TYPE_HOST) {
+        } else if (addrType == ADDR_TYPE_HOST) {
             short hostLength = mBufferQueue.getUnsignedByte(1);
             // addrType(1) + len(1) + host + port(2)
             if (bufferLength < hostLength + 4)

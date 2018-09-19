@@ -20,9 +20,13 @@ public class ShadowsocksVertx {
     private boolean mIsServer;
     private NetServer mNetServer;
 
+    private String localhost;
+
     public ShadowsocksVertx(boolean isServer) {
         mVertx = Vertx.vertx();
         mIsServer = isServer;
+        boolean preferIPv4Stack = Boolean.parseBoolean(System.getProperty("java.net.preferIPv4Stack"));
+        localhost = preferIPv4Stack ? "0.0.0.0" : "::";
     }
 
     public void start() {
@@ -31,7 +35,7 @@ public class ShadowsocksVertx {
         mNetServer = mVertx.createNetServer(new NetServerOptions().setTcpKeepAlive(true)).connectHandler(sock -> {
             Handler<Buffer> dataHandler = mIsServer ? new ServerHandler(mVertx, sock, config) : new ClientHandler(mVertx, sock, config);
             sock.handler(dataHandler);
-        }).listen(port, "::", res -> {
+        }).listen(port, localhost, res -> {
             if (res.succeeded()) {
                 log.info("Listening at " + port);
             }else{

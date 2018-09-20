@@ -96,6 +96,7 @@ public class ServerHandler implements Handler<Buffer> {
                 return false;
             try{
                 addr = InetAddress.getByAddress(mBufferQueue.getBytes(1, 5)).getHostAddress();
+                log.info("ipv4 : " + addr);
             }catch(UnknownHostException e){
                 log.error("UnknownHostException.", e);
                 return true;
@@ -107,6 +108,7 @@ public class ServerHandler implements Handler<Buffer> {
                 return false;
             try{
                 addr = InetAddress.getByAddress(mBufferQueue.getBytes(1, 17)).getHostAddress();
+                log.info("ipv6 : " + addr);
             }catch(UnknownHostException e){
                 log.error("UnknownHostException.", e);
                 return true;
@@ -118,7 +120,7 @@ public class ServerHandler implements Handler<Buffer> {
             if (bufferLength < hostLength + 4)
                 return false;
             addr = mBufferQueue.getString(2, hostLength + 2);
-
+            log.info("hostname : " + addr);
             current = hostLength + 2;
         }else {
             log.warn("Unsupport addr type " + addrType);

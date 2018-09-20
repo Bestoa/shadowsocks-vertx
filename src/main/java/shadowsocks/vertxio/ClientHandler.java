@@ -142,6 +142,7 @@ public class ClientHandler implements Handler<Buffer> {
                 return false;
             try{
                 addr = InetAddress.getByAddress(mBufferQueue.getBytes(1, 5)).getHostAddress();
+                log.info("ipv4 : " + addr);
             }catch(UnknownHostException e){
                 log.error("UnknownHostException.", e);
                 return true;
@@ -154,6 +155,7 @@ public class ClientHandler implements Handler<Buffer> {
                 return false;
             try{
                 addr = InetAddress.getByAddress(mBufferQueue.getBytes(1, 17)).getHostAddress();
+                log.info("ipv6 : " + addr);
             }catch(UnknownHostException e){
                 log.error("UnknownHostException.", e);
                 return true;
@@ -166,6 +168,7 @@ public class ClientHandler implements Handler<Buffer> {
             if (bufferLength < hostLength + 4)
                 return false;
             addr = mBufferQueue.getString(2, hostLength + 2);
+            log.info("hostname : " + addr);
             remoteHeader.appendByte((byte)hostLength).appendString(addr);
             compactBuffer(hostLength + 2);
         }else {

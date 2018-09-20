@@ -3,13 +3,13 @@ package shadowsocks;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javax.net.ssl.HttpsURLConnection;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.URL;
-import java.util.Arrays;
 
 /**
  * 本地测试
@@ -19,6 +19,10 @@ public class TEST {
     private static Logger log = LogManager.getLogger(TEST.class);
 
     public static void main(String[] args) {
+
+        // 绕过 HTTPS 证书
+        HttpsURLConnection.setDefaultHostnameVerifier((urlHostName, session) -> true);
+
         testSimpleHttp();
     }
 

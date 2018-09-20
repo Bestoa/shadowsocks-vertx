@@ -15,7 +15,7 @@ About vert.x, please refer to https://vertx.io/
 Features
 ===========
 
-Not support ipv6.
+Support ipv6.
 
 Not support udp.
 

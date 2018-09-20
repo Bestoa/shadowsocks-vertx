@@ -30,7 +30,10 @@ public class TEST {
 
     private static void testSimpleHttp() {
 
-        Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("127.0.0.1", GlobalConfig.get().getLocalPort()));
+        boolean preferIPv4Stack = Boolean.parseBoolean(System.getProperty("java.net.preferIPv4Stack"));
+        String localhost = preferIPv4Stack ? "0.0.0.0" : "::";
+
+        Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress(localhost, GlobalConfig.get().getLocalPort()));
         HttpURLConnection proxyConnection = null;// 代理连接
         HttpURLConnection directConnection = null;// 直接连接
         try{

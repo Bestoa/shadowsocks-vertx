@@ -33,7 +33,7 @@ public class TEST {
         boolean preferIPv4Stack = Boolean.parseBoolean(System.getProperty("java.net.preferIPv4Stack"));
         String localhost = preferIPv4Stack ? "0.0.0.0" : "::";
 
-        Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress("2001:19f0:8001:8c9:5400:1ff:feaf:b51d", GlobalConfig.get().getLocalPort()));
+        Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress(localhost, GlobalConfig.get().getLocalPort()));
         HttpURLConnection proxyConnection = null;// 代理连接
         HttpURLConnection directConnection = null;// 直接连接
         try{

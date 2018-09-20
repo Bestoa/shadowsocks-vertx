@@ -5,8 +5,6 @@ import org.apache.logging.log4j.Logger;
 
 import shadowsocks.crypto.CryptoFactory;
 
-import shadowsocks.util.GlobalConfig;
-
 public class Main{
 
     private static Logger log = LogManager.getLogger(Main.class.getName());

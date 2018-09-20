@@ -5,7 +5,7 @@ import org.bouncycastle.crypto.StreamCipher;
 import org.bouncycastle.crypto.engines.ChaChaEngine;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.ParametersWithIV;
-import shadowsocks.util.GlobalConfig;
+import shadowsocks.GlobalConfig;
 
 import java.io.ByteArrayOutputStream;
 

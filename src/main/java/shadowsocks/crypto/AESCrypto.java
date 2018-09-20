@@ -6,7 +6,7 @@ import org.bouncycastle.crypto.engines.AESEngine;
 import org.bouncycastle.crypto.modes.CFBBlockCipher;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.ParametersWithIV;
-import shadowsocks.util.GlobalConfig;
+import shadowsocks.GlobalConfig;
 
 import java.io.ByteArrayOutputStream;
 

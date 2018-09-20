@@ -1,4 +1,4 @@
-package shadowsocks.util;
+package shadowsocks;
 
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
@@ -231,18 +231,4 @@ public class GlobalConfig{
         }
     }
 
-    public static LocalConfig createLocalConfig() {
-        LocalConfig lc;
-        GlobalConfig.get().getLock();
-        lc = new LocalConfig(GlobalConfig.get().getPassword(),
-                GlobalConfig.get().getMethod(),
-                GlobalConfig.get().getServer(),
-                GlobalConfig.get().getPort(),
-                GlobalConfig.get().getLocalPort(),
-                GlobalConfig.get().getTimeout(),
-                GlobalConfig.get().getIvLen()
-                );
-        GlobalConfig.get().releaseLock();
-        return lc;
-    }
 }

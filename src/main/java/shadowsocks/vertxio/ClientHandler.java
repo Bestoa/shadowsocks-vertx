@@ -8,10 +8,10 @@ import io.vertx.core.net.NetClientOptions;
 import io.vertx.core.net.NetSocket;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import shadowsocks.GlobalConfig;
 import shadowsocks.crypto.CryptoException;
 import shadowsocks.crypto.CryptoFactory;
 import shadowsocks.crypto.SSCrypto;
-import shadowsocks.util.LocalConfig;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -27,7 +27,6 @@ public class ClientHandler implements Handler<Buffer> {
     private Vertx mVertx;
     private NetSocket mLocalSocket;
     private NetSocket mServerSocket;
-    private LocalConfig mConfig;
     private int mCurrentStage;
     private Buffer mBufferQueue;
     private SSCrypto mCrypto;
@@ -61,15 +60,14 @@ public class ClientHandler implements Handler<Buffer> {
         });
     }
 
-    public ClientHandler(Vertx vertx, NetSocket socket, LocalConfig config) {
+    public ClientHandler(Vertx vertx, NetSocket socket) {
         mVertx = vertx;
         mLocalSocket = socket;
-        mConfig = config;
         mCurrentStage = Stage.HELLO;
         mBufferQueue = Buffer.buffer();
         setFinishHandler(mLocalSocket);
         try{
-            mCrypto = CryptoFactory.create(mConfig.method, mConfig.password);
+            mCrypto = CryptoFactory.create(GlobalConfig.get().getMethod(), GlobalConfig.get().getPassword());
         }catch(Exception e){
             //Will never happen, we check this before.
         }
@@ -178,14 +176,14 @@ public class ClientHandler implements Handler<Buffer> {
         remoteHeader.appendShort((short)port);
         compactBuffer(2);
         log.info("Connecting to " + addr + ":" + port);
-        connectToRemote(mConfig.server, mConfig.serverPort, remoteHeader);
+        connectToRemote(GlobalConfig.get().getServer(), GlobalConfig.get().getPort(), remoteHeader);
         nextStage();
         return false;
     }
 
     private void connectToRemote(String addr, int port, Buffer remoteHeader) {
 
-        NetClientOptions options = new NetClientOptions().setConnectTimeout(this.mConfig.timeout).setTcpKeepAlive(true);
+        NetClientOptions options = new NetClientOptions().setConnectTimeout(GlobalConfig.get().getTimeout()).setTcpKeepAlive(true);
         NetClient client = mVertx.createNetClient(options);
         client.connect(port, addr, res -> {  // connect handler
             if (!res.succeeded()) {

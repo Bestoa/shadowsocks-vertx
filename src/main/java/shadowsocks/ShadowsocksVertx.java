@@ -7,8 +7,6 @@ import io.vertx.core.net.NetServer;
 import io.vertx.core.net.NetServerOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import shadowsocks.util.GlobalConfig;
-import shadowsocks.util.LocalConfig;
 import shadowsocks.vertxio.ClientHandler;
 import shadowsocks.vertxio.ServerHandler;
 
@@ -30,10 +28,9 @@ public class ShadowsocksVertx {
     }
 
     public void start() {
-        LocalConfig config = GlobalConfig.createLocalConfig();
-        int port = mIsServer ? config.serverPort : config.localPort;
+        int port = mIsServer ? GlobalConfig.get().getPort() : GlobalConfig.get().getLocalPort();
         mNetServer = mVertx.createNetServer(new NetServerOptions().setTcpKeepAlive(true)).connectHandler(sock -> {
-            Handler<Buffer> dataHandler = mIsServer ? new ServerHandler(mVertx, sock, config) : new ClientHandler(mVertx, sock, config);
+            Handler<Buffer> dataHandler = mIsServer ? new ServerHandler(mVertx, sock) : new ClientHandler(mVertx, sock);
             sock.handler(dataHandler);
         }).listen(port, localhost, res -> {
             if (res.succeeded()) {

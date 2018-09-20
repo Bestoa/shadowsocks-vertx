@@ -3,7 +3,7 @@ package shadowsocks.crypto;
 import org.bouncycastle.crypto.StreamCipher;
 import org.bouncycastle.crypto.engines.RC4Engine;
 import org.bouncycastle.crypto.params.KeyParameter;
-import shadowsocks.util.GlobalConfig;
+import shadowsocks.GlobalConfig;
 
 import java.io.ByteArrayOutputStream;
 

@@ -8,13 +8,11 @@ import io.vertx.core.net.NetClientOptions;
 import io.vertx.core.net.NetSocket;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import shadowsocks.GlobalConfig;
 import shadowsocks.crypto.CryptoException;
 import shadowsocks.crypto.CryptoFactory;
 import shadowsocks.crypto.SSCrypto;
-import shadowsocks.util.LocalConfig;
 
-import java.net.Inet4Address;
-import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -30,7 +28,6 @@ public class ServerHandler implements Handler<Buffer> {
     private Vertx mVertx;
     private NetSocket mClientSocket;
     private NetSocket mTargetSocket;
-    private LocalConfig mConfig;
     private int mCurrentStage;
     private Buffer mBufferQueue;
     private SSCrypto mCrypto;
@@ -62,15 +59,14 @@ public class ServerHandler implements Handler<Buffer> {
         });
     }
 
-    public ServerHandler(Vertx vertx, NetSocket socket, LocalConfig config) {
+    public ServerHandler(Vertx vertx, NetSocket socket) {
         mVertx = vertx;
         mClientSocket = socket;
-        mConfig = config;
         mCurrentStage = Stage.ADDRESS;
         mBufferQueue = Buffer.buffer();
         setFinishHandler(mClientSocket);
         try{
-            mCrypto = CryptoFactory.create(mConfig.method, mConfig.password);
+            mCrypto = CryptoFactory.create(GlobalConfig.get().getMethod(), GlobalConfig.get().getPassword());
         }catch(Exception e){
             //Will never happen, we check this before.
         }
@@ -140,7 +136,7 @@ public class ServerHandler implements Handler<Buffer> {
 
     private void connectToRemote(String addr, int port) {
 
-        NetClientOptions options = new NetClientOptions().setConnectTimeout(this.mConfig.timeout).setTcpKeepAlive(true);
+        NetClientOptions options = new NetClientOptions().setConnectTimeout(GlobalConfig.get().getTimeout()).setTcpKeepAlive(true);
         NetClient client = mVertx.createNetClient(options);
         client.connect(port, addr, res -> {  // connect handler
             if (!res.succeeded()) {

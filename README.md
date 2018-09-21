@@ -15,13 +15,13 @@ About vert.x, please refer to https://vertx.io/
 Features
 ===========
 
-Support ipv6.
-
 Not support udp.
+
+Support ipv6.
 
 Support JSON config file, refer to etc/config.json. 
 
-Supported encrypt method:
+Support encrypt method:
 
     aes-256-cfb, chacha20, rc4-md5
 

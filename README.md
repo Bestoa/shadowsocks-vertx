@@ -55,7 +55,7 @@ Chrome + SwitchyOmega .
 Linux settings
 ===========
 
-### 1 Tcp_keepalive
+### 1 Set tcp_keepalive
 
 Edit /etc/sysctl.conf ,then ```sysctl -p``` .  
 Recommended as follows:

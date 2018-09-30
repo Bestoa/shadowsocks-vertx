@@ -36,7 +36,7 @@ public class GlobalConfig{
     final private static int DEFAULT_PORT = 8388;
     final private static int DEFAULT_LOCAL_PORT = 1080;
     final private static int DEFAULT_TIMEOUT = 2000;
-    final private static int DEFAULT_IV_LEN = 16;// 默认16，兼容原生ss的rc4-md5
+    final private static int DEFAULT_IV_LEN = 7;// 默认7，不兼容原生SS
 
     final static String SERVER_MODE = "server_mode";
     final static String SERVER_ADDR = "server";

@@ -26,13 +26,20 @@ Support encrypt method:
     aes-256-cfb, chacha20, rc4-md5
 
 
-**You can customize iv_len !**
+**Support customized iv_len !**
 
 
 How to run
 ===========
 
 ### 1 Install jdk8 and gradle
+```
+$ yum -y install java-1.8.0-openjdk java-1.8.0-openjdk-devel
+$ wget https://services.gradle.org/distributions/gradle-3.2-bin.zip
+$ unzip gradle-3.2-bin.zip
+$ vim /etc/profile
+$ source /etc/profile
+```
 
 ### 2 Generate fat jar
 ```

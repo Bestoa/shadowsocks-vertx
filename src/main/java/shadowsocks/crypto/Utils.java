@@ -7,7 +7,7 @@ import java.security.SecureRandom;
 
 public class Utils{
 
-    public static final int NOISE_MAX = 1024;
+    public static final int NOISE_MAX = 256;
 
     /**
      * Thanks go to Ola Bini for releasing this source on his blog.

@@ -147,7 +147,7 @@ public class ServerHandler implements Handler<Buffer> {
 
 
     /**
-     * 读取噪声数据，并删除
+     * 删除噪声数据
      *
      * @return 返回 -1 表示长度不够；
      *          返回 -2 表示客户端伪造数据（非法的 noise 长度）；
@@ -176,8 +176,8 @@ public class ServerHandler implements Handler<Buffer> {
         }
 
         // noise data
-        byte[] noiseData = new byte[noiseLenInt];
-        mBufferQueue.getBytes(0, noiseLenInt, noiseData);
+//        byte[] noiseData = new byte[noiseLenInt];
+//        mBufferQueue.getBytes(0, noiseLenInt, noiseData);
 
         compactBuffer(noiseLenInt);
 

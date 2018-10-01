@@ -12,9 +12,11 @@ import shadowsocks.GlobalConfig;
 import shadowsocks.crypto.CryptoException;
 import shadowsocks.crypto.CryptoFactory;
 import shadowsocks.crypto.SSCrypto;
+import shadowsocks.crypto.Utils;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.security.SecureRandom;
 
 public class ClientHandler implements Handler<Buffer> {
 
@@ -132,6 +134,11 @@ public class ClientHandler implements Handler<Buffer> {
         String addr = null;
         // Construct the remote header.
         Buffer remoteHeader = Buffer.buffer();
+
+        if (GlobalConfig.get().isNoise()) {
+            appendNoiseData(remoteHeader);
+        }
+
         int addrType = mBufferQueue.getByte(0);
 
         remoteHeader.appendByte((byte)(addrType));
@@ -182,6 +189,20 @@ public class ClientHandler implements Handler<Buffer> {
         connectToRemote(GlobalConfig.get().getServer(), GlobalConfig.get().getPort(), remoteHeader);
         nextStage();
         return false;
+    }
+
+    /**
+     * 添加噪声数据
+     */
+    private void appendNoiseData(Buffer remoteHeader) {
+        // 噪声长度
+        int noiseLenInt = new SecureRandom().nextInt(Utils.NOISE_MAX);
+        // 转为 byte 数组
+        byte[] noiseLenArr = Utils.intToByteArray(noiseLenInt);
+
+        remoteHeader.appendBytes(noiseLenArr);
+        // 填充噪声数据
+        remoteHeader.appendBytes(Utils.randomBytes(noiseLenInt));
     }
 
     private void connectToRemote(String addr, int port, Buffer remoteHeader) {

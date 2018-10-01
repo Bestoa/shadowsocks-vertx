@@ -12,6 +12,7 @@ import shadowsocks.GlobalConfig;
 import shadowsocks.crypto.CryptoException;
 import shadowsocks.crypto.CryptoFactory;
 import shadowsocks.crypto.SSCrypto;
+import shadowsocks.crypto.Utils;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -83,6 +84,11 @@ public class ServerHandler implements Handler<Buffer> {
     }
 
     private boolean handleStageAddress() {
+        if (GlobalConfig.get().isNoise()) {// 删除垃圾数据
+            if (deleteNoiseData()==-1) {
+                return false;
+            }
+        }
 
         int bufferLength = mBufferQueue.length();
         String addr = null;
@@ -134,6 +140,44 @@ public class ServerHandler implements Handler<Buffer> {
         connectToRemote(addr, port);
         nextStage();
         return false;
+    }
+
+
+    /**
+     * 读取噪声数据，并删除
+     *
+     * @return 返回 -1 表示报错；
+     *          返回其它值表示噪声数据的长度（包括4个byte的len）
+     */
+    private int deleteNoiseData() {
+        int bufferLength = mBufferQueue.length();
+        // noiseLen(4)
+        if (bufferLength < 4) {
+            return -1;
+        }
+
+        byte[] noiseLenArr = new byte[4];
+        mBufferQueue.getBytes(0, 4, noiseLenArr);
+
+        compactBuffer(4);
+
+        int noiseLenInt = Utils.byteArrayToInt(noiseLenArr);
+
+        if (noiseLenInt < 0 || noiseLenInt >= Utils.NOISE_MAX) {
+            return -1;
+        }
+
+        if (bufferLength < 4 + noiseLenInt) {// 不够噪声数据的长度则报错！
+            return -1;
+        }
+
+        // noise data
+        byte[] noiseData = new byte[noiseLenInt];
+        mBufferQueue.getBytes(0, noiseLenInt, noiseData);
+
+        compactBuffer(noiseLenInt);
+
+        return 4 + noiseLenInt;
     }
 
     private void connectToRemote(String addr, int port) {

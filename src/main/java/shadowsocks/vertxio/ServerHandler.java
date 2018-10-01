@@ -84,9 +84,12 @@ public class ServerHandler implements Handler<Buffer> {
     }
 
     private boolean handleStageAddress() {
-        if (GlobalConfig.get().isNoise()) {// 删除垃圾数据
-            if (deleteNoiseData()==-1) {
+        if (GlobalConfig.get().isNoise()) {
+            int flag = deleteNoiseData();
+            if (flag == -1) {
                 return false;
+            } else if (flag == -2) {
+                return true;
             }
         }
 
@@ -146,8 +149,9 @@ public class ServerHandler implements Handler<Buffer> {
     /**
      * 读取噪声数据，并删除
      *
-     * @return 返回 -1 表示报错；
-     *          返回其它值表示噪声数据的长度（包括4个byte的len）
+     * @return 返回 -1 表示长度不够；
+     *          返回 -2 表示客户端伪造数据（非法的 noise 长度）；
+     *          返回 1 表示运行正常，噪声数据已删除
      */
     private int deleteNoiseData() {
         int bufferLength = mBufferQueue.length();
@@ -163,11 +167,11 @@ public class ServerHandler implements Handler<Buffer> {
 
         int noiseLenInt = Utils.byteArrayToInt(noiseLenArr);
 
-        if (noiseLenInt < 0 || noiseLenInt >= Utils.NOISE_MAX) {
-            return -1;
+        if (noiseLenInt < 0 || noiseLenInt >= Utils.NOISE_MAX) {// 客户端伪造数据！
+            return -2;
         }
 
-        if (bufferLength < 4 + noiseLenInt) {// 不够噪声数据的长度则报错！
+        if (bufferLength < 4 + noiseLenInt) {// 不够噪声数据的长度！
             return -1;
         }
 
@@ -177,7 +181,7 @@ public class ServerHandler implements Handler<Buffer> {
 
         compactBuffer(noiseLenInt);
 
-        return 4 + noiseLenInt;
+        return 1;
     }
 
     private void connectToRemote(String addr, int port) {

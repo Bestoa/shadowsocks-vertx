@@ -28,6 +28,8 @@ Support encrypt method:
 
 **Support customized iv_len !**
 
+**Support noise data !**
+
 
 How to run
 ===========

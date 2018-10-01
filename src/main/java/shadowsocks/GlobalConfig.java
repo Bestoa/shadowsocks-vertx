@@ -29,6 +29,7 @@ public class GlobalConfig{
     private AtomicInteger mTimeout; /* 单位毫秒 */
     private AtomicBoolean mIsServerMode;
     private AtomicInteger mIvLen;// IV 长度
+    private AtomicBoolean mNoise;// 是否启用噪声
 
     final private static String DEFAULT_METHOD = "rc4-md5";// 效率最高
     final private static String DEFAULT_PASSWORD = "zxcvbnm";
@@ -37,6 +38,7 @@ public class GlobalConfig{
     final private static int DEFAULT_LOCAL_PORT = 1080;
     final private static int DEFAULT_TIMEOUT = 2000;
     final private static int DEFAULT_IV_LEN = 7;// 默认7，不兼容原生SS
+    final private static boolean DEFAULT_NOISE = false;// 默认不启用噪声，省流量
 
     final static String SERVER_MODE = "server_mode";
     final static String SERVER_ADDR = "server";
@@ -46,6 +48,7 @@ public class GlobalConfig{
     final static String PASSWORD = "password";
     final static String TIMEOUT = "timeout";
     final static String IV_LEN = "iv_len";
+    final static String NOISE = "noise";
 
     //Lock
     public void getLock() {
@@ -128,6 +131,15 @@ public class GlobalConfig{
         return mIvLen.get();
     }
 
+    // noise
+    public void setNoise(boolean noise) {
+        mNoise.set(noise);
+    }
+
+    public boolean isNoise(){
+        return mNoise.get();
+    }
+
     public synchronized static GlobalConfig get()
     {
         if (mConfig == null)
@@ -148,6 +160,7 @@ public class GlobalConfig{
         mConfigFile = new AtomicReference<>();
         mTimeout = new AtomicInteger(DEFAULT_TIMEOUT);
         mIvLen = new AtomicInteger(DEFAULT_IV_LEN);
+        mNoise = new AtomicBoolean(DEFAULT_NOISE);
     }
 
     public void printConfig(){
@@ -156,6 +169,7 @@ public class GlobalConfig{
         log.info("Crypto method [" + getMethod() + "]");
         log.info("Password [" + getPassword() + "]");
         log.info("Iv len [" + getIvLen() + "]");
+        log.info("Noise [" + isNoise() + "]");
         if (isServerMode()) {
             log.info("Bind port [" + getPort() + "]");
         }else{
@@ -228,6 +242,12 @@ public class GlobalConfig{
             Integer ivLen = jsonobj.getInteger(IV_LEN);
             log.debug("CFG:IV len : " + ivLen);
             GlobalConfig.get().setIvLen(ivLen);
+        }
+
+        if (jsonobj.containsKey(NOISE)) {
+            Boolean isNoise = jsonobj.getBoolean(NOISE);
+            log.debug("CFG:Noise : " + isNoise);
+            GlobalConfig.get().setNoise(isNoise);
         }
     }
 

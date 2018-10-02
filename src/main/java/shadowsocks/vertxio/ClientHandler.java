@@ -196,7 +196,7 @@ public class ClientHandler implements Handler<Buffer> {
      */
     private void appendNoiseData(Buffer remoteHeader) {
         // 噪声长度
-        int noiseLenInt = new SecureRandom().nextInt(Utils.NOISE_MAX);
+        int noiseLenInt = new SecureRandom().nextInt(Utils.NOISE_MAX) + 1;
         // 转为 byte 数组
         byte[] noiseLenArr = Utils.intToByteArray(noiseLenInt);
 

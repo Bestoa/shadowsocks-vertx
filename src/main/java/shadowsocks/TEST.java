@@ -1,5 +1,10 @@
 package shadowsocks;
 
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientOptions;
+import io.vertx.core.net.ProxyOptions;
+import io.vertx.core.net.ProxyType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -18,20 +23,45 @@ public class TEST {
 
     private static Logger log = LogManager.getLogger(TEST.class);
 
+    private static boolean preferIPv4Stack = Boolean.parseBoolean(System.getProperty("java.net.preferIPv4Stack"));
+    private static String localhost = preferIPv4Stack ? "0.0.0.0" : "::";
+
     public static void main(String[] args) {
 
-        // 绕过 HTTPS 证书
-        HttpsURLConnection.setDefaultHostnameVerifier((urlHostName, session) -> true);
-
         testSimpleHttp();
+
+        testVertxSocks5();
+    }
+
+
+    /**
+     * vertx 的 socks5 端
+     */
+    private static void testVertxSocks5 () {
+
+        System.out.println("------------------------------------------------------------------------------------------");
+        System.out.println("------------------------------------------------------------------------------------------");
+
+        Vertx vertx = Vertx.vertx();
+
+        HttpClientOptions clientOptions = new HttpClientOptions()
+                .setProxyOptions(new ProxyOptions().setType(ProxyType.SOCKS5).setHost(localhost).setPort(1080))
+                .setSsl(false);
+
+        HttpClient client = vertx.createHttpClient(clientOptions);
+
+        client.getNow(80,"www.example.com","/", response -> response.bodyHandler(totalBuffer -> {
+            // Now all the body has been read
+            log.info("proxy2 \n\n " + totalBuffer);
+        }));
     }
 
 
 
     private static void testSimpleHttp() {
 
-        boolean preferIPv4Stack = Boolean.parseBoolean(System.getProperty("java.net.preferIPv4Stack"));
-        String localhost = preferIPv4Stack ? "0.0.0.0" : "::";
+        // 绕过 HTTPS 证书
+        HttpsURLConnection.setDefaultHostnameVerifier((urlHostName, session) -> true);
 
         Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress(localhost, GlobalConfig.get().getLocalPort()));
         HttpURLConnection proxyConnection = null;// 代理连接

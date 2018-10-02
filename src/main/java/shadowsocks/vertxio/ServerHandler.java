@@ -132,7 +132,7 @@ public class ServerHandler implements Handler<Buffer> {
             log.info("hostname : " + addr);
             current = hostLength + 2;
         }else {
-            log.warn("Unsupport addr type " + addrType);
+            log.error("Unsupport addr type " + addrType);
             return true;
         }
         int port = mBufferQueue.getUnsignedShort(current);
@@ -168,6 +168,7 @@ public class ServerHandler implements Handler<Buffer> {
         int noiseLenInt = Utils.byteArrayToInt(noiseLenArr);
 
         if (noiseLenInt < 0 || noiseLenInt >= Utils.NOISE_MAX) {// 客户端伪造数据！
+            log.error("noiseLenInt error : " + noiseLenInt);
             return -2;
         }
 

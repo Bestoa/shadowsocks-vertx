@@ -9,7 +9,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.net.ssl.HttpsURLConnection;
-import java.io.DataInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
@@ -25,7 +27,7 @@ public class TEST {
     private static boolean preferIPv4Stack = Boolean.parseBoolean(System.getProperty("java.net.preferIPv4Stack"));
     private static String localhost = preferIPv4Stack ? "0.0.0.0" : "::";
 
-    private static final int BYTE_MAX = 1024 * 64;
+    private static final int BYTE_MAX = 1024 * 1024;
 
     public static void main(String[] args) {
 
@@ -78,10 +80,9 @@ public class TEST {
             directConnection = (HttpURLConnection) url.openConnection();
             directConnection.setRequestMethod("GET");
 
-            DataInputStream directData = new DataInputStream(directConnection.getInputStream());
-            byte[] directArr = new byte[BYTE_MAX];
-            directData.read(directArr);// 直连数据放入 directArr
-            System.out.println("----------------------------------------------------------------\n\n " + new String(directArr, "UTF-8").trim());
+            InputStream directInput = directConnection.getInputStream();
+            byte[] directArr = readInfoStream(directInput);
+            System.out.println("----------------------------------------------------------------\n\n " + new String(directArr, "UTF-8"));
 
         } catch (Exception e) {
             log.error("Failed with exception.", e);
@@ -106,10 +107,9 @@ public class TEST {
             proxyConnection = (HttpURLConnection) url.openConnection(proxy);
             proxyConnection.setRequestMethod("GET");
 
-            DataInputStream proxyData = new DataInputStream(proxyConnection.getInputStream());
-            byte[] proxyArr = new byte[BYTE_MAX];
-            proxyData.read(proxyArr);// 代理数据放入 proxyArr
-            System.out.println("----------------------------------------------------------------\n\n " + new String(proxyArr, "UTF-8").trim());
+            InputStream proxyInput = proxyConnection.getInputStream();
+            byte[] proxyArr = readInfoStream(proxyInput);
+            System.out.println("----------------------------------------------------------------\n\n " + new String(proxyArr, "UTF-8"));
 
         } catch (Exception e) {
             log.error("Failed with exception.", e);
@@ -139,6 +139,32 @@ public class TEST {
         return protocol;
     }
 
+    public static byte[] readInfoStream(InputStream input) throws Exception {
+        byte[] bcache = new byte[1024];
+        int readSize = 0;
+        int totalSize = 0;
+        ByteArrayOutputStream infoStream = new ByteArrayOutputStream();
+        try {
+            while ((readSize = input.read(bcache)) > 0) {
+                totalSize += readSize;
+                if (totalSize > BYTE_MAX) {
+                    throw new Exception("数据量太大！");
+                }
+                infoStream.write(bcache,0,readSize);
+            }
+        } catch (IOException e1) {
+            throw new Exception("输入流读取异常");
+        } finally {
+            try {
+                //输入流关闭
+                input.close();
+            } catch (IOException e) {
+                throw new Exception("输入流关闭异常");
+            }
+        }
+
+        return infoStream.toByteArray();
+    }
 
 
     /**

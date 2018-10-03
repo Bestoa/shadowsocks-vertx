@@ -10,14 +10,13 @@ import org.apache.logging.log4j.Logger;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.io.DataInputStream;
-import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.URL;
 
 /**
- * 本地测试
+ * socks5 客户端测试
  */
 public class TEST {
 
@@ -26,78 +25,150 @@ public class TEST {
     private static boolean preferIPv4Stack = Boolean.parseBoolean(System.getProperty("java.net.preferIPv4Stack"));
     private static String localhost = preferIPv4Stack ? "0.0.0.0" : "::";
 
+    private static final int BYTE_MAX = 1024 * 64;
+
     public static void main(String[] args) {
 
-        testSimpleHttp();
+        String host;
 
-        testVertxSocks5();
+        int port;
+
+        String uri;
+
+        int type;
+
+        if (args == null || args.length != 4) {
+            type = 1;
+            host = "www.example.com";
+            port = 443;
+            uri = "/";
+        } else {
+            type = Integer.parseInt(args[0]);
+            host = args[1];
+            port = Integer.parseInt(args[2]);
+            uri = args[3];
+        }
+
+
+        /*
+         * 1 直接连接
+         * 2 socks5 本地 DNS
+         * 3 socks5 远程 DNS
+         */
+        if (type == 1) {
+            testDirect(host, port, uri);
+        } else if (type == 2) {
+            testSocks5(host, port, uri);
+        } else if (type == 3) {
+            testSocks5_(host, port, uri);
+        } else {
+            log.error("type error  " + type);
+        }
     }
+
+
+    private static void testDirect(String host, int port, String uri) {
+        String protocol = preTest(port);
+        if (protocol == null) return;
+
+
+        HttpURLConnection directConnection = null;
+        try {
+            URL url = new URL(protocol, host, port, uri);
+            directConnection = (HttpURLConnection) url.openConnection();
+            directConnection.setRequestMethod("GET");
+
+            DataInputStream directData = new DataInputStream(directConnection.getInputStream());
+            byte[] directArr = new byte[BYTE_MAX];
+            directData.read(directArr);// 直连数据放入 directArr
+            System.out.println("----------------------------------------------------------------\n\n " + new String(directArr, "UTF-8").trim());
+
+        } catch (Exception e) {
+            log.error("Failed with exception.", e);
+        } finally {
+            if (directConnection != null) {
+                directConnection.disconnect();
+            }
+        }
+    }
+
+
+
+    private static void testSocks5(String host, int port, String uri) {
+        String protocol = preTest(port);
+        if (protocol == null) return;
+
+        Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress(localhost, 1080));
+        HttpURLConnection proxyConnection = null;
+        try {
+            URL url = new URL(protocol, host, port, uri);
+
+            proxyConnection = (HttpURLConnection) url.openConnection(proxy);
+            proxyConnection.setRequestMethod("GET");
+
+            DataInputStream proxyData = new DataInputStream(proxyConnection.getInputStream());
+            byte[] proxyArr = new byte[BYTE_MAX];
+            proxyData.read(proxyArr);// 代理数据放入 proxyArr
+            System.out.println("----------------------------------------------------------------\n\n " + new String(proxyArr, "UTF-8").trim());
+
+        } catch (Exception e) {
+            log.error("Failed with exception.", e);
+        } finally {
+            if (proxyConnection != null) {
+                proxyConnection.disconnect();
+            }
+        }
+
+    }
+
+
+    private static String preTest(int port) {
+        // 绕过 HTTPS 证书
+        HttpsURLConnection.setDefaultHostnameVerifier((urlHostName, session) -> true);
+
+        String protocol;
+
+        if (port == 443) {
+            protocol = "https";
+        } else if (port == 80) {
+            protocol = "http";
+        } else {
+            log.error("port error ! " + port);
+            return null;
+        }
+        return protocol;
+    }
+
 
 
     /**
      * vertx 的 socks5 端
+     * 远程 DNS 解析！
      */
-    private static void testVertxSocks5 () {
-
-        System.out.println("------------------------------------------------------------------------------------------");
-        System.out.println("------------------------------------------------------------------------------------------");
-
-        Vertx vertx = Vertx.vertx();
+    private static void testSocks5_(String host, int port, String uri) {
 
         HttpClientOptions clientOptions = new HttpClientOptions()
-                .setProxyOptions(new ProxyOptions().setType(ProxyType.SOCKS5).setHost(localhost).setPort(1080))
-                .setSsl(false);
+                .setProxyOptions(new ProxyOptions().setType(ProxyType.SOCKS5).setHost(localhost).setPort(1080));
 
+        if (port == 443) {
+            clientOptions.setSsl(true);
+        } else if (port == 80) {
+            clientOptions.setSsl(false);
+        } else {
+            log.error("port error ! " + port);
+            return;
+        }
+
+        Vertx vertx = Vertx.vertx();
         HttpClient client = vertx.createHttpClient(clientOptions);
 
-        client.getNow(80,"www.example.com","/", response -> response.bodyHandler(totalBuffer -> {
-            // Now all the body has been read
-            log.info("proxy2 \n\n " + totalBuffer);
+        client.getNow(port, host, uri, response -> response.bodyHandler(totalBuffer -> {
+            System.out.println("----------------------------------------------------------------\n\n " + totalBuffer);
+
+            // 关闭
+            client.close();
+            vertx.close();
         }));
     }
 
-
-
-    private static void testSimpleHttp() {
-
-        // 绕过 HTTPS 证书
-        HttpsURLConnection.setDefaultHostnameVerifier((urlHostName, session) -> true);
-
-        Proxy proxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress(localhost, GlobalConfig.get().getLocalPort()));
-        HttpURLConnection proxyConnection = null;// 代理连接
-        HttpURLConnection directConnection = null;// 直接连接
-        try{
-            URL url = new URL("http://www.example.com/");
-
-            proxyConnection = (HttpURLConnection)url.openConnection(proxy);
-            proxyConnection.setRequestMethod("GET");
-
-            directConnection = (HttpURLConnection) url.openConnection();
-            directConnection.setRequestMethod("GET");
-
-            DataInputStream proxyData = new DataInputStream(proxyConnection.getInputStream());
-            byte [] proxyArr = new byte[1024];
-            proxyData.read(proxyArr);// 代理数据放入 proxyArr
-            log.info("proxy \n\n " + new String(proxyArr,"UTF-8"));
-
-            System.out.println("------------------------------------------------------------------------------------------");
-            System.out.println("------------------------------------------------------------------------------------------");
-
-            DataInputStream directData = new DataInputStream(directConnection.getInputStream());
-            byte [] directArr = new byte[1024];
-            directData.read(directArr);// 直连数据放入 directArr
-            log.info("direct \n\n " + new String(directArr,"UTF-8"));
-
-        }catch(IOException e){
-            log.error("Failed with exception.", e);
-        }finally{
-            if (proxyConnection != null) {
-                proxyConnection.disconnect();
-            }
-            if (directConnection != null) {
-                directConnection.disconnect();
-            }
-
-        }
-    }
 }

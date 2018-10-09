@@ -1,7 +1,6 @@
 version '1.0.0'
 
 apply plugin: 'java'
-apply plugin: 'jacoco'
 apply plugin: 'application'
 
 sourceCompatibility = 1.8
@@ -11,12 +10,10 @@ repositories {
 }
 
 dependencies {
-    compile 'gnu.getopt:java-getopt:1.0.13'
-    compile 'org.bouncycastle:bcprov-jdk15on:1.55'
-    compile 'io.vertx:vertx-core:3.3.2'
+    compile 'org.bouncycastle:bcprov-jdk15on:1.60'
+    compile 'io.vertx:vertx-core:3.5.0'
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.7'
     compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.7'
-    testCompile 'junit:junit:4.12'
 }
 
 compileJava {
@@ -24,10 +21,6 @@ compileJava {
     options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
 }
 
-compileTestJava {
-    options.encoding = 'UTF-8'
-    options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
-}
 
 mainClassName = 'shadowsocks.Main'
 
@@ -46,11 +39,3 @@ task ('fatJar', type: Jar, dependsOn: classes){
     from 'build/resources/main'
     exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA'
 }
-
-jacocoTestReport {
-    reports {
-        xml.enabled = true
-        html.enabled = true
-    }
-}
-check.dependsOn jacocoTestReport

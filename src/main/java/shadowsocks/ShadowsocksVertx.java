@@ -2,7 +2,9 @@ package shadowsocks;
 
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.dns.AddressResolverOptions;
 import io.vertx.core.net.NetServer;
 import io.vertx.core.net.NetServerOptions;
 import org.apache.logging.log4j.LogManager;
@@ -21,8 +23,16 @@ public class ShadowsocksVertx {
     private String localhost;
 
     public ShadowsocksVertx(boolean isServer) {
-        mVertx = Vertx.vertx();
         mIsServer = isServer;
+        if (mIsServer) {// server 使用自定义 DNS
+            VertxOptions vertxOptions = new VertxOptions().setAddressResolverOptions(
+                    new AddressResolverOptions().
+                            addServer("8.8.8.8").
+                            addServer("1.1.1.1"));
+            mVertx = Vertx.vertx(vertxOptions);
+        } else {// client 使用默认 DNS
+            mVertx = Vertx.vertx();
+        }
         boolean preferIPv4Stack = Boolean.parseBoolean(System.getProperty("java.net.preferIPv4Stack"));
         localhost = preferIPv4Stack ? "0.0.0.0" : "::";
     }

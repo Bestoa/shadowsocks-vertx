@@ -28,7 +28,7 @@ public class ShadowsocksVertx {
             VertxOptions vertxOptions = new VertxOptions().setAddressResolverOptions(
                     new AddressResolverOptions().
                             addServer("8.8.8.8").
-                            addServer("1.1.1.1"));
+                            addServer("8.8.4.4"));
             mVertx = Vertx.vertx(vertxOptions);
         } else {// client 使用默认 DNS
             mVertx = Vertx.vertx();

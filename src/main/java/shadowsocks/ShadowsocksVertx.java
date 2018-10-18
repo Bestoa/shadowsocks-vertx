@@ -24,7 +24,15 @@ public class ShadowsocksVertx {
 
     public ShadowsocksVertx(boolean isServer) {
         mIsServer = isServer;
-        mVertx = Vertx.vertx();
+        if (mIsServer) {// server 使用自定义 DNS
+            VertxOptions vertxOptions = new VertxOptions().setAddressResolverOptions(
+                    new AddressResolverOptions().
+                            addServer("8.8.8.8").
+                            addServer("8.8.4.4"));
+            mVertx = Vertx.vertx(vertxOptions);
+        } else {// client 使用默认 DNS
+            mVertx = Vertx.vertx();
+        }
         boolean preferIPv4Stack = Boolean.parseBoolean(System.getProperty("java.net.preferIPv4Stack"));
         localhost = preferIPv4Stack ? "0.0.0.0" : "::";
     }

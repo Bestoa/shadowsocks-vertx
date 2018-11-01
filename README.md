@@ -34,28 +34,26 @@ Support encrypt method:
 How to run
 ===========
 
-### 1 Install jdk8 and gradle
+###1 Install jdk8
 ```
 $ yum -y install java-1.8.0-openjdk java-1.8.0-openjdk-devel
-$ wget https://services.gradle.org/distributions/gradle-3.2-bin.zip
-$ unzip gradle-3.2-bin.zip
-$ vim /etc/profile
-$ source /etc/profile
 ```
 
-### 2 Generate fat jar
+###2 Download fat jar
 ```
-$ gradle clean build fatJar
+$ curl https://raw.githubusercontent.com/lenovobenben/shadowsocks-vertx/master/shadowsocks-fat-1.0.0.jar -o shadowsocks-fat-1.0.0.jar --progress
 ```
 
-Then you will get **shadowsocks-fat-ver.jar** in build/libs.
+###3 Edit config.json
 
-### 3 Run both server and client
+refer to etc/config.json.
+
+###4 Run both server and client
 ```
 $ java -jar shadowsocks-fat-ver.jar config.json
 ```
 
-### 4 Web browser
+###5 Web browser
 
 Chrome + SwitchyOmega .
 

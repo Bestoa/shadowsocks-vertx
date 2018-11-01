@@ -41,7 +41,7 @@ $ yum -y install java-1.8.0-openjdk java-1.8.0-openjdk-devel
 
 ### 2 Download fat jar
 ```
-$ curl https://raw.githubusercontent.com/lenovobenben/shadowsocks-vertx/master/shadowsocks-fat-1.0.0.jar -o shadowsocks-fat-1.0.0.jar --progress
+$ wget https://raw.githubusercontent.com/lenovobenben/shadowsocks-vertx/master/shadowsocks-fat-1.0.0.jar
 ```
 
 ### 3 Edit config.json
@@ -50,7 +50,7 @@ refer to etc/config.json.
 
 ### 4 Run both server and client
 ```
-$ java -jar shadowsocks-fat-ver.jar config.json
+$ java -jar shadowsocks-fat-1.0.0.jar config.json
 ```
 
 ### 5 Web browser

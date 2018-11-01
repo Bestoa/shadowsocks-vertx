@@ -34,26 +34,26 @@ Support encrypt method:
 How to run
 ===========
 
-###1 Install jdk8
+### 1 Install jdk8
 ```
 $ yum -y install java-1.8.0-openjdk java-1.8.0-openjdk-devel
 ```
 
-###2 Download fat jar
+### 2 Download fat jar
 ```
 $ curl https://raw.githubusercontent.com/lenovobenben/shadowsocks-vertx/master/shadowsocks-fat-1.0.0.jar -o shadowsocks-fat-1.0.0.jar --progress
 ```
 
-###3 Edit config.json
+### 3 Edit config.json
 
 refer to etc/config.json.
 
-###4 Run both server and client
+### 4 Run both server and client
 ```
 $ java -jar shadowsocks-fat-ver.jar config.json
 ```
 
-###5 Web browser
+### 5 Web browser
 
 Chrome + SwitchyOmega .
 

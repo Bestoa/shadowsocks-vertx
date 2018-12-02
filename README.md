@@ -17,14 +17,14 @@ Features
 
 Not support udp.
 
-Support ipv6.
-
 Support JSON config file, refer to etc/config.json. 
 
 Support encrypt method:
 
     aes-256-cfb, chacha20, rc4-md5
 
+
+**Support ipv6 .**
 
 **Support customized iv_len !**
 

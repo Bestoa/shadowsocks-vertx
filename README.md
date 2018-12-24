@@ -1,7 +1,7 @@
 shadowsocks-vertx
 ================
 
-Based on SS_V1, but we have to change the protocol now.
+Only support SS-V1
 
 [![Build Status](https://travis-ci.org/Bestoa/shadowsocks-vertx.svg?branch=master)](https://travis-ci.org/Bestoa/shadowsocks-vertx)
 [![codecov](https://codecov.io/gh/Bestoa/shadowsocks-vertx/branch/master/graph/badge.svg)](https://codecov.io/gh/Bestoa/shadowsocks-vertx)
@@ -15,7 +15,7 @@ The protocol is compatible with the origin shadowsocks (if both have been upgrad
 
 JDK 8 is needed.
 
-Current version 0.8.3
+Current version 0.8.4
 
 It is **unstable**! If you encounter any problems, please open an issue.
 

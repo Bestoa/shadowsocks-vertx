@@ -70,6 +70,6 @@ Linux 相关
 
 确保防火墙开启相应端口
 
-开启 Google BBR 加速
+建议开启 Google BBR 加速
 
 加入开机自启动

@@ -15,7 +15,7 @@ Features
 
 支持 json 配置文件，参见 etc/config.json
 
-仅支持以下3种加密算法:
+仅支持以下3种加密算法 ：
 
     aes-256-cfb, chacha20, rc4-md5
 

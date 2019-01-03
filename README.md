@@ -1,79 +1,69 @@
-shadowsocks-vertx
+Shadowsocks-Vertx
 ================
 
 [![License](http://img.shields.io/:license-apache-blue.svg?style=flat-square)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
-Intro
+简介
 ===========
 
-Shadowsocks-vertx is a socks5 proxy which can help you get through firewalls. It is a java port of shadowsocks. This project is based on vert.x.
-
-About shadowsocks, please refer to https://shadowsocks.org/
-
-About vert.x, please refer to https://vertx.io/
+Shadowsocks-Vertx 是一个 socks5 代理，基于 Java Vert.x 。
 
 Features
 ===========
 
-Not support udp.
+不支持 UDP ！
 
-Support JSON config file, refer to etc/config.json. 
+支持 json 配置文件，参见 etc/config.json。 
 
-Support encrypt method:
+仅支持以下3种加密算法:
 
     aes-256-cfb, chacha20, rc4-md5
 
 
-**Support ipv6 .**
+**完美支持IPv6**
 
-**Support customized iv_len !**
+**支持自定义的iv长度**
 
-**Support noise data !**
+**支持添加噪音数据**
 
 
-How to run
+运行方法
 ===========
 
-### 1 Install jdk8
+### 服务端（以 CentOS 为例）
+1 安装JDK8
 ```
 $ yum -y install java-1.8.0-openjdk java-1.8.0-openjdk-devel
 ```
 
-### 2 Download fat jar
+2 下载 fat jar
 ```
 $ wget https://raw.githubusercontent.com/lenovobenben/shadowsocks-vertx/master/shadowsocks-fat-1.0.0.jar
 ```
 
-### 3 Edit config.json
+3 编辑 config.json
 
-refer to etc/config.json.
-
-### 4 Run both server and client
+4 运行 java
 ```
 $ java -jar shadowsocks-fat-1.0.0.jar config.json
 ```
 
-### 5 Web browser
+### 客户端（以 Windows 为例）
+1 安装JDK8  
+2 下载 fat jar  
+3 编辑 config.json  
+4 运行 java  
+操作简单，不赘述。
 
-Chrome + SwitchyOmega .
+浏览器： Chrome + SwitchyOmega 。
+
+SwitchyOmega 选择 socks5 ，端口选择 1080 （默认）即可。
 
 
-
-Linux settings
+Linux 优化
 ===========
 
-### 1 Set tcp_keepalive
+### 开启 Google BBR 加速
 
-Edit /etc/sysctl.conf ,then ```sysctl -p``` .  
-Recommended as follows:
+### 加入开机自启动
 
-    net.ipv4.tcp_keepalive_time = 600  (default 7200)  
-    net.ipv4.tcp_keepalive_intvl = 20  (default 75)  
-    net.ipv4.tcp_keepalive_probes = 4  (default 9)
- 
-
-### 2 Google BBR
-It is recommended to use TCP-BBR !
-
-### 3 Auto start
-vi /etc/rc.d/rc.local to auto start it !

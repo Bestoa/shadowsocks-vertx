@@ -1,5 +1,4 @@
 ## Shadowsocks-Vertx
-****
 
 [![License](http://img.shields.io/:license-apache-blue.svg?style=flat-square)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
@@ -7,7 +6,8 @@
 
 Shadowsocks-Vertx 是一个 socks5 代理，基于 Java Vert.x 
 
-****
+
+
 ## Features
 
 不支持 UDP 
@@ -26,7 +26,8 @@ Shadowsocks-Vertx 是一个 socks5 代理，基于 Java Vert.x
 **支持添加噪音数据**
 
 
-****
+
+
 ## 运行方法
 
 ### 服务端（以 CentOS 为例）
@@ -67,7 +68,8 @@ $ java -jar shadowsocks-fat-1.0.0.jar config.json
 SwitchyOmega 选择 socks5 ，端口选择 1080 （默认）即可
 
 
-****
+
+
 ## Linux 相关
 
 确保防火墙开启相应端口

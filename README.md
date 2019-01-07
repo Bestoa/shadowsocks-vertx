@@ -1,14 +1,15 @@
-## Shadowsocks-Vertx
+Shadowsocks-Vertx
+================
 
 [![License](http://img.shields.io/:license-apache-blue.svg?style=flat-square)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
-## 简介
+简介
+===========
 
 Shadowsocks-Vertx 是一个 socks5 代理，基于 Java Vert.x 
 
-
-
-## Features
+Features
+===========
 
 不支持 UDP 
 
@@ -26,12 +27,10 @@ Shadowsocks-Vertx 是一个 socks5 代理，基于 Java Vert.x
 **支持添加噪音数据**
 
 
-
-
-## 运行方法
+运行方法
+===========
 
 ### 服务端（以 CentOS 为例）
-
 1 安装JDK8
 ```
 $ yum -y install java-1.8.0-openjdk java-1.8.0-openjdk-devel
@@ -50,9 +49,7 @@ $ java -jar shadowsocks-fat-1.0.0.jar config.json
 ```
 启动 java 时，如果为纯 ipv4 ，则**必须**添加  -Djava.net.preferIPv4Stack=true ；如果为双栈则**建议**添加 -Djava.net.preferIPv6Addresses=true
 
-
 ### 客户端（以 Windows 为例）
-
 1 安装JDK8
 
 2 下载 fat jar
@@ -63,14 +60,13 @@ $ java -jar shadowsocks-fat-1.0.0.jar config.json
 
 操作简单，不赘述
 
-浏览器： Chrome + SwitchyOmega
+浏览器： Chrome + SwitchyOmega 
 
 SwitchyOmega 选择 socks5 ，端口选择 1080 （默认）即可
 
 
-
-
-## Linux 相关
+Linux 相关
+===========
 
 确保防火墙开启相应端口
 

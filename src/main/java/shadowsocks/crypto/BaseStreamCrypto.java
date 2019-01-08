@@ -18,7 +18,6 @@ package shadowsocks.crypto;
 import org.bouncycastle.crypto.StreamCipher;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 
 import shadowsocks.crypto.CryptoException;
 import shadowsocks.crypto.Utils;
@@ -29,9 +28,6 @@ import shadowsocks.crypto.DecryptState;
  */
 public abstract class BaseStreamCrypto implements SSCrypto
 {
-
-    protected abstract StreamCipher createCipher(byte[] iv, boolean encrypt);
-    protected abstract void process(byte[] in, ByteArrayOutputStream out, boolean encrypt);
 
     protected final String mName;
     protected final byte[] mKey;
@@ -48,6 +44,9 @@ public abstract class BaseStreamCrypto implements SSCrypto
     protected ByteArrayOutputStream mData;
 
     private byte [] mLock = new byte[0];
+
+    protected abstract StreamCipher createCipher(byte[] iv, boolean encrypt);
+    protected abstract void process(byte[] in, ByteArrayOutputStream out, boolean encrypt);
 
     public BaseStreamCrypto(String name, String password) throws CryptoException
     {

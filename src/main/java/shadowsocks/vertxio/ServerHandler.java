@@ -16,7 +16,6 @@
 
 package shadowsocks.vertxio;
 
-import java.net.InetSocketAddress;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -27,14 +26,12 @@ import io.vertx.core.Vertx;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.NetSocket;
-import io.vertx.core.net.NetServer;
 import io.vertx.core.net.NetClient;
 import io.vertx.core.net.NetClientOptions;
 
 import shadowsocks.util.LocalConfig;
 import shadowsocks.crypto.SSCrypto;
 import shadowsocks.crypto.CryptoFactory;
-import shadowsocks.crypto.CryptoException;
 import shadowsocks.crypto.DecryptState;
 
 public class ServerHandler implements Handler<Buffer> {
@@ -48,7 +45,6 @@ public class ServerHandler implements Handler<Buffer> {
     private Vertx mVertx;
     private NetSocket mClientSocket;
     private NetSocket mTargetSocket;
-    private LocalConfig mConfig;
     private int mCurrentStage;
     private Buffer mPlainTextBufferQ;
     private Buffer mEncryptTextBufferQ;
@@ -83,12 +79,11 @@ public class ServerHandler implements Handler<Buffer> {
     public ServerHandler(Vertx vertx, NetSocket socket, LocalConfig config) {
         mVertx = vertx;
         mClientSocket = socket;
-        mConfig = config;
         mCurrentStage = Stage.HANDSHAKER;
         mPlainTextBufferQ = Buffer.buffer();
         mEncryptTextBufferQ = Buffer.buffer();
         setFinishHandler(mClientSocket);
-        mCrypto = CryptoFactory.create(mConfig.method, mConfig.password);
+        mCrypto = CryptoFactory.create(config.method, config.password);
     }
 
     private Buffer compactPlainTextBufferQ(int start) {

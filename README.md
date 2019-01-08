@@ -19,9 +19,9 @@ Current version 0.8.4
 
 It is **unstable**! If you encounter any problems, please open an issue.
 
-About shadowsocks, please refer to https://shadowsocks.org/
+About shadowsocks, please refer to [shadowsocks](https://shadowsocks.org/)
 
-About vert.x, please refer to http://vertx.io/
+About vert.x, please refer to [vertx](http://vertx.io/)
 
 #Features
 
@@ -47,7 +47,7 @@ Supported encrypt method:
 
 Supported one-time auth.
 
-Support JSON config file. Please refer to https://github.com/shadowsocks/shadowsocks/wiki/Configuration-via-Config-File.
+Support JSON config file. Please refer to [shadowsocks config](https://github.com/shadowsocks/shadowsocks/wiki/Configuration-via-Config-File).
 Note:
 
     1. Not support: local_address, client will bind 0.0.0.0 not 127.0.0.1
@@ -57,25 +57,25 @@ Note:
 
 You could refer to demo config etc/demo.json.
 
-How to run:
-===========
+How to run
+====
 ### (1) Before you start
 You must have 'gradle' installed first, or use gradle wrapper ./gradlew.
 
 ### (2) generate distributable zip
-```
+```shell
 $ gradle distZip
 ```
 or
-```
+```shell
 $ ./gradlew distZip
 ```
 
-Then you will get **shadowsocks-ver.zip** in build/distributions.
+Then you will get shadowsocks-ver.zip in build/distributions.
 Unzip it, the folder should contain bin and lib.
 
-#### How to run
-```
+#### Run
+```shell
 //Server
 $ bin/shadowsocks -S ...
 $ bin/shadowsocks --server_mode ...
@@ -84,19 +84,19 @@ $ bin/shadowsocks ...
 ```
 
 ### (3) generate all-in-one jar
-```
+```shell
 $ gradle fatJar
 ```
 or
-```
+```shell
 $ ./gradlew fatJar
 ```
 
 
-Then you will get **shadowsocks-fat-ver.jar** in build/libs.
+Then you will get shadowsocks-fat-ver.jar in build/libs.
 
 #### How to run
-```
+```shell
 //Server
 $ java -jar shadowsocks-fat-xx.jar -S ...
 $ java -jar shadowsocks-fat-xx.jar --server_mode ...

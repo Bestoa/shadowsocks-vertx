@@ -14,8 +14,6 @@
  *  limitations under the License.
  */
 package shadowsocks.crypto;
-import java.io.UnsupportedEncodingException;
-import java.security.NoSuchAlgorithmException;
 
 public class CryptoException extends Exception
 {

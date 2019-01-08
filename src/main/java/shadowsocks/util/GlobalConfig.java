@@ -56,15 +56,15 @@ public class GlobalConfig{
     final private static int DEFAULT_LOCAL_PORT = 9999;
     final private static int DEFAULT_TIMEOUT = 300;
 
-    final static String SERVER_MODE = "server_mode";
-    final static String SERVER_ADDR = "server";
-    final static String LOCAL_PORT = "local_port";
-    final static String SERVER_PORT = "server_port";
-    final static String METHOD = "method";
-    final static String PASSWORD = "password";
-    final static String TIMEOUT = "timeout";
-    final static String HELP = "help";
-    final static String CONFIG = "config";
+    final private static String SERVER_MODE = "server_mode";
+    final private static String SERVER_ADDR = "server";
+    final private static String LOCAL_PORT = "local_port";
+    final private static String SERVER_PORT = "server_port";
+    final private static String METHOD = "method";
+    final private static String PASSWORD = "password";
+    final private static String TIMEOUT = "timeout";
+    final private static String HELP = "help";
+    final private static String CONFIG = "config";
 
     //Lock
     public void getLock() {

@@ -15,11 +15,6 @@
  */
 package shadowsocks.crypto; 
 
-import java.io.ByteArrayOutputStream;
-import java.util.Map;
-
-import shadowsocks.crypto.CryptoException;
-
 /**
  * Interface of crypt
  */

@@ -40,9 +40,9 @@ Supported argument:
 
 Supported encrypt method:
 
-    1. aes-128-cfb/ofb
-    2. aes-192-cfb/ofb
-    3. aes-256-cfb/ofb
+    1. aes-128-cfb
+    2. aes-192-cfb
+    3. aes-256-cfb
     4. chacha20/chacha20-ietf
 
 Supported one-time auth.

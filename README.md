@@ -3,7 +3,6 @@ shadowsocks-vertx
 
 Only support SS-V1
 
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/957e408ec09f44ec8982078f7c28422f)](https://app.codacy.com/app/Bestoa/shadowsocks-vertx?utm_source=github.com&utm_medium=referral&utm_content=Bestoa/shadowsocks-vertx&utm_campaign=Badge_Grade_Settings)
 [![Build Status](https://travis-ci.org/Bestoa/shadowsocks-vertx.svg?branch=master)](https://travis-ci.org/Bestoa/shadowsocks-vertx)
 [![codecov](https://codecov.io/gh/Bestoa/shadowsocks-vertx/branch/master/graph/badge.svg)](https://codecov.io/gh/Bestoa/shadowsocks-vertx)
 [![License](http://img.shields.io/:license-apache-blue.svg?style=flat-square)](http://www.apache.org/licenses/LICENSE-2.0.html)

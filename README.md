@@ -7,7 +7,7 @@ Only support SS-V1
 [![codecov](https://codecov.io/gh/Bestoa/shadowsocks-vertx/branch/master/graph/badge.svg)](https://codecov.io/gh/Bestoa/shadowsocks-vertx)
 [![License](http://img.shields.io/:license-apache-blue.svg?style=flat-square)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
-#Intro
+## Intro
 
 shadowsocks-vertx is a lightweight tunnel proxy which can help you get through firewalls. It is a java port of shadowsocks. This project is based on vert.x.
 
@@ -23,7 +23,7 @@ About shadowsocks, please refer to [shadowsocks](https://shadowsocks.org/)
 
 About vert.x, please refer to [vertx](http://vertx.io/)
 
-#Features
+## Features
 
 Supported argument:
 
@@ -57,12 +57,12 @@ Note:
 
 You could refer to demo config etc/demo.json.
 
-How to run
-====
-### (1) Before you start
+### How to run
+
+#### (1) Before you start
 You must have 'gradle' installed first, or use gradle wrapper ./gradlew.
 
-### (2) generate distributable zip
+#### (2) generate distributable zip
 ```shell
 $ gradle distZip
 ```

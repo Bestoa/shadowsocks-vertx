@@ -1,43 +1,22 @@
-/*
- *   Copyright 2016 Author:NU11 bestoapache@gmail.com
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
-
 package shadowsocks.vertxio;
 
-import java.net.InetSocketAddress;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import io.vertx.core.Vertx;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.net.NetSocket;
-import io.vertx.core.net.NetServer;
 import io.vertx.core.net.NetClient;
 import io.vertx.core.net.NetClientOptions;
-
-import shadowsocks.util.LocalConfig;
-import shadowsocks.crypto.SSCrypto;
-import shadowsocks.crypto.CryptoFactory;
+import io.vertx.core.net.NetSocket;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import shadowsocks.GlobalConfig;
 import shadowsocks.crypto.CryptoException;
-import shadowsocks.auth.SSAuth;
-import shadowsocks.auth.HmacSHA1;
-import shadowsocks.auth.AuthException;
+import shadowsocks.crypto.CryptoFactory;
+import shadowsocks.crypto.SSCrypto;
+import shadowsocks.crypto.Utils;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.security.SecureRandom;
 
 public class ClientHandler implements Handler<Buffer> {
 
@@ -45,18 +24,14 @@ public class ClientHandler implements Handler<Buffer> {
 
     private final static int ADDR_TYPE_IPV4 = 1;
     private final static int ADDR_TYPE_HOST = 3;
-
-    private final static int OTA_FLAG = 0x10;
+    private final static int ADDR_TYPE_IPV6 = 4;
 
     private Vertx mVertx;
     private NetSocket mLocalSocket;
     private NetSocket mServerSocket;
-    private LocalConfig mConfig;
     private int mCurrentStage;
     private Buffer mBufferQueue;
-    private int mChunkCount;
     private SSCrypto mCrypto;
-    private SSAuth mAuthor;
 
     private class Stage {
         final public static int HELLO = 0;
@@ -81,25 +56,23 @@ public class ClientHandler implements Handler<Buffer> {
             destory();
         });
         socket.exceptionHandler(e -> {
-            log.error("Catch Exception.", e);
+            log.error("Client setFinishHandler Exception " + e.getMessage()
+                    +" local " + socket.localAddress() + " , remote " + socket.remoteAddress());
             destory();
         });
     }
 
-    public ClientHandler(Vertx vertx, NetSocket socket, LocalConfig config) {
+    public ClientHandler(Vertx vertx, NetSocket socket) {
         mVertx = vertx;
         mLocalSocket = socket;
-        mConfig = config;
         mCurrentStage = Stage.HELLO;
         mBufferQueue = Buffer.buffer();
-        mChunkCount = 0;
         setFinishHandler(mLocalSocket);
         try{
-            mCrypto = CryptoFactory.create(mConfig.method, mConfig.password);
+            mCrypto = CryptoFactory.create(GlobalConfig.get().getMethod(), GlobalConfig.get().getPassword());
         }catch(Exception e){
             //Will never happen, we check this before.
         }
-        mAuthor = new HmacSHA1();
     }
 
     private Buffer compactBuffer(int start) {
@@ -112,25 +85,6 @@ public class ClientHandler implements Handler<Buffer> {
         return mBufferQueue;
     }
 
-    /*
-     *  Sock5 client side work flow.
-     *
-     *  Receive method list
-     *  Reply 05 00
-     *  Receive address + port
-     *  Reply
-     *        05 00 00 01 + ip 0.0.0.0 + port 0x01 (fake)
-     *
-     *  Send to remote
-     *  addr type: 1 byte| addr | port: 2 bytes with big endian
-     *
-     *  addr type 0x1: addr = ipv4 | 4 bytes
-     *  addr type 0x3: addr = host address byte array | 1 byte(array length) + byte array
-     *  addr type 0x4: addr = ipv6 | 19 bytes
-     *
-     *  OTA will add 10 bytes HMAC-SHA1 in the end of the head.
-     *
-     */
 
     private boolean handleStageHello() {
         int bufferLength = mBufferQueue.length();
@@ -180,31 +134,48 @@ public class ClientHandler implements Handler<Buffer> {
         String addr = null;
         // Construct the remote header.
         Buffer remoteHeader = Buffer.buffer();
-        int addrType = mBufferQueue.getByte(0);
-        if (mConfig.oneTimeAuth) {
-            remoteHeader.appendByte((byte)(addrType | OTA_FLAG));
-        }else{
-            remoteHeader.appendByte((byte)(addrType));
+
+        if (GlobalConfig.get().isNoise()) {
+            appendNoiseData(remoteHeader);
         }
+
+        int addrType = mBufferQueue.getByte(0);
+
+        remoteHeader.appendByte((byte)(addrType));
 
         if (addrType == ADDR_TYPE_IPV4) {
             // addr type (1) + ipv4(4) + port(2)
             if (bufferLength < 7)
                 return false;
             try{
-                addr = InetAddress.getByAddress(mBufferQueue.getBytes(1, 5)).toString();
+                addr = InetAddress.getByAddress(mBufferQueue.getBytes(1, 5)).getHostAddress();
+                log.info("ipv4 : " + addr);
             }catch(UnknownHostException e){
                 log.error("UnknownHostException.", e);
                 return true;
             }
             remoteHeader.appendBytes(mBufferQueue.getBytes(1,5));
             compactBuffer(5);
-        }else if (addrType == ADDR_TYPE_HOST) {
+        } else if (addrType == ADDR_TYPE_IPV6){
+            // addr type (1) + ipv6(16) + port(2)
+            if (bufferLength < 19)
+                return false;
+            try{
+                addr = InetAddress.getByAddress(mBufferQueue.getBytes(1, 17)).getHostAddress();
+                log.info("ipv6 : " + addr);
+            }catch(UnknownHostException e){
+                log.error("UnknownHostException.", e);
+                return true;
+            }
+            remoteHeader.appendBytes(mBufferQueue.getBytes(1,17));
+            compactBuffer(17);
+        } else if (addrType == ADDR_TYPE_HOST) {
             short hostLength = mBufferQueue.getUnsignedByte(1);
             // addr type(1) + len(1) + host + port(2)
             if (bufferLength < hostLength + 4)
                 return false;
             addr = mBufferQueue.getString(2, hostLength + 2);
+            log.info("hostname : " + addr);
             remoteHeader.appendByte((byte)hostLength).appendString(addr);
             compactBuffer(hostLength + 2);
         }else {
@@ -215,14 +186,28 @@ public class ClientHandler implements Handler<Buffer> {
         remoteHeader.appendShort((short)port);
         compactBuffer(2);
         log.info("Connecting to " + addr + ":" + port);
-        connectToRemote(mConfig.server, mConfig.serverPort, remoteHeader);
+        connectToRemote(GlobalConfig.get().getServer(), GlobalConfig.get().getPort(), remoteHeader);
         nextStage();
         return false;
     }
 
+    /**
+     * 添加噪声数据
+     */
+    private void appendNoiseData(Buffer remoteHeader) {
+        // 噪声长度
+        int noiseLenInt = new SecureRandom().nextInt(Utils.NOISE_MAX) + 1;
+        // 转为 byte 数组
+        byte[] noiseLenArr = Utils.intToByteArray(noiseLenInt);
+
+        remoteHeader.appendBytes(noiseLenArr);
+        // 填充噪声数据
+        remoteHeader.appendBytes(Utils.randomBytes(noiseLenInt));
+    }
+
     private void connectToRemote(String addr, int port, Buffer remoteHeader) {
-        // 5s timeout.
-        NetClientOptions options = new NetClientOptions().setConnectTimeout(5000);
+
+        NetClientOptions options = new NetClientOptions().setConnectTimeout(GlobalConfig.get().getTimeout()).setTcpKeepAlive(true);
         NetClient client = mVertx.createNetClient(options);
         client.connect(port, addr, res -> {  // connect handler
             if (!res.succeeded()) {
@@ -248,16 +233,11 @@ public class ClientHandler implements Handler<Buffer> {
             mLocalSocket.write(Buffer.buffer(msg));
             // send remote header.
             try{
-                if (mConfig.oneTimeAuth) {
-                    byte [] authKey = SSAuth.prepareKey(mCrypto.getIV(true), mCrypto.getKey());
-                    byte [] authData = remoteHeader.getBytes();
-                    byte [] authResult = mAuthor.doAuth(authKey, authData);
-                    remoteHeader.appendBytes(authResult);
-                }
+
                 byte [] header = remoteHeader.getBytes();
                 byte [] encryptHeader = mCrypto.encrypt(header, header.length);
                 mServerSocket.write(Buffer.buffer(encryptHeader));
-            }catch(CryptoException | AuthException e){
+            }catch(CryptoException e){
                 log.error("Catch exception", e);
                 destory();
             }
@@ -268,15 +248,7 @@ public class ClientHandler implements Handler<Buffer> {
 
         Buffer chunkBuffer = Buffer.buffer();
         try{
-            if (mConfig.oneTimeAuth) {
-                //chunk length 2 bytes
-                chunkBuffer.appendShort((short)buffer.length());
-                //auth result 10 bytes
-                byte [] authKey = SSAuth.prepareKey(mCrypto.getIV(true), mChunkCount++);
-                byte [] authData = buffer.getBytes();
-                byte [] authResult = mAuthor.doAuth(authKey, authData);
-                chunkBuffer.appendBytes(authResult);
-            }
+
             chunkBuffer.appendBuffer(buffer);
             byte [] data = chunkBuffer.getBytes();
             byte [] encryptData = mCrypto.encrypt(data, data.length);
@@ -285,7 +257,7 @@ public class ClientHandler implements Handler<Buffer> {
             }
             flowControl(mServerSocket, mLocalSocket);
             mServerSocket.write(Buffer.buffer(encryptData));
-        }catch(CryptoException | AuthException e){
+        }catch(CryptoException e){
             log.error("Catch exception", e);
             destory();
         }

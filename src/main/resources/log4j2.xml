@@ -1,18 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="WARN">
-    <Appenders>
-        <Console name="Console" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d{DATE} %highlight{%-5level} %msg%n"/>
-        </Console>
-        <RollingFile name="RollingFile" fileName="logs/ss.log" filePattern="logs/ss-%d{MM-dd-yyyy}.log.gz" ignoreExceptions="false">
-            <PatternLayout pattern="%d{DATE} %level %msg%n"/>
+<configuration status="WARN" monitorInterval="30">
+    <appenders>
+
+        <console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS}  %-5level [%t] %l - %msg%n"/>
+        </console>
+
+        <RollingFile name="RollingFile" fileName="logs/ss.log" filePattern="logs/ss-%d{yyyy-MM-dd}.log" ignoreExceptions="false">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS}  %-5level [%t] %l - %msg%n"/>
             <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
         </RollingFile>
-    </Appenders>
-    <Loggers>
-        <Root level="trace">
-            <AppenderRef level="warn" ref="RollingFile"/>
-            <AppenderRef ref="Console"/>
-        </Root>
-    </Loggers>
-</Configuration>
+
+    </appenders>
+    <loggers>
+        <root level="INFO">
+            <appender-ref ref="Console"/>
+            <appender-ref ref="RollingFile"/>
+        </root>
+    </loggers>
+</configuration>

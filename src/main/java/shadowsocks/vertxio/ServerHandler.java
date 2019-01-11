@@ -1,43 +1,21 @@
-/*
- *   Copyright 2016 Author:NU11 bestoapache@gmail.com
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
-
 package shadowsocks.vertxio;
 
-import java.net.InetSocketAddress;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import io.vertx.core.Vertx;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.net.NetSocket;
-import io.vertx.core.net.NetServer;
 import io.vertx.core.net.NetClient;
 import io.vertx.core.net.NetClientOptions;
-
-import shadowsocks.util.LocalConfig;
-import shadowsocks.crypto.SSCrypto;
-import shadowsocks.crypto.CryptoFactory;
+import io.vertx.core.net.NetSocket;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import shadowsocks.GlobalConfig;
 import shadowsocks.crypto.CryptoException;
-import shadowsocks.auth.SSAuth;
-import shadowsocks.auth.HmacSHA1;
-import shadowsocks.auth.AuthException;
+import shadowsocks.crypto.CryptoFactory;
+import shadowsocks.crypto.SSCrypto;
+import shadowsocks.crypto.Utils;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 public class ServerHandler implements Handler<Buffer> {
 
@@ -45,18 +23,15 @@ public class ServerHandler implements Handler<Buffer> {
 
     private final static int ADDR_TYPE_IPV4 = 1;
     private final static int ADDR_TYPE_HOST = 3;
+    private final static int ADDR_TYPE_IPV6 = 4;
 
-    private final static int OTA_FLAG = 0x10;
 
     private Vertx mVertx;
     private NetSocket mClientSocket;
     private NetSocket mTargetSocket;
-    private LocalConfig mConfig;
     private int mCurrentStage;
     private Buffer mBufferQueue;
-    private int mChunkCount;
     private SSCrypto mCrypto;
-    private SSAuth mAuthor;
 
     private class Stage {
         final public static int ADDRESS = 1;
@@ -79,25 +54,23 @@ public class ServerHandler implements Handler<Buffer> {
             destory();
         });
         socket.exceptionHandler(e -> {
-            log.error("Catch Exception.", e);
+            log.error("Server setFinishHandler Exception " + e.getMessage()
+                    +" local " + socket.localAddress() + " , remote " + socket.remoteAddress());
             destory();
         });
     }
 
-    public ServerHandler(Vertx vertx, NetSocket socket, LocalConfig config) {
+    public ServerHandler(Vertx vertx, NetSocket socket) {
         mVertx = vertx;
         mClientSocket = socket;
-        mConfig = config;
         mCurrentStage = Stage.ADDRESS;
         mBufferQueue = Buffer.buffer();
-        mChunkCount = 0;
         setFinishHandler(mClientSocket);
         try{
-            mCrypto = CryptoFactory.create(mConfig.method, mConfig.password);
+            mCrypto = CryptoFactory.create(GlobalConfig.get().getMethod(), GlobalConfig.get().getPassword());
         }catch(Exception e){
             //Will never happen, we check this before.
         }
-        mAuthor = new HmacSHA1();
     }
 
     private Buffer compactBuffer(int start) {
@@ -111,63 +84,60 @@ public class ServerHandler implements Handler<Buffer> {
     }
 
     private boolean handleStageAddress() {
+        if (GlobalConfig.get().isNoise()) {
+            int flag = deleteNoiseData();
+            if (flag == -1) {
+                return false;
+            } else if (flag == -2) {
+                return true;
+            }
+        }
 
         int bufferLength = mBufferQueue.length();
         String addr = null;
-        int authLen = 0;
         int current = 0;
 
         int addrType = mBufferQueue.getByte(0);
 
-        if (mConfig.oneTimeAuth) {
-            authLen = HmacSHA1.AUTH_LEN;
-            if ((addrType & OTA_FLAG) != OTA_FLAG) {
-                log.error("OTA is not enabled.");
-                return true;
-            }
-            addrType &= 0x0f;
-        }
-
         if (addrType == ADDR_TYPE_IPV4) {
             // addrType(1) + ipv4(4) + port(2)
-            if (bufferLength < 7 + authLen)
+            if (bufferLength < 7)
                 return false;
             try{
-                //remote the "/"
-                addr = InetAddress.getByAddress(mBufferQueue.getBytes(1, 5)).toString().substring(1);
+                addr = InetAddress.getByAddress(mBufferQueue.getBytes(1, 5)).getHostAddress();
+                log.info("ipv4 : " + addr);
             }catch(UnknownHostException e){
                 log.error("UnknownHostException.", e);
                 return true;
             }
             current = 5;
-        }else if (addrType == ADDR_TYPE_HOST) {
+        } else if (addrType == ADDR_TYPE_IPV6){
+            // addrType(1) + ipv6(16) + port(2)
+            if (bufferLength < 19)
+                return false;
+            try{
+                addr = InetAddress.getByAddress(mBufferQueue.getBytes(1, 17)).getHostAddress();
+                log.info("ipv6 : " + addr);
+            }catch(UnknownHostException e){
+                log.error("UnknownHostException.", e);
+                return true;
+            }
+            current = 17;
+        } else if (addrType == ADDR_TYPE_HOST) {
             short hostLength = mBufferQueue.getUnsignedByte(1);
             // addrType(1) + len(1) + host + port(2)
-            if (bufferLength < hostLength + 4 + authLen)
+            if (bufferLength < hostLength + 4)
                 return false;
             addr = mBufferQueue.getString(2, hostLength + 2);
+            log.info("hostname : " + addr);
             current = hostLength + 2;
         }else {
-            log.warn("Unsupport addr type " + addrType);
+            log.error("Unsupport addr type " + addrType);
             return true;
         }
         int port = mBufferQueue.getUnsignedShort(current);
         current = current + 2;
-        if (mConfig.oneTimeAuth) {
-            byte [] expectResult = mBufferQueue.getBytes(current, current + authLen);
-            byte [] authKey = SSAuth.prepareKey(mCrypto.getIV(false), mCrypto.getKey());
-            byte [] authData = mBufferQueue.getBytes(0, current);
-            try{
-                if (!mAuthor.doAuth(authKey, authData, expectResult)) {
-                    log.error("Auth header failed.");
-                    return true;
-                }
-            }catch(AuthException e) {
-                log.error("Auth header exception.", e);
-                return true;
-            }
-            current = current + authLen;
-        }
+
         compactBuffer(current);
         log.info("Connecting to " + addr + ":" + port);
         connectToRemote(addr, port);
@@ -175,9 +145,49 @@ public class ServerHandler implements Handler<Buffer> {
         return false;
     }
 
+
+    /**
+     * 删除噪声数据
+     *
+     * @return 返回 -1 表示长度不够；
+     *          返回 -2 表示客户端伪造数据（非法的 noise 长度）；
+     *          返回 1 表示运行正常，噪声数据已删除
+     */
+    private int deleteNoiseData() {
+        int bufferLength = mBufferQueue.length();
+        // noiseLen(4)
+        if (bufferLength < 4) {
+            return -1;
+        }
+
+        byte[] noiseLenArr = new byte[4];
+        mBufferQueue.getBytes(0, 4, noiseLenArr);
+
+        compactBuffer(4);
+
+        int noiseLenInt = Utils.byteArrayToInt(noiseLenArr);
+
+        if (noiseLenInt <= 0 || noiseLenInt > Utils.NOISE_MAX) {// 客户端伪造数据！
+            log.error("noiseLenInt error : " + noiseLenInt);
+            return -2;
+        }
+
+        if (bufferLength < 4 + noiseLenInt) {// 不够噪声数据的长度！
+            return -1;
+        }
+
+        // noise data
+//        byte[] noiseData = new byte[noiseLenInt];
+//        mBufferQueue.getBytes(0, noiseLenInt, noiseData);
+
+        compactBuffer(noiseLenInt);
+
+        return 1;
+    }
+
     private void connectToRemote(String addr, int port) {
-        // 5s timeout.
-        NetClientOptions options = new NetClientOptions().setConnectTimeout(5000);
+
+        NetClientOptions options = new NetClientOptions().setConnectTimeout(GlobalConfig.get().getTimeout()).setTcpKeepAlive(true);
         NetClient client = mVertx.createNetClient(options);
         client.connect(port, addr, res -> {  // connect handler
             if (!res.succeeded()) {
@@ -223,42 +233,9 @@ public class ServerHandler implements Handler<Buffer> {
             //remote is not ready, just hold the buffer.
             return false;
         }
-        if (mConfig.oneTimeAuth) {
-            // chunk len (2) + auth len
-            int chunkHeaderLen = 2 + HmacSHA1.AUTH_LEN;
-            int bufferLength = mBufferQueue.length();
-            if (bufferLength < chunkHeaderLen){
-                return false;
-            }
-            int chunkLen = mBufferQueue.getUnsignedShort(0);
-            if (bufferLength < chunkLen + chunkHeaderLen) {
-                return false;
-            }
-            //handle this case, chunk len = 0
-            if (chunkLen > 0) {
-                byte [] expectResult = mBufferQueue.getBytes(2, chunkHeaderLen);
-                byte [] authKey = SSAuth.prepareKey(mCrypto.getIV(false), mChunkCount);
-                byte [] authData = mBufferQueue.getBytes(chunkHeaderLen, chunkHeaderLen + chunkLen);
-                try{
-                    if (!mAuthor.doAuth(authKey, authData, expectResult)){
-                        log.error("Auth chunk " + mChunkCount + " failed.");
-                        return true;
-                    }
-                }catch(AuthException e){
-                    log.error("Auth chunk " + mChunkCount + " exception.", e);
-                    return true;
-                }
-                sendToRemote(mBufferQueue.slice(chunkHeaderLen, chunkHeaderLen + chunkLen));
-            }
-            mChunkCount++;
-            compactBuffer(chunkHeaderLen + chunkLen);
-            if (mBufferQueue.length() > 0) {
-                return handleStageData();
-            }
-        }else{
-            sendToRemote(mBufferQueue);
-            cleanBuffer();
-        }
+        sendToRemote(mBufferQueue);
+        cleanBuffer();
+
         return false;
     }
 
@@ -297,4 +274,6 @@ public class ServerHandler implements Handler<Buffer> {
             destory();
         }
     }
+
+
 }

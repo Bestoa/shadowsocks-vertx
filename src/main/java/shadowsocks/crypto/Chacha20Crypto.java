@@ -1,40 +1,20 @@
-/*   
- *   Copyright 2016 Author:NU11 bestoapache@gmail.com
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
+
 package shadowsocks.crypto;
 
 import org.bouncycastle.crypto.StreamCipher;
-import org.bouncycastle.crypto.engines.ChaCha7539Engine;
 import org.bouncycastle.crypto.engines.ChaChaEngine;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.ParametersWithIV;
+import shadowsocks.GlobalConfig;
 
 import java.io.ByteArrayOutputStream;
 
-import shadowsocks.crypto.CryptoException;
-
-/**
- * Chacha20 Crypt implementation
- */
 public class Chacha20Crypto extends BaseCrypto {
 
-    private final static String CIPHER_CHACHA20 = "chacha20";
-    private final static String CIPHER_CHACHA20_IETF = "chacha20-ietf";
 
-    private final static int IV_LENGTH = 8;
-    private final static int IV_IETF_LENGTH = 12;
+    private final static int IV_LENGTH = GlobalConfig.get().getIvLen();
+
+    private final static int LEN = 8;
 
     private final static int KEY_LENGTH = 32;
 
@@ -44,31 +24,27 @@ public class Chacha20Crypto extends BaseCrypto {
 
     @Override
     public int getIVLength() {
-        if (mName.equals(CIPHER_CHACHA20_IETF)) {
-            return IV_IETF_LENGTH;
-        } else {
-            return IV_LENGTH;
-        }
+        return IV_LENGTH;
     }
 
     @Override
     public int getKeyLength() {
-        if (mName.equals(CIPHER_CHACHA20) || mName.equals(CIPHER_CHACHA20_IETF)) {
-            return KEY_LENGTH;
-        }
-        return 0;
+        return KEY_LENGTH;
     }
 
     @Override
     protected StreamCipher createCipher(byte[] iv, boolean encrypt) throws CryptoException
     {
-        StreamCipher c;
-        if (mName.equals(CIPHER_CHACHA20_IETF)) {
-            c = new ChaCha7539Engine();
-        } else {
-            c = new ChaChaEngine();
+        StreamCipher c = new ChaChaEngine();
+        byte[] newIv = new byte[LEN];
+        if(IV_LENGTH == LEN) {// 兼容原生
+            newIv = iv;
+        } else {// 计算 iv 的 md5 ，取前 8 byte 做 newIv
+            byte[] md5 = Utils.md5(iv);
+            System.arraycopy(md5,0,newIv,0,LEN);
         }
-        ParametersWithIV parameterIV = new ParametersWithIV(new KeyParameter(mKey), iv, 0, mIVLength);
+
+        ParametersWithIV parameterIV = new ParametersWithIV(new KeyParameter(mKey), newIv);
         c.init(encrypt, parameterIV);
         return c;
     }

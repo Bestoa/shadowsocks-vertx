@@ -1,106 +1,75 @@
-shadowsocks-vertx
+Shadowsocks-Vertx
 ================
 
-Based on SS_V1, but we have to change the protocol now.
-
-[![Build Status](https://travis-ci.org/Bestoa/shadowsocks-vertx.svg?branch=master)](https://travis-ci.org/Bestoa/shadowsocks-vertx)
-[![codecov](https://codecov.io/gh/Bestoa/shadowsocks-vertx/branch/master/graph/badge.svg)](https://codecov.io/gh/Bestoa/shadowsocks-vertx)
 [![License](http://img.shields.io/:license-apache-blue.svg?style=flat-square)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
-#Intro
-
-shadowsocks-vertx is a lightweight tunnel proxy which can help you get through firewalls. It is a java port of shadowsocks. This project is based on vert.x.
-
-The protocol is compatible with the origin shadowsocks (if both have been upgraded to the latest version).
-
-JDK 8 is needed.
-
-Current version 0.8.3
-
-It is **unstable**! If you encounter any problems, please open an issue.
-
-About shadowsocks, please refer to https://shadowsocks.org/
-
-About vert.x, please refer to http://vertx.io/
-
-#Features
-
-Supported argument:
-
-    1. -m/--method crypto method
-    2. -k/--password password
-    3. -p/--server_port bind port(server)/remote port(client)
-    4. -a/--auth OTA enforcing mode
-    5. -l/--local_port local port
-    6. -s/--server server
-    7. -S/--server_mode server mode(default is client mode)
-    8. -c/--config config file
-    9. -t/--timeout timeout(unit is second, currently unused)
-    10. -h/--help show help.
-
-Supported encrypt method:
-
-    1. aes-128-cfb/ofb
-    2. aes-192-cfb/ofb
-    3. aes-256-cfb/ofb
-    4. chacha20/chacha20-ietf
-
-Supported one-time auth.
-
-Support JSON config file. Please refer to https://github.com/shadowsocks/shadowsocks/wiki/Configuration-via-Config-File.
-Note:
-
-    1. Not support: local_address, client will bind 0.0.0.0 not 127.0.0.1
-    2. Not support: fast_open. Java doesn't have such feature.
-    3. Not support: workers. Vertx will set work thread number automatically.
-    4. Additional: server_mode, set the running mode, true for the server.
-
-You could refer to demo config etc/demo.json.
-
-How to run:
+简介
 ===========
-### (1) Before you start
-You must have 'gradle' installed first, or use gradle wrapper ./gradlew.
 
-### (2) generate distributable zip
-```
-$ gradle distZip
-```
-or
-```
-$ ./gradlew distZip
-```
+Shadowsocks-Vertx 是一个 socks5 代理，基于 Java Vert.x 
 
-Then you will get **shadowsocks-ver.zip** in build/distributions.
-Unzip it, the folder should contain bin and lib.
+Features
+===========
 
-#### How to run
-```
-//Server
-$ bin/shadowsocks -S ...
-$ bin/shadowsocks --server_mode ...
-//Local
-$ bin/shadowsocks ...
-```
+不支持 UDP 
 
-### (3) generate all-in-one jar
-```
-$ gradle fatJar
-```
-or
-```
-$ ./gradlew fatJar
-```
+支持 json 配置文件，参见 etc/config.json
+
+仅支持以下3种加密算法 ：
+
+    aes-256-cfb, chacha20, rc4-md5
 
 
-Then you will get **shadowsocks-fat-ver.jar** in build/libs.
+**完美支持 IPv6**
 
-#### How to run
+**支持自定义的 iv 长度**
+
+**支持添加噪音数据**
+
+
+运行方法
+===========
+
+### 服务端（以 CentOS 为例）
+1 安装JDK8
 ```
-//Server
-$ java -jar shadowsocks-fat-xx.jar -S ...
-$ java -jar shadowsocks-fat-xx.jar --server_mode ...
-//Local
-$ java -jar shadowsocks-fat-xx.jar ...
+$ yum -y install java-1.8.0-openjdk java-1.8.0-openjdk-devel
 ```
 
+2 下载 fat jar
+```
+$ wget https://raw.githubusercontent.com/lenovobenben/shadowsocks-vertx/master/shadowsocks-fat-1.0.0.jar
+```
+
+3 编辑 config.json ，参见 etc/config.json
+
+4 运行 java
+```
+$ java -jar shadowsocks-fat-1.0.0.jar config.json
+```
+启动 java 时，如果为纯 ipv4 ，则**必须**添加  -Djava.net.preferIPv4Stack=true ；如果为双栈则**建议**添加 -Djava.net.preferIPv6Addresses=true
+
+### 客户端（以 Windows 为例）
+1 安装JDK8
+
+2 下载 fat jar
+
+3 编辑 config.json
+
+4 运行 java
+
+操作简单，不赘述
+
+浏览器： Chrome + SwitchyOmega 
+
+SwitchyOmega 选择 socks5 ，端口选择 1080 （默认）即可
+
+
+Linux 相关
+===========
+
+确保防火墙开启相应端口
+
+建议开启 Google BBR 加速
+
+加入开机自启动

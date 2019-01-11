@@ -1,27 +1,9 @@
-/*   
- *   Copyright 2016 Author:NU11 bestoapache@gmail.com
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
 package shadowsocks.crypto;
 
 import org.bouncycastle.crypto.StreamCipher;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-
-import shadowsocks.crypto.CryptoException;
-import shadowsocks.crypto.Utils;
 
 /**
  * Crypt base class implementation
@@ -109,11 +91,11 @@ public abstract class BaseCrypto implements SSCrypto
         byte[] data;
         mData.reset();
         if (mDecryptCipher == null) {
-            mDecryptCipher = createCipher(in, false);
             mDecryptIV = new byte[mIVLength];
             data = new byte[in.length - mIVLength];
             System.arraycopy(in, 0, mDecryptIV, 0, mIVLength);
             System.arraycopy(in, mIVLength, data, 0, in.length - mIVLength);
+            mDecryptCipher = createCipher(mDecryptIV, false);
         } else {
             data = in;
         }

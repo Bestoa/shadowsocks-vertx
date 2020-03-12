@@ -1,6 +1,9 @@
 shadowsocks-vertx
 ================
 
+DO NOT USE IT ANYMORE!!!
+========================
+
 Only support SS-V1
 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/c374229026604afe9383ab11e2f46d04)](https://app.codacy.com/app/Bestoa/shadowsocks-vertx?utm_source=github.com&utm_medium=referral&utm_content=Bestoa/shadowsocks-vertx&utm_campaign=Badge_Grade_Dashboard)
